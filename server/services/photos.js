@@ -53,3 +53,11 @@ export function cascadeRestorePhotos(ctx, ownerType, ownerId, stamp) {
   ctx.db.prepare('UPDATE photos SET deleted_at = NULL WHERE owner_type = ? AND owner_id = ? AND deleted_at = ?').run(ownerType, ownerId, stamp);
   for (const p of rows) restorePhotoFile(ctx.config.dataDir, p.filename);
 }
+
+// Kinds of record a photo can belong to, and their tables. Later stages add more.
+export const PHOTO_OWNERS = { item: 'items', supplier: 'suppliers' };
+
+export function setCover(db, photo) {
+  db.prepare('UPDATE photos SET is_cover = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL')
+    .run(photo.id, photo.owner_type, photo.owner_id);
+}

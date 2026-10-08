@@ -4,6 +4,7 @@ import { systemRouter } from './system.js';
 import { settingsRouter } from './settings.js';
 import { sectionsRouter, itemsRouter, purchasesRouter, expirySuggestionRoute, storageSpotsRoute } from './cabinet.js';
 import { suppliersRouter } from './suppliers.js';
+import { photosRouter } from './photos.js';
 
 export function apiRouter(ctx, { onShutdown }) {
   const r = Router();
@@ -13,6 +14,7 @@ export function apiRouter(ctx, { onShutdown }) {
   r.use('/items', itemsRouter(ctx));
   r.use('/purchases', purchasesRouter(ctx));
   r.use('/suppliers', suppliersRouter(ctx));
+  r.use('/photos', photosRouter(ctx));
   r.get('/expiry-suggestion', expirySuggestionRoute(ctx));
   r.get('/storage-spots', storageSpotsRoute(ctx));
   r.use(systemRouter(ctx, { onShutdown }));
