@@ -111,11 +111,28 @@ Greeting with date, moon phase and moon sign, the day's ruler, and the next fest
 
 ### Herb cabinet
 
-One row per jar.
+Holds herbs and every other supply, one row per jar, bottle, bag or box. The drawer keeps its name; its sections split herbs from supplies.
 
-- Fields: herb (linked to a grimoire entry, or free text), form (dried leaf, dried flower, root, bark, seed, resin, powder, fresh, tincture, oil, other), amount and unit (g, oz, ml, fl oz, count), low-stock threshold, source (supplier name or "my garden" / "foraged"), date bought or harvested, expiry date, storage spot, notes, photos.
+- Sections (user-managed: add, rename, reorder, delete): Herbs, Oils and butters, Waxes, Alcohol and vinegars, Honey and sweeteners, Essential oils, Salts and minerals, Resins and incense, Candles, Crystals and stones, Containers (bottles, jars, tins, droppers, pumps, roller bottles, lids, corks), Labels and packaging, Cloth and bags (muslin, tea bags, sachets), Tools and equipment (scales, funnels, strainers, double boilers, mortar and pestle), Other.
+- Herb fields: herb (linked to a grimoire entry, or free text), form (dried leaf, dried flower, root, bark, seed, resin, powder, fresh, tincture, oil, other), amount and unit, low-stock threshold, date bought or harvested, expiry date, storage spot, notes, photos.
+- Supply fields: name, section, size or capacity where it applies (for example "30 ml amber dropper bottle", "2 oz tin"), amount and unit (g, oz, ml, fl oz, count), low-stock threshold, expiry date where it applies, storage spot, notes, photos. Containers and tools usually have no expiry.
+- Where it came from, for every herb and supply, one of:
+  - Bought: supplier (from the Suppliers list), price, quantity bought, order date, order or invoice note.
+  - Grown: links to the garden plant and harvest entry.
+  - Foraged: place and date.
+  - Made: links to the batch that made it.
+  - Gifted or traded: from whom.
+- Batches use up supplies the same way they use herbs. A recipe can list containers and other supplies (for example two 30 ml dropper bottles and 15 g beeswax), and making the batch takes them out of the cabinet.
 - Expiry is suggested from the form (for example: dried leaf and flower 1 year, root and bark 2 years, powder 6 months, tincture 5 years, infused oil 1 year) and can be changed. The suggested durations are editable in Settings.
-- Filters: low, nearing expiry, expired, by form, by storage spot, by plant part. Search by common or Latin name.
+- Filters: section, low, nearing expiry, expired, by form, by storage spot, by plant part, by source, by supplier. Search by name, common name or Latin name.
+
+### Suppliers
+
+Part of the Herb cabinet drawer (a Suppliers tab), not its own drawer.
+
+- Fields: name, website, contact notes, what they're good for, rating (1 to 5), notes. Add, edit, delete.
+- Each supplier page lists everything bought from them with dates and prices, so you can compare where things cost less.
+- The shopping list can group items by supplier.
 
 ### Grimoire
 
@@ -161,9 +178,10 @@ A general journal, separate from the batch journal, for anything else: rituals, 
 
 ### Shopping list
 
-- Jars at or below their threshold are added automatically and removed when restocked.
+- Herbs and supplies at or below their threshold are added automatically and removed when restocked. Each shows its last supplier and price.
+- The list can be grouped by section or by supplier.
 - Manual items can be added, edited, checked off, deleted and cleared.
-- "Bought" on an item can open a prefilled new-jar form.
+- "Bought" on an item can open a prefilled new-jar form with the supplier and price filled in from last time.
 
 ### Garden log
 
@@ -192,7 +210,7 @@ Back up now, restore (makes a safety copy first), data folder location (read-onl
 
 ## Data
 
-SQLite tables (names indicative): `herbs` (grimoire, including correspondences and garden notes), `herb_sources`, `jars`, `recipe_types`, `recipes`, `recipe_ingredients`, `batches`, `batch_ingredients`, `batch_steps`, `journal_types`, `journal_entries`, `journal_links`, `tasks`, `task_dismissals`, `shopping_items`, `garden_plants`, `garden_entries`, `photos` (linked to any record by kind and id), `timing_rules`, `settings`, plus a migrations table. Database upgrades run on start, as in Hearth & Larder. Starter content (grimoire herbs, recipe types, journal types, timing rules) is seeded once on first run from JSON files in the repo, so later edits by the user are never overwritten.
+SQLite tables (names indicative): `herbs` (grimoire, including correspondences and garden notes), `herb_sources`, `cabinet_sections`, `jars` (herbs and supplies, with source kind and links), `suppliers`, `purchases`, `recipe_types`, `recipes`, `recipe_ingredients` (herbs and supplies), `batches`, `batch_ingredients`, `batch_steps`, `journal_types`, `journal_entries`, `journal_links`, `tasks`, `task_dismissals`, `shopping_items`, `garden_plants`, `garden_entries`, `photos` (linked to any record by kind and id), `timing_rules`, `settings`, plus a migrations table. Database upgrades run on start, as in Hearth & Larder. Starter content (grimoire herbs, recipe types, journal types, timing rules) is seeded once on first run from JSON files in the repo, so later edits by the user are never overwritten.
 
 ## Error handling
 
@@ -215,7 +233,7 @@ SQLite tables (names indicative): `herbs` (grimoire, including correspondences a
 The app is large, so it ships in stages, each its own pull request:
 
 1. Foundation and look: server, database, backups, Windows tasks and shortcut, the cabinet side bar, parchment theme, Today shell, Settings, photos service.
-2. Grimoire (with the 30 starter herbs and correspondences) and Herb cabinet.
+2. Grimoire (with the 30 starter herbs and correspondences) and Herb cabinet with supplies, sources and Suppliers.
 3. Recipe book with recipe types, and Batch journal.
 4. Sky and tradition: calculations, timing rules, suggestions.
 5. Calendar and To-do list.

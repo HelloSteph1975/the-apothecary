@@ -2017,7 +2017,7 @@ After merge: `npm run setup`, then (after a yes) `npm run install-windows`, then
 
 Each gets its own plan, written when the stage before it is merged:
 
-2. Grimoire (30 starter herbs with correspondences and garden notes) and Herb cabinet; photos route and gallery; `/api/today`.
+2. Grimoire (30 starter herbs with correspondences and garden notes) and Herb cabinet with supplies (bottles, tins, droppers and more), where-it-came-from, and Suppliers; photos route and gallery; `/api/today`.
 3. Recipe book with user-managed recipe types, and Batch journal.
 4. Sky and tradition: `astronomy-engine`, moon phase and sign, day rulers, Wheel of the Year, timing rules and suggestions.
 5. Calendar and To-do list.
