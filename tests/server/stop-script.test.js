@@ -37,6 +37,8 @@ describe('scripts/stop.js', () => {
     expect(resolvePort(dir, {})).toBe(4197);
     fs.writeFileSync(path.join(dir, 'config.json'), '{"port":4555}');
     expect(resolvePort(dir, {})).toBe(4555);
+    fs.writeFileSync(path.join(dir, 'config.json'), '{"port": " 4205 "}');
+    expect(resolvePort(dir, {})).toBe(4205);
     expect(resolvePort(dir, { APOTHECARY_PORT: '4197' })).toBe(4197);
     expect(() => resolvePort(dir, { APOTHECARY_PORT: 'abc' })).toThrow(/APOTHECARY_PORT/);
     expect(() => resolvePort(dir, { APOTHECARY_PORT: '70000' })).toThrow(/APOTHECARY_PORT/);

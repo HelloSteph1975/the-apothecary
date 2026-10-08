@@ -76,3 +76,25 @@ it('asks before restoring', async () => {
   expect(await screen.findByText(/safety copy/i)).toBeInTheDocument();
   expect(calls).not.toContain('POST /api/backups/restore');
 });
+
+it('says when backups could not load and lets her try again', async () => {
+  const user = userEvent.setup();
+  const base = global.fetch;
+  let failing = true;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/backups' && (opts.method ?? 'GET') === 'GET') {
+      calls.push('GET /api/backups');
+      return failing
+        ? new Response(JSON.stringify({ error: 'Backups folder is unavailable.' }), { status: 500 })
+        : new Response(JSON.stringify([]), { status: 200 });
+    }
+    return base(url, opts);
+  });
+  open();
+  expect(await screen.findByText(/Couldn't load your backups\. Backups folder is unavailable\./)).toBeInTheDocument();
+  const before = calls.filter(c => c === 'GET /api/backups').length;
+  failing = false;
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByText('No backups yet.')).toBeInTheDocument();
+  expect(calls.filter(c => c === 'GET /api/backups').length).toBe(before + 1);
+});

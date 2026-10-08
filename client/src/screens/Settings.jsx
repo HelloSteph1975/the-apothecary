@@ -92,6 +92,13 @@ export function Settings() {
           <p>With the Windows schedule installed, your cabinet is backed up every night at 9:30 PM. It also backs up when it starts if the last backup is more than a day old. Backups are kept for 30 days, and the newest 5 are always kept.</p>
           <p className="muted">Data folder: {folder.data?.path ?? '…'}</p>
           <p><button type="button" className="btn" onClick={backUp}>Back up now</button></p>
+          {backups.error && (
+            <p role="alert">
+              Couldn't load your backups. {backups.error.message}{' '}
+              <button type="button" className="btn" onClick={backups.reload}>Try again</button>
+            </p>
+          )}
+          {!backups.error && !backups.loading && (backups.data ?? []).length === 0 && <p className="muted">No backups yet.</p>}
           <ul className="backup-list">
             {(backups.data ?? []).map(b => (
               <li key={b.name}>

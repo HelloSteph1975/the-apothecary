@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { makeTestContext } from './helpers.js';
+import { migrations } from '../../server/db/migrations.js';
 import { backupNow, listBackups, rotateBackups, ensureRecentBackup, restoreBackup } from '../../server/services/backup.js';
 
 let t;
@@ -55,6 +56,27 @@ it('refuses a damaged backup and leaves live data alone', () => {
   expect(() => restoreBackup(t.ctx, 'apothecary-2026-01-01.db')).toThrow(/damaged/);
   expect(t.ctx.db.prepare("SELECT value AS name FROM settings WHERE key LIKE 'marker_%'").all().map(s => s.name)).toContain('Keep');
   expect(fs.existsSync(path.join(t.dataDir, 'apothecary.db.restore-tmp'))).toBe(false);
+});
+
+function expectForeignRefused(version, setup) {
+  t = makeTestContext();
+  t.ctx.db.prepare("INSERT INTO settings (key, value) VALUES ('marker_Keep', 'Keep')").run();
+  const file = path.join(t.dataDir, 'backups', 'apothecary-2026-01-02.db');
+  const other = new DatabaseSync(file);
+  other.exec(setup);
+  other.exec(`PRAGMA user_version = ${version}`);
+  other.close();
+  expect(() => restoreBackup(t.ctx, 'apothecary-2026-01-02.db')).toThrow(/isn't an Apothecary backup/);
+  expect(t.ctx.db.prepare("SELECT value AS name FROM settings WHERE key LIKE 'marker_%'").all().map(s => s.name)).toContain('Keep');
+  expect(fs.existsSync(path.join(t.dataDir, 'apothecary.db.restore-tmp'))).toBe(false);
+}
+
+it('refuses an unrelated SQLite file and leaves live data alone', () => {
+  expectForeignRefused(1, 'CREATE TABLE other(x)');
+});
+
+it('refuses a backup from a newer version of the app', () => {
+  expectForeignRefused(migrations.length + 1, 'CREATE TABLE settings(key, value); CREATE TABLE photos(id)');
 });
 
 it('puts data back from the safety copy when reopen fails after the swap', () => {

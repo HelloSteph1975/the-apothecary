@@ -1,5 +1,5 @@
-import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
 
@@ -32,4 +32,17 @@ it('shows the three cabinet cards with gentle empty notes', async () => {
 it('has a wax seal button to log a batch', async () => {
   today();
   expect(await screen.findByRole('button', { name: /log a batch/i })).toBeInTheDocument();
+});
+
+it('moves from morning to afternoon without a reload', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setInterval', 'clearInterval', 'Date'] });
+  vi.setSystemTime(new Date(2026, 9, 8, 11, 58, 0));
+  try {
+    today();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Good morning' })).toBeInTheDocument();
+    await act(async () => { vi.setSystemTime(new Date(2026, 9, 8, 12, 1, 0)); await vi.advanceTimersByTimeAsync(61000); });
+    expect(screen.getByRole('heading', { level: 1, name: 'Good afternoon' })).toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
 });

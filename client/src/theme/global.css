@@ -131,7 +131,7 @@ a { color: inherit; text-underline-offset: 3px; }
 .wax-seal:hover { filter: brightness(1.08); }
 
 /* ---------- Grid and forms ---------- */
-.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 24px; }
 .field { display: grid; gap: 4px; margin-bottom: 14px; }
 .field label { font-weight: 600; }
 .field input, .field select {

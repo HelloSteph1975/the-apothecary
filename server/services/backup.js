@@ -3,6 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { HttpError } from '../http.js';
 import { untrashLivePhotos } from './photos.js';
+import { migrations } from '../db/migrations.js';
 import { photoFilenamesIn } from '../db/backups.js';
 
 const pad = n => String(n).padStart(2, '0');
@@ -76,13 +77,25 @@ export function restoreBackup(ctx, name) {
   const tmp = `${live}.restore-tmp`;
   fs.copyFileSync(src, tmp);
   let valid = false;
+  let ours = false;
   try {
     const probe = new DatabaseSync(tmp, { readOnly: true });
-    try { valid = probe.prepare('PRAGMA integrity_check').get().integrity_check === 'ok'; } finally { probe.close(); }
+    try {
+      valid = probe.prepare('PRAGMA integrity_check').get().integrity_check === 'ok';
+      if (valid) {
+        const v = probe.prepare('PRAGMA user_version').get().user_version;
+        const tables = probe.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('settings','photos')").all();
+        ours = v >= 1 && v <= migrations.length && tables.length === 2;
+      }
+    } finally { probe.close(); }
   } catch { valid = false; }
   if (!valid) {
     fs.rmSync(tmp, { force: true });
     throw new HttpError(400, 'That backup file is damaged, so nothing was changed.');
+  }
+  if (!ours) {
+    fs.rmSync(tmp, { force: true });
+    throw new HttpError(400, "That file isn't an Apothecary backup, so nothing was changed.");
   }
   try {
     ctx.db.exec(`VACUUM INTO '${safetyPath.replace(/'/g, "''")}'`);

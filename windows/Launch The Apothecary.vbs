@@ -9,7 +9,7 @@ cfgPath = appDir & "\config.json"
 If fso.FileExists(cfgPath) Then
   txt = fso.OpenTextFile(cfgPath, 1).ReadAll
   Set re = New RegExp
-  re.Pattern = """port""\s*:\s*(\d+)"
+  re.Pattern = """port""\s*:\s*""?\s*(\d+)\s*""?"
   Set m = re.Execute(txt)
   If m.Count > 0 Then port = m(0).SubMatches(0)
 End If
