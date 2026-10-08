@@ -112,7 +112,7 @@ a { color: inherit; text-underline-offset: 3px; }
   outline: 1px solid var(--rule); outline-offset: -6px;
   padding: 30px 24px 22px;
 }
-.panel-ornament { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--parchment); padding: 0 6px; line-height: 0; }
+.panel-ornament { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); line-height: 0; }
 .panel h2 { color: var(--ink-green); text-align: center; margin-bottom: .1em; }
 .panel .panel-subtitle { text-align: center; font-style: italic; color: var(--ink-soft); margin: 0 0 14px; }
 .panel .muted, .sheet .muted { color: var(--ink-soft); font-style: italic; }
@@ -138,7 +138,6 @@ a { color: inherit; text-underline-offset: 3px; }
   font: inherit; color: var(--ink-on-parchment); background: #f7efdc;
   border: 1px solid var(--parchment-edge); border-radius: var(--radius); padding: 8px 10px;
 }
-.field .error { color: var(--oxblood); font-size: .95rem; }
 
 /* ---------- Small screens: cabinet slides in ---------- */
 @media (max-width: 860px) {

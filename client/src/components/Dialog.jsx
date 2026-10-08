@@ -10,6 +10,8 @@ export function Dialog({ open, onClose, title, children, footer, wide = false })
     if (open && !d.open) {
       if (typeof d.showModal === 'function') d.showModal();
       else d.setAttribute('open', '');
+      // Browsers can't focus a button inside a closed dialog, so pick the starting focus here.
+      d.querySelector('[data-autofocus]')?.focus();
     }
     if (!open && d.open) {
       if (typeof d.close === 'function') d.close();

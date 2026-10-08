@@ -36,5 +36,5 @@ it('opens a drawer that is not built yet with a friendly note', async () => {
 
 it('shows a not-found page for unknown paths', async () => {
   at('/nowhere');
-  expect(await screen.findByRole('heading', { name: /lost in the stacks/i })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { level: 1, name: /lost in the stacks/i })).toBeInTheDocument();
 });

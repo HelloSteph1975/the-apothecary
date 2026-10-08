@@ -43,3 +43,12 @@ it('drops old data when the url changes and clears it for a null url', async () 
   expect(result.current.data).toBeNull();
   expect(result.current.loading).toBe(false);
 });
+
+it.each([[true, 'Keep it'], [false, 'Delete']])('focuses the safe button first (danger: %s)', async (danger, name) => {
+  let confirm;
+  function Grab() { confirm = useConfirm(); return null; }
+  render(<ConfirmProvider><Grab /></ConfirmProvider>);
+  act(() => { confirm({ title: 'Sure?', danger, confirmLabel: 'Delete' }); });
+  const btn = await screen.findByRole('button', { name });
+  await waitFor(() => expect(btn).toHaveFocus());
+});

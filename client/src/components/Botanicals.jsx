@@ -47,22 +47,57 @@ export function Chamomile({ size = 120 }) {
 }
 
 export function Lavender({ size = 120 }) {
-  const spike = (x, top, n, lean) => (
-    <g>
-      <path d={`M${x} 118 C${x} 90 ${x + lean / 2} 60 ${x + lean} ${top}`} />
-      {Array.from({ length: n }, (_, i) => {
-        const y = top + 4 + i * 5;
-        const cx = x + lean * (1 - (y - top) / (118 - top));
-        return <g key={i}><ellipse cx={cx - 2.5} cy={y} rx="2" ry="3" /><ellipse cx={cx + 2.5} cy={y + 1} rx="2" ry="3" /></g>;
-      })}
-    </g>
-  );
+  const floretFill = { fill: '#8e7fa3', fillOpacity: 0.6, strokeWidth: 0.7 };
+  const leafFill = { fill: '#8a9a7a', fillOpacity: 0.55, strokeWidth: 0.8 };
+  const base = [35, 116];
+  // One slender spike: a curved stem, then whorled tiers of tiny florets on the top third only.
+  const spike = (key, [cx, cy], [tx, ty]) => {
+    const at = t => [
+      (1 - t) ** 2 * base[0] + 2 * (1 - t) * t * cx + t * t * tx,
+      (1 - t) ** 2 * base[1] + 2 * (1 - t) * t * cy + t * t * ty,
+    ];
+    const tiers = [
+      { t: 0.7, n: 5, w: 5.4 },
+      { t: 0.77, n: 5, w: 5 },
+      { t: 0.84, n: 4, w: 4.2 },
+      { t: 0.91, n: 3, w: 3.2 },
+      { t: 0.97, n: 2, w: 1.8 },
+    ];
+    return (
+      <g key={key}>
+        <path d={`M${base[0]} ${base[1]} Q${cx} ${cy} ${tx} ${ty}`} strokeWidth="0.9" />
+        {tiers.map(({ t, n, w }, ti) => {
+          const [x, y] = at(t);
+          return (
+            <g key={ti}>
+              {ti < 2 && <path d={`M${x - 2.2} ${y + 4.4} L${x} ${y + 2.4} L${x + 2.2} ${y + 4.4}`} strokeWidth="0.6" />}
+              {Array.from({ length: n }, (_, i) => {
+                const f = n === 1 ? 0 : i / (n - 1) - 0.5;
+                const fx = x + f * 2 * w;
+                const fy = y + (i % 2 ? 1.3 : -1.1) - Math.abs(f) * 1.2;
+                return <circle key={i} cx={fx} cy={fy} r={ti < 3 ? 1.7 : 1.4} {...floretFill} />;
+              })}
+            </g>
+          );
+        })}
+        <ellipse cx={tx} cy={ty - 1} rx="1" ry="1.8" {...floretFill} />
+      </g>
+    );
+  };
+  // Long thin blades in opposite pairs, low on the plant only.
+  const pair = (y, angle, len) => [-1, 1].map(side => (
+    <path key={`${y}${side}`} transform={`translate(${base[0] + side * 0.6} ${y}) rotate(${side * angle})`}
+      d={`M0 0 Q1.6 ${-len / 2} 0 ${-len} Q-1.6 ${-len / 2} 0 0 Z`} {...leafFill} />
+  ));
   return (
     <svg viewBox="0 0 70 120" height={size} aria-hidden="true" {...ink}>
-      {spike(30, 8, 8, -4)}
-      {spike(40, 18, 7, 6)}
-      {spike(22, 30, 5, -8)}
-      <path d="M32 112 C24 104 18 102 12 104 M38 108 C46 100 52 98 58 100" />
+      {pair(114, 52, 18)}
+      {pair(107, 40, 17)}
+      {pair(100, 30, 15)}
+      {pair(93, 20, 14)}
+      {spike('a', [28, 70], [16, 16])}
+      {spike('b', [36, 60], [36, 6])}
+      {spike('c', [42, 72], [55, 22])}
     </svg>
   );
 }

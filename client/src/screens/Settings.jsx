@@ -89,7 +89,7 @@ export function Settings() {
         </ParchmentCard>
 
         <ParchmentCard title="Backups">
-          <p>Your cabinet is backed up every night at 9:30 PM and kept for 30 days.</p>
+          <p>With the Windows schedule installed, your cabinet is backed up every night at 9:30 PM. It also backs up when it starts if the last backup is more than a day old. Backups are kept for 30 days, and the newest 5 are always kept.</p>
           <p className="muted">Data folder: {folder.data?.path ?? '…'}</p>
           <p><button type="button" className="btn" onClick={backUp}>Back up now</button></p>
           <ul className="backup-list">

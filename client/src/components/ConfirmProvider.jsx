@@ -27,8 +27,8 @@ export function ConfirmProvider({ children }) {
       <Dialog open={Boolean(req)} onClose={() => done(false)} title={req?.title ?? ''}
         footer={req && (
           <>
-            <Button variant="ghost" onClick={() => done(false)}>Keep it</Button>
-            <Button variant={req.danger ? 'danger' : 'primary'} onClick={() => done(true)} autoFocus>{req.confirmLabel ?? 'OK'}</Button>
+            <Button variant="ghost" onClick={() => done(false)} data-autofocus={req.danger ? '' : undefined}>Keep it</Button>
+            <Button variant={req.danger ? 'danger' : 'primary'} onClick={() => done(true)} data-autofocus={req.danger ? undefined : ''}>{req.confirmLabel ?? 'OK'}</Button>
           </>
         )}>
         {req?.body && <p>{req.body}</p>}

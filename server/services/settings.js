@@ -1,4 +1,5 @@
 import { HttpError } from '../http.js';
+import { transaction } from '../db/connection.js';
 
 export const DEFAULT_SETTINGS = {
   keeper_name: '',
@@ -38,6 +39,6 @@ export function saveSettings(db, input) {
   }
   if (Object.keys(errors).length) throw new HttpError(400, 'Please fix the highlighted fields.', { ...errors });
   const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
-  for (const [k, v] of Object.entries(clean)) up.run(k, v);
+  transaction(db, () => { for (const [k, v] of Object.entries(clean)) up.run(k, v); });
   return getSettings(db);
 }

@@ -32,7 +32,7 @@ describe('scripts/stop.js', () => {
   });
 
   it('reads the port from env, then config.json, then defaults, and rejects a bad APOTHECARY_PORT', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hl-stop-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ap-stop-'));
     onTestFinished(() => fs.rmSync(dir, { recursive: true, force: true }));
     expect(resolvePort(dir, {})).toBe(4197);
     fs.writeFileSync(path.join(dir, 'config.json'), '{"port":4555}');

@@ -8,7 +8,7 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 This is stage 1 of 8.
 
-- Today shows a greeting and the sky timing for where you live.
+- Today shows a greeting and the date; moon and sky timing arrive in a later stage.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
 - Backups run every night, and Settings has Back up now and Restore.
 - The cabinet has eleven drawers. The ones not built yet say so.
