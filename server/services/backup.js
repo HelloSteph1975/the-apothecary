@@ -66,7 +66,7 @@ export function ensureRecentBackup(db, dataDir, now = new Date()) {
 }
 
 export function restoreBackup(ctx, name) {
-  if (!NAME.test(String(name))) throw new HttpError(400, 'That is not a The Apothecary backup.');
+  if (!NAME.test(String(name))) throw new HttpError(400, 'That is not an Apothecary backup.');
   const src = path.join(dirOf(ctx.config.dataDir), name);
   if (!fs.existsSync(src)) throw new HttpError(404, 'Backup not found.');
   const live = path.join(ctx.config.dataDir, 'apothecary.db');
