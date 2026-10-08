@@ -36,7 +36,10 @@ export function sectionsRouter(ctx) {
 
 export function itemsRouter(ctx) {
   const r = Router();
-  r.get('/', (req, res) => res.json(listItems(ctx.db, { ...req.query, include_used_up: req.query.include_used_up === '1' }, today(req))));
+  r.get('/', (req, res) => {
+    check({ supplier_id: 'int' }, { supplier_id: req.query.supplier_id });
+    res.json(listItems(ctx.db, { ...req.query, include_used_up: req.query.include_used_up === '1' }, today(req)));
+  });
   r.get('/:id', (req, res) => res.json(getItemDetail(ctx.db, idParam(req), today(req))));
   r.post('/', (req, res) => res.status(201).json(createItem(ctx.db, req.body)));
   r.patch('/:id', (req, res) => res.json(updateItem(ctx.db, idParam(req), req.body)));

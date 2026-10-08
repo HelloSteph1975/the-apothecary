@@ -51,9 +51,9 @@ export function listItems(db, f, today) {
     where.push('EXISTS (SELECT 1 FROM purchases px WHERE px.item_id = i.id AND px.deleted_at IS NULL AND px.supplier_id = ?)');
     args.push(Number(f.supplier_id));
   }
-  if (f.status === 'low') where.push('i.low_threshold IS NOT NULL AND i.amount <= i.low_threshold');
-  if (f.status === 'expiring') { where.push('i.expires_on >= ? AND i.expires_on <= ?'); args.push(today, addDays(today, 30)); }
-  if (f.status === 'expired') { where.push('i.expires_on < ?'); args.push(today); }
+  if (f.status === 'low') where.push('i.used_up_at IS NULL AND i.low_threshold IS NOT NULL AND i.amount <= i.low_threshold');
+  if (f.status === 'expiring') { where.push('i.used_up_at IS NULL AND i.expires_on >= ? AND i.expires_on <= ?'); args.push(today, addDays(today, 30)); }
+  if (f.status === 'expired') { where.push('i.used_up_at IS NULL AND i.expires_on < ?'); args.push(today); }
   const sql = `${LIST_SQL}${where.map(w => ` AND ${w}`).join('')} ORDER BY s.sort_order, s.id, i.name COLLATE NOCASE`;
   return db.prepare(sql).all(...args).map(r => ({ ...r, status: itemStatus(r, today) }));
 }

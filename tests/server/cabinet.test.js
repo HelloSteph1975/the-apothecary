@@ -9,8 +9,7 @@ async function supplier(h, name = 'Moonvale Botanicals') {
   return (await h().post('/api/suppliers').send({ name })).body;
 }
 
-// Tests marked it.skip call /api/suppliers; Task 3 un-skips them.
-it.skip('creates a bought herb with its first purchase and lists it with status', async () => {
+it('creates a bought herb with its first purchase and lists it with status', async () => {
   t = makeTestContext();
   const h = t.http;
   const sup = await supplier(h);
@@ -28,7 +27,7 @@ it.skip('creates a bought herb with its first purchase and lists it with status'
   });
 });
 
-it.skip('restock adds to the amount, logs the purchase and can set a new expiry', async () => {
+it('restock adds to the amount, logs the purchase and can set a new expiry', async () => {
   t = makeTestContext();
   const h = t.http;
   const sup = await supplier(h);
@@ -42,7 +41,7 @@ it.skip('restock adds to the amount, logs the purchase and can set a new expiry'
   expect(detail.status.low).toBe(false);
 });
 
-it.skip('filters by section, search, status, source and supplier', async () => {
+it('filters by section, search, status, source and supplier', async () => {
   t = makeTestContext();
   const h = t.http;
   const sup = await supplier(h);
@@ -82,7 +81,7 @@ it('rejects bad items and unknown sections with field errors', async () => {
   expect(noSupplier.status).toBe(400);
 });
 
-it.skip('deletes and restores an item, its purchases staying with it', async () => {
+it('deletes and restores an item, its purchases staying with it', async () => {
   t = makeTestContext();
   const h = t.http;
   const sup = await supplier(h);
@@ -124,7 +123,7 @@ it('manages sections: add, rename, reorder, and delete only after moving items',
   expect((await h().get('/api/sections')).body.some(s => s.name === 'Altar tools')).toBe(true);
 });
 
-it.skip('edits and deletes a purchase without touching the amount', async () => {
+it('edits and deletes a purchase without touching the amount', async () => {
   t = makeTestContext();
   const h = t.http;
   const sup = await supplier(h);
@@ -140,4 +139,21 @@ it.skip('edits and deletes a purchase without touching the amount', async () => 
 it('requires today on list and detail', async () => {
   t = makeTestContext();
   expect((await t.http().get('/api/items')).status).toBe(400);
+});
+
+it('used-up items never show in the status lists', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const item = (await h().post('/api/items').send({ section_id: 1, name: 'Yarrow', amount: 1, unit: 'g', low_threshold: 5, expires_on: '2026-09-01' })).body;
+  await h().patch(`/api/items/${item.id}`).send({ used_up: true });
+  for (const status of ['low', 'expiring', 'expired']) {
+    expect((await h().get(`/api/items?today=${TODAY}&status=${status}&include_used_up=1`)).body).toHaveLength(0);
+  }
+});
+
+it('rejects a non-numeric supplier filter', async () => {
+  t = makeTestContext();
+  const res = await t.http().get(`/api/items?today=${TODAY}&supplier_id=abc`);
+  expect(res.status).toBe(400);
+  expect(res.body.details).toHaveProperty('supplier_id');
 });

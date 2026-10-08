@@ -3,6 +3,7 @@ import { HttpError } from '../http.js';
 import { systemRouter } from './system.js';
 import { settingsRouter } from './settings.js';
 import { sectionsRouter, itemsRouter, purchasesRouter, expirySuggestionRoute, storageSpotsRoute } from './cabinet.js';
+import { suppliersRouter } from './suppliers.js';
 
 export function apiRouter(ctx, { onShutdown }) {
   const r = Router();
@@ -11,6 +12,7 @@ export function apiRouter(ctx, { onShutdown }) {
   r.use('/sections', sectionsRouter(ctx));
   r.use('/items', itemsRouter(ctx));
   r.use('/purchases', purchasesRouter(ctx));
+  r.use('/suppliers', suppliersRouter(ctx));
   r.get('/expiry-suggestion', expirySuggestionRoute(ctx));
   r.get('/storage-spots', storageSpotsRoute(ctx));
   r.use(systemRouter(ctx, { onShutdown }));
