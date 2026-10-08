@@ -1,0 +1,31 @@
+import { it, expect, afterEach } from 'vitest';
+import { makeTestContext } from './helpers.js';
+
+let t;
+afterEach(() => t?.cleanup());
+
+it('returns defaults set for Mexico City', async () => {
+  t = makeTestContext();
+  const res = await t.http().get('/api/settings');
+  expect(res.status).toBe(200);
+  expect(res.body).toEqual({
+    keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332',
+    hemisphere: 'north', units: 'metric',
+  });
+});
+
+it('saves good values and trims them', async () => {
+  t = makeTestContext();
+  const res = await t.http().put('/api/settings').send({ keeper_name: '  Stephanie ', latitude: 40.7, longitude: '-74', hemisphere: 'south', units: 'us' });
+  expect(res.status).toBe(200);
+  expect(res.body).toMatchObject({ keeper_name: 'Stephanie', latitude: '40.7', longitude: '-74', hemisphere: 'south', units: 'us' });
+  expect((await t.http().get('/api/settings')).body.keeper_name).toBe('Stephanie');
+});
+
+it('rejects bad values and unknown keys, saving nothing', async () => {
+  t = makeTestContext();
+  const res = await t.http().put('/api/settings').send({ keeper_name: 'Ok', latitude: '91', longitude: 'east', hemisphere: 'up', units: 'stone', colour: 'red', ['__proto__']: 'x' });
+  expect(res.status).toBe(400);
+  expect(Object.keys(res.body.details).sort()).toEqual(['__proto__', 'colour', 'hemisphere', 'latitude', 'longitude', 'units'].sort());
+  expect((await t.http().get('/api/settings')).body.keeper_name).toBe('');
+});

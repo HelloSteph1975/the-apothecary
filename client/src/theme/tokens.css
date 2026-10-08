@@ -1,0 +1,34 @@
+:root {
+  --walnut-950: #120c09;
+  --walnut-900: #1a110c;
+  --walnut-800: #2a1c14;
+  --walnut-700: #3b2a1e;
+  --walnut-600: #5a4030;
+  --parchment: #ece0c4;
+  --parchment-deep: #dccaa2;
+  --parchment-edge: #b8a37a;
+  --ink-on-parchment: #2e1d12;
+  --ink-soft: #5a4330;
+  --text-on-wood: #e9dcc0;
+  --oxblood: #6e1f24;
+  --oxblood-bright: #8e2e34;
+  --oxblood-wash: #f1d9d3;
+  --forest: #2f4a3a;
+  --forest-ink: #24402f;
+  --forest-wash: #dbe5d6;
+  --brass: #b08d57;
+  --brass-dark: #7d6238;
+  --brass-light: #d4b47a;
+  --ink-green: #2b4a2b;
+  --ink-green-soft: #4a6440;
+  --leaf: #6b8455;
+  --rule: #8c7a52;
+
+  --font-head: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'EB Garamond', Georgia, serif;
+
+  --radius: 4px;
+  --cabinet-w: 232px;
+  --gutter: clamp(16px, 3vw, 40px);
+  --focus-color: var(--ink-green);
+}

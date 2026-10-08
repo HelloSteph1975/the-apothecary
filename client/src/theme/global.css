@@ -1,0 +1,221 @@
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text-on-wood);
+  font: 18px/1.55 var(--font-body);
+  background-color: var(--walnut-900);
+  /* Wood grain: long soft stripes under a dark vignette. Made in CSS, no image files. */
+  background-image:
+    radial-gradient(ellipse at 50% 40%, transparent 30%, rgba(10, 6, 4, .75) 100%),
+    repeating-linear-gradient(92deg, rgba(255, 220, 170, .025) 0 2px, transparent 2px 9px, rgba(0, 0, 0, .06) 9px 11px, transparent 11px 23px),
+    linear-gradient(180deg, var(--walnut-800), var(--walnut-900));
+  background-attachment: fixed;
+}
+
+h1, h2, h3 { font-family: var(--font-head); font-weight: 600; line-height: 1.1; margin: 0 0 .4em; }
+h1 { font-size: clamp(2.2rem, 1.6rem + 2vw, 3.2rem); color: var(--ink-green); }
+h2 { font-size: 1.7rem; }
+h3 { font-size: 1.3rem; }
+p { margin: 0 0 1em; }
+a { color: inherit; text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius); }
+.cabinet :focus-visible, .topbar :focus-visible, .toast :focus-visible { outline-color: var(--brass-light); }
+.skip-link:focus-visible { outline-offset: -5px; }
+.btn-secondary:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 3px; }
+.dialog:focus-visible { outline: 3px solid var(--focus-color); outline-offset: -8px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Shell ---------- */
+.app-shell { display: grid; grid-template-columns: var(--cabinet-w) minmax(0, 1fr); min-height: 100vh; }
+.skip-link { position: absolute; left: -999px; top: 8px; background: var(--parchment); color: var(--ink-on-parchment); padding: 8px 12px; z-index: 10; }
+.skip-link:focus { left: 8px; }
+.main { padding: var(--gutter); outline: none; }
+.page { max-width: 1180px; margin: 0 auto; }
+
+/* The page is one parchment sheet with a double-line border and vines in the corners. */
+.sheet {
+  position: relative;
+  color: var(--ink-on-parchment);
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(255, 255, 255, .4), transparent 50%),
+    radial-gradient(ellipse at 90% 95%, rgba(130, 90, 45, .16), transparent 55%),
+    var(--parchment);
+  padding: clamp(28px, 4vw, 56px);
+  border: 1px solid var(--rule);
+  outline: 1px solid var(--rule); outline-offset: -10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  min-height: calc(100vh - 2 * var(--gutter));
+}
+.sheet-vine { position: absolute; width: 170px; height: 170px; pointer-events: none; }
+.sheet-vine.tl { top: 2px; left: 2px; }
+.sheet-vine.tr { top: 2px; right: 2px; transform: scaleX(-1); }
+.sheet-vine.bl { bottom: 2px; left: 2px; transform: scaleY(-1); }
+.sheet-vine.br { bottom: 2px; right: 2px; transform: scale(-1, -1); }
+.sheet > :not(.sheet-vine) { position: relative; }
+.topbar { display: none; }
+
+/* ---------- Cabinet ---------- */
+.cabinet {
+  background: linear-gradient(90deg, var(--walnut-700), var(--walnut-800) 85%, var(--walnut-950));
+  border-right: 4px solid var(--walnut-950);
+  padding: 12px 12px 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.cabinet-brand { text-align: center; text-decoration: none; margin-bottom: 4px; }
+.cabinet-brand .name { font-family: var(--font-head); font-size: 1.6rem; line-height: 1; color: var(--text-on-wood); display: block; }
+.cabinet-brand .flourish { color: var(--brass-light); letter-spacing: .3em; font-size: .8rem; }
+.drawers { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.drawer {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 5px 8px 4px;
+  text-decoration: none;
+  background: linear-gradient(180deg, #5d4130, #45301f);
+  border: 1px solid var(--walnut-950);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 170, .12), 0 2px 0 var(--walnut-950);
+  border-radius: 3px;
+  transition: transform .15s ease;
+}
+.drawer-plate {
+  font-family: var(--font-head); font-size: 1.05rem; font-weight: 600;
+  color: var(--ink-on-parchment);
+  background: linear-gradient(180deg, #eadbb4, #cdb68a);
+  border: 1px solid var(--brass-dark);
+  outline: 1px solid var(--brass); outline-offset: 1px;
+  padding: 1px 12px; border-radius: 2px; min-width: 70%; text-align: center;
+}
+.drawer-knob { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--brass-light), var(--brass-dark)); }
+.drawer:hover { transform: translateX(3px); }
+.drawer[aria-current='page'] { background: linear-gradient(180deg, var(--oxblood-bright), var(--oxblood)); transform: translateX(6px); }
+.cabinet-key { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--brass-light); text-decoration: none; padding: 4px 8px; }
+.cabinet-key[aria-current='page'] { color: var(--text-on-wood); text-decoration: underline; }
+.demo-ribbon { background: var(--forest); color: var(--text-on-wood); text-align: center; font-family: var(--font-head); border-radius: 2px; }
+
+/* ---------- Page header and flourish lines ---------- */
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.page-header .subtitle { color: var(--ink-soft); font-variant: small-caps; letter-spacing: .08em; margin: 0; }
+.flourish-line {
+  text-align: center; font-variant: small-caps; letter-spacing: .14em; color: var(--ink-green-soft);
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  padding: 4px 12px; margin: 0 auto 28px; width: fit-content;
+}
+
+/* ---------- Framed panel (the ParchmentCard component) ---------- */
+.panel {
+  position: relative;
+  color: var(--ink-on-parchment);
+  background: rgba(255, 250, 235, .45);
+  border: 1px solid var(--rule);
+  outline: 1px solid var(--rule); outline-offset: -6px;
+  padding: 30px 24px 22px;
+}
+.panel-ornament { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); line-height: 0; }
+.panel h2 { color: var(--ink-green); text-align: center; margin-bottom: .1em; }
+.panel .panel-subtitle { text-align: center; font-style: italic; color: var(--ink-soft); margin: 0 0 14px; }
+.panel .muted, .sheet .muted { color: var(--ink-soft); font-style: italic; }
+.panel .botanical { position: absolute; right: 12px; bottom: 10px; opacity: .9; pointer-events: none; }
+.panel:has(> .botanical) > .muted { margin-right: 84px; }
+
+/* ---------- Wax seal button ---------- */
+.wax-seal {
+  display: inline-flex; align-items: center; gap: 10px;
+  border: 0; cursor: pointer; padding: 12px 26px 12px 18px;
+  font: 600 1.1rem var(--font-head); color: #f6e6d8;
+  background: radial-gradient(circle at 35% 30%, #a3343b, var(--oxblood) 60%, #4d1418);
+  border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%;
+  box-shadow: inset 0 0 0 3px rgba(255, 200, 190, .18), 0 3px 6px rgba(0, 0, 0, .5);
+}
+.wax-seal:hover { filter: brightness(1.08); }
+
+/* ---------- Grid and forms ---------- */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 24px; }
+.field { display: grid; gap: 4px; margin-bottom: 14px; }
+.field label { font-weight: 600; }
+.field input, .field select {
+  font: inherit; color: var(--ink-on-parchment); background: #f7efdc;
+  border: 1px solid var(--parchment-edge); border-radius: var(--radius); padding: 8px 10px;
+}
+
+/* ---------- Small screens: cabinet slides in ---------- */
+@media (max-width: 860px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--walnut-800); }
+  .cabinet { position: fixed; inset: 0 auto 0 0; width: var(--cabinet-w); transform: translateX(-100%); visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s; z-index: 5; }
+  .cabinet.is-open { transform: none; visibility: visible; transition-delay: 0s; }
+  .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  .drawer:hover, .drawer[aria-current='page'] { transform: none; }
+}
+
+/* ---------- Shared components: buttons, dialogs, fields, toasts ---------- */
+.btn {
+  --btn-bg: var(--forest); --btn-fg: #f6efdc; --btn-edge: var(--walnut-950);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 42px; padding: 8px 20px;
+  font: 600 1.05rem var(--font-head); letter-spacing: .02em; text-decoration: none; cursor: pointer;
+  color: var(--btn-fg); background: var(--btn-bg);
+  border: 1px solid var(--btn-edge); border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 2px 0 var(--btn-edge);
+}
+.btn:hover { filter: brightness(1.1); color: var(--btn-fg); }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--btn-edge); }
+.btn:disabled, .btn[aria-disabled='true'] { opacity: .55; cursor: not-allowed; filter: none; transform: none; }
+.btn-primary { --btn-bg: var(--forest); --btn-fg: #f6efdc; --btn-edge: #17281d; }
+.btn-secondary { --btn-bg: #f7efdc; --btn-fg: var(--ink-on-parchment); --btn-edge: var(--brass-dark); outline: 1px solid var(--brass); outline-offset: 2px; }
+.btn-ghost { --btn-bg: transparent; --btn-fg: var(--ink-on-parchment); --btn-edge: transparent; box-shadow: none; }
+.btn-ghost:hover { background: rgba(125, 98, 56, .15); filter: none; }
+.btn-danger { --btn-bg: var(--oxblood); --btn-fg: #f6e6d8; --btn-edge: #3d0f12; }
+.btn-sm { min-height: 34px; padding: 5px 14px; font-size: .95rem; gap: 6px; }
+.btn-icon { padding: 0; width: 42px; }
+.btn-sm.btn-icon { width: 34px; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; cursor: pointer;
+  color: inherit; background: transparent; border: 1px solid transparent; border-radius: var(--radius);
+}
+.icon-btn:hover { border-color: var(--brass); }
+.topbar .icon-btn { color: var(--text-on-wood); }
+
+.dialog {
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+  color: var(--ink-on-parchment); background: var(--parchment);
+  border: 1px solid var(--rule); outline: 1px solid var(--rule); outline-offset: -8px;
+  border-radius: 2px; box-shadow: 0 16px 40px rgba(0, 0, 0, .6);
+}
+.dialog[open] { display: flex; flex-direction: column; }
+.dialog-wide { width: min(780px, calc(100vw - 32px)); }
+.dialog::backdrop { background: rgba(18, 12, 9, .65); }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 16px 8px 26px; }
+.dialog-head h2 { margin: 0; font-size: 1.5rem; color: var(--ink-green); }
+.dialog-body { padding: 8px 26px 16px; overflow-y: auto; }
+.dialog-body > :last-child { margin-bottom: 0; }
+.dialog-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 26px 22px; }
+
+.field .input, .input {
+  font: inherit; color: var(--ink-on-parchment); background: #f7efdc;
+  border: 1px solid var(--parchment-edge); border-radius: var(--radius); padding: 8px 10px; width: 100%;
+}
+textarea.input { resize: vertical; }
+.field-hint { color: var(--ink-soft); font-size: .95rem; }
+.field-error { color: var(--oxblood); font-size: .95rem; font-weight: 600; }
+.field.has-error .input { border-color: var(--oxblood); }
+.checkbox { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.checkbox input { width: 18px; height: 18px; accent-color: var(--forest); }
+
+.toast-region { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; display: grid; justify-items: center; }
+.toast {
+  display: flex; align-items: center; gap: 14px; padding: 10px 18px;
+  color: var(--text-on-wood); background: var(--walnut-800);
+  border: 1px solid var(--brass); outline: 1px solid var(--walnut-950); outline-offset: 2px;
+  border-radius: var(--radius); box-shadow: 0 8px 20px rgba(0, 0, 0, .55);
+}
+.toast-action { font: 600 1rem var(--font-head); color: var(--brass-light); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 4px; }
+
+.backup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.backup-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dotted var(--ink-soft); }
+.backup-list li span { overflow-wrap: anywhere; }
