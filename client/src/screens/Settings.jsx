@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ParchmentCard } from '../components/ParchmentCard.jsx';
+import { Field, TextInput, Select } from '../components/Field.jsx';
 import { WaxSeal } from '../components/WaxSeal.jsx';
 import { useSettings } from '../components/SettingsProvider.jsx';
 import { useConfirm } from '../components/ConfirmProvider.jsx';
@@ -14,17 +15,6 @@ const FIELDS = [
   { key: 'latitude', label: 'Latitude', hint: 'For moon and sky timing. Mexico City is 19.4326.' },
   { key: 'longitude', label: 'Longitude', hint: 'West is negative. Mexico City is -99.1332.' },
 ];
-
-function Field({ id, label, hint, error, children }) {
-  return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
-      {children}
-      {hint && <small className="muted">{hint}</small>}
-      {error && <span className="error" role="alert">{error}</span>}
-    </div>
-  );
-}
 
 export function Settings() {
   const { settings, reload } = useSettings();
@@ -81,21 +71,18 @@ export function Settings() {
         <ParchmentCard title="You and your sky">
           <form onSubmit={save} noValidate>
             {FIELDS.map(f => (
-              <Field key={f.key} id={`s-${f.key}`} label={f.label} hint={f.hint} error={errors[f.key]}>
-                <input id={`s-${f.key}`} value={form[f.key]} onChange={e => set(f.key, e.target.value)} />
+              <Field key={f.key} label={f.label} hint={f.hint} error={errors[f.key]}>
+                <TextInput value={form[f.key]} onChange={e => set(f.key, e.target.value)}
+                  inputMode={f.key === 'latitude' || f.key === 'longitude' ? 'decimal' : undefined} />
               </Field>
             ))}
-            <Field id="s-hemisphere" label="Hemisphere" hint="Turns the Wheel of the Year for where you live." error={errors.hemisphere}>
-              <select id="s-hemisphere" value={form.hemisphere} onChange={e => set('hemisphere', e.target.value)}>
-                <option value="north">Northern</option>
-                <option value="south">Southern</option>
-              </select>
+            <Field label="Hemisphere" hint="Turns the Wheel of the Year for where you live." error={errors.hemisphere}>
+              <Select value={form.hemisphere} onChange={e => set('hemisphere', e.target.value)}
+                options={[{ value: 'north', label: 'Northern' }, { value: 'south', label: 'Southern' }]} />
             </Field>
-            <Field id="s-units" label="Units" error={errors.units}>
-              <select id="s-units" value={form.units} onChange={e => set('units', e.target.value)}>
-                <option value="metric">Metric (g, ml)</option>
-                <option value="us">US (oz, fl oz)</option>
-              </select>
+            <Field label="Units" error={errors.units}>
+              <Select value={form.units} onChange={e => set('units', e.target.value)}
+                options={[{ value: 'metric', label: 'Metric (g, ml)' }, { value: 'us', label: 'US (oz, fl oz)' }]} />
             </Field>
             <WaxSeal type="submit">Save settings</WaxSeal>
           </form>

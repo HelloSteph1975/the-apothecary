@@ -27,7 +27,7 @@ beforeEach(() => {
     if (url === '/api/settings') return json(saved);
     if (url === '/api/backups' && opts.method === 'POST') return new Response(JSON.stringify({ name: 'apothecary-2026-10-08.db' }), { status: 201 });
     if (url === '/api/backups') return json([{ name: 'apothecary-2026-10-07.db', size: 4096, modified: '2026-10-07T21:30:00.000Z' }]);
-    if (url === '/api/data-folder') return json({ path: 'C:\Users\me\Documents\The Apothecary Data' });
+    if (url === '/api/data-folder') return json({ path: 'C:\\Users\\me\\Documents\\The Apothecary Data' });
     return json({});
   });
 });
@@ -57,6 +57,7 @@ it('shows the server error next to the field', async () => {
   await user.type(lat, '99');
   await user.click(screen.getByRole('button', { name: 'Save settings' }));
   expect(await screen.findByText('Not a valid value')).toBeInTheDocument();
+  expect(lat).toHaveAttribute('aria-invalid', 'true');
 });
 
 it('lists backups, backs up now, and shows the data folder', async () => {
