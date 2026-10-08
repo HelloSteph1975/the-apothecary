@@ -69,17 +69,24 @@ export function Lavender({ size = 120 }) {
 
 // A climbing vine for the corners of the page sheet. Drawn for the top-left corner; CSS mirrors it for the others.
 export function VineCorner({ className }) {
-  const leaf = (x, y, r) => <path transform={`translate(${x} ${y}) rotate(${r})`} d="M0 0 C4 -6 12 -7 16 -2 C11 2 5 3 0 0 Z" fill="#6b8455" stroke="#4a6440" strokeWidth=".8" />;
+  const leaf = (x, y, r, k = 1) => <path key={`${x}-${y}`} transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`} d="M0 0 C4 -6 12 -7 16 -2 C11 2 5 3 0 0 Z" fill="#6b8455" stroke="#4a6440" strokeWidth=".8" />;
+  const flower = (x, y, k) => (
+    <g transform={`translate(${x} ${y}) scale(${k})`}>
+      {Array.from({ length: 8 }, (_, i) => <ellipse key={i} transform={`rotate(${i * 45}) translate(0 -6)`} rx="2.2" ry="4.5" fill="#f4ecd8" stroke="#5a4330" strokeWidth=".7" />)}
+      <circle r="2.6" fill="#c9a24a" stroke="#5a4330" strokeWidth=".6" />
+    </g>
+  );
   return (
-    <svg className={className} viewBox="0 0 120 120" aria-hidden="true">
-      <path d="M6 116 C8 80 14 50 30 30 C46 12 76 6 116 6" fill="none" stroke="#4a6440" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M18 60 C26 58 32 52 34 44 M52 18 C56 26 62 30 70 30" fill="none" stroke="#4a6440" strokeWidth="1.1" strokeLinecap="round" />
-      {leaf(10, 92, -70)}{leaf(14, 72, -110)}{leaf(22, 50, -60)}{leaf(34, 44, -150)}
-      {leaf(40, 22, -30)}{leaf(60, 12, -10)}{leaf(70, 30, 20)}{leaf(88, 8, 10)}
-      <g transform="translate(30 30)">
-        {Array.from({ length: 8 }, (_, i) => <ellipse key={i} transform={`rotate(${i * 45}) translate(0 -6)`} rx="2.2" ry="4.5" fill="#f4ecd8" stroke="#5a4330" strokeWidth=".7" />)}
-        <circle r="2.6" fill="#c9a24a" stroke="#5a4330" strokeWidth=".6" />
-      </g>
+    <svg className={className} viewBox="0 0 170 170" aria-hidden="true">
+      <path d="M8 164 C10 114 20 70 42 42 C64 16 106 8 164 8" fill="none" stroke="#4a6440" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M26 84 C36 82 44 74 47 62 M72 22 C78 34 88 40 100 40 M14 130 C22 128 28 122 30 114 M118 11 C122 20 130 24 138 23" fill="none" stroke="#4a6440" strokeWidth="1.4" strokeLinecap="round" />
+      {leaf(10, 146, -70)}{leaf(12, 128, -110)}{leaf(15, 112, -60)}{leaf(18, 96, -115)}
+      {leaf(24, 78, -55)}{leaf(30, 62, -125)}{leaf(38, 50, -50)}{leaf(47, 62, -150, .9)}
+      {leaf(52, 34, -110)}{leaf(58, 28, -25)}{leaf(72, 22, -120)}{leaf(80, 18, -15)}
+      {leaf(100, 40, 20, .9)}{leaf(96, 12, -140)}{leaf(104, 10, -8)}{leaf(122, 8, -130)}
+      {leaf(130, 8, 8)}{leaf(138, 23, 20, .9)}{leaf(150, 8, -125, .9)}{leaf(14, 130, -40, .8)}
+      {flower(42, 42, 1.25)}
+      {flower(108, 12, .8)}
     </svg>
   );
 }

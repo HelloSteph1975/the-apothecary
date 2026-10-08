@@ -49,7 +49,7 @@ a { color: inherit; text-underline-offset: 3px; }
   box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
   min-height: calc(100vh - 2 * var(--gutter));
 }
-.sheet-vine { position: absolute; width: 120px; height: 120px; pointer-events: none; }
+.sheet-vine { position: absolute; width: 170px; height: 170px; pointer-events: none; }
 .sheet-vine.tl { top: 2px; left: 2px; }
 .sheet-vine.tr { top: 2px; right: 2px; transform: scaleX(-1); }
 .sheet-vine.bl { bottom: 2px; left: 2px; transform: scaleY(-1); }
@@ -61,17 +61,17 @@ a { color: inherit; text-underline-offset: 3px; }
 .cabinet {
   background: linear-gradient(90deg, var(--walnut-700), var(--walnut-800) 85%, var(--walnut-950));
   border-right: 4px solid var(--walnut-950);
-  padding: 18px 12px;
-  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 12px 8px;
+  display: flex; flex-direction: column; gap: 4px;
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
-.cabinet-brand { text-align: center; text-decoration: none; margin-bottom: 8px; }
+.cabinet-brand { text-align: center; text-decoration: none; margin-bottom: 4px; }
 .cabinet-brand .name { font-family: var(--font-head); font-size: 1.6rem; line-height: 1; color: var(--text-on-wood); display: block; }
 .cabinet-brand .flourish { color: var(--brass-light); letter-spacing: .3em; font-size: .8rem; }
-.drawers { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.drawers { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .drawer {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 8px 8px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 5px 8px 4px;
   text-decoration: none;
   background: linear-gradient(180deg, #5d4130, #45301f);
   border: 1px solid var(--walnut-950);
@@ -87,10 +87,10 @@ a { color: inherit; text-underline-offset: 3px; }
   outline: 1px solid var(--brass); outline-offset: 1px;
   padding: 1px 12px; border-radius: 2px; min-width: 70%; text-align: center;
 }
-.drawer-knob { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--brass-light), var(--brass-dark)); }
+.drawer-knob { width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, var(--brass-light), var(--brass-dark)); }
 .drawer:hover { transform: translateX(3px); }
 .drawer[aria-current='page'] { background: linear-gradient(180deg, var(--oxblood-bright), var(--oxblood)); transform: translateX(6px); }
-.cabinet-key { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--brass-light); text-decoration: none; padding: 8px; }
+.cabinet-key { margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--brass-light); text-decoration: none; padding: 4px 8px; }
 .cabinet-key[aria-current='page'] { color: var(--text-on-wood); text-decoration: underline; }
 .demo-ribbon { background: var(--forest); color: var(--text-on-wood); text-align: center; font-family: var(--font-head); border-radius: 2px; }
 
@@ -117,6 +117,7 @@ a { color: inherit; text-underline-offset: 3px; }
 .panel .panel-subtitle { text-align: center; font-style: italic; color: var(--ink-soft); margin: 0 0 14px; }
 .panel .muted, .sheet .muted { color: var(--ink-soft); font-style: italic; }
 .panel .botanical { position: absolute; right: 12px; bottom: 10px; opacity: .9; pointer-events: none; }
+.panel:has(> .botanical) > .muted { margin-right: 84px; }
 
 /* ---------- Wax seal button ---------- */
 .wax-seal {
