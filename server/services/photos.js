@@ -38,3 +38,18 @@ export function untrashLivePhotos(db, dataDir) {
   }
   return n;
 }
+
+const OWNER_CASCADE = 'UPDATE photos SET deleted_at = ? WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL';
+
+export function cascadeDeletePhotos(ctx, ownerType, ownerId, stamp) {
+  const rows = ctx.db.prepare('SELECT filename FROM photos WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL').all(ownerType, ownerId);
+  ctx.db.prepare(OWNER_CASCADE).run(stamp, ownerType, ownerId);
+  for (const p of rows) trashPhotoFile(ctx.config.dataDir, p.filename);
+}
+
+// Brings back only the photos removed together with the owner (same stamp), not ones deleted earlier on their own.
+export function cascadeRestorePhotos(ctx, ownerType, ownerId, stamp) {
+  const rows = ctx.db.prepare('SELECT filename FROM photos WHERE owner_type = ? AND owner_id = ? AND deleted_at = ?').all(ownerType, ownerId, stamp);
+  ctx.db.prepare('UPDATE photos SET deleted_at = NULL WHERE owner_type = ? AND owner_id = ? AND deleted_at = ?').run(ownerType, ownerId, stamp);
+  for (const p of rows) restorePhotoFile(ctx.config.dataDir, p.filename);
+}

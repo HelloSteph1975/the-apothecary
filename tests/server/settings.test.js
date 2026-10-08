@@ -11,6 +11,8 @@ it('returns defaults set for Mexico City', async () => {
   expect(res.body).toEqual({
     keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332',
     hemisphere: 'north', units: 'metric',
+    expiry_dried_leaf: '12', expiry_dried_flower: '12', expiry_root: '24', expiry_bark: '24', expiry_seed: '24',
+    expiry_resin: '36', expiry_powder: '6', expiry_tincture: '60', expiry_oil: '12',
   });
 });
 
