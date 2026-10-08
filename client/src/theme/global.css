@@ -21,7 +21,11 @@ h2 { font-size: 1.7rem; }
 h3 { font-size: 1.3rem; }
 p { margin: 0 0 1em; }
 a { color: inherit; text-underline-offset: 3px; }
-:focus-visible { outline: none; box-shadow: var(--focus); border-radius: var(--radius); }
+:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius); }
+.cabinet :focus-visible, .topbar :focus-visible, .toast :focus-visible { outline-color: var(--brass-light); }
+.skip-link:focus-visible { outline-offset: -5px; }
+.btn-secondary:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 3px; }
+.dialog:focus-visible { outline: 3px solid var(--focus-color); outline-offset: -8px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- Shell ---------- */
@@ -139,8 +143,8 @@ a { color: inherit; text-underline-offset: 3px; }
 @media (max-width: 860px) {
   .app-shell { grid-template-columns: 1fr; }
   .topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--walnut-800); }
-  .cabinet { position: fixed; inset: 0 auto 0 0; width: var(--cabinet-w); transform: translateX(-100%); transition: transform .2s ease; z-index: 5; }
-  .cabinet.is-open { transform: none; }
+  .cabinet { position: fixed; inset: 0 auto 0 0; width: var(--cabinet-w); transform: translateX(-100%); visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s; z-index: 5; }
+  .cabinet.is-open { transform: none; visibility: visible; transition-delay: 0s; }
   .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 4; }
 }
 

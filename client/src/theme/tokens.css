@@ -30,5 +30,5 @@
   --radius: 4px;
   --cabinet-w: 232px;
   --gutter: clamp(16px, 3vw, 40px);
-  --focus: 0 0 0 3px var(--brass-light);
+  --focus-color: var(--ink-green);
 }
