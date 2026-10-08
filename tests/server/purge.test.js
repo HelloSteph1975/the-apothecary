@@ -2,6 +2,7 @@ import { it, expect, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { makeTestContext } from './helpers.js';
+import { backupNow } from '../../server/services/backup.js';
 import { purgeSoftDeleted, purgeTrash } from '../../server/services/purge.js';
 
 let t;
@@ -68,4 +69,18 @@ it('keeps a deleted section while a deleted-but-unpurged item still sits in it',
   db.prepare('UPDATE cabinet_sections SET deleted_at = ? WHERE id = ?').run(old, sec);
   expect(purgeSoftDeleted(db, t.dataDir).cabinet_sections).toBe(0);
   expect(db.prepare('SELECT id FROM cabinet_sections WHERE id = ?').get(sec)).toBeDefined();
+});
+
+it('keeps the file of a purged item photo that a kept backup still needs', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const item = Number(db.prepare("INSERT INTO items (section_id, name, amount, unit) VALUES (1, 'Gone', 1, 'g')").run().lastInsertRowid);
+  db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('item', ?, '3-cccccccc.jpg')").run(item);
+  fs.writeFileSync(path.join(t.dataDir, 'photos', '3-cccccccc.jpg'), 'x');
+  backupNow(db, t.dataDir);
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  db.prepare('UPDATE items SET deleted_at = ? WHERE id = ?').run(old, item);
+  expect(purgeSoftDeleted(db, t.dataDir).photos).toBe(1);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', '3-cccccccc.jpg'))).toBe(true);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '3-cccccccc.jpg'))).toBe(false);
 });

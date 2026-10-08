@@ -30,7 +30,7 @@ export function photosRouter(ctx) {
     const { owner_type, caption } = body;
     const owner_id = Number(body.owner_id);
     if (!req.file || !ALLOWED_TYPES.includes(req.file.mimetype)) throw new HttpError(400, 'Please choose a JPEG, PNG, WebP or GIF image.');
-    const table = Object.hasOwn(PHOTO_OWNERS, owner_type) ? PHOTO_OWNERS[owner_type] : null;
+    const table = typeof owner_type === 'string' && Object.hasOwn(PHOTO_OWNERS, owner_type) ? PHOTO_OWNERS[owner_type] : null;
     if (!table || !ctx.db.prepare(`SELECT id FROM ${table} WHERE id = ? AND deleted_at IS NULL`).get(owner_id)) {
       throw new HttpError(400, 'That photo has nothing to belong to.');
     }
@@ -50,7 +50,11 @@ export function photosRouter(ctx) {
 
   // Making a photo the cover clears the others for that owner.
   r.patch('/:id', (req, res, next) => {
-    if (req.body?.is_cover !== true && req.body?.is_cover !== 1 && req.body?.is_cover !== 'true') return next();
+    const wanted = req.body?.is_cover;
+    if (wanted !== true && wanted !== 1 && wanted !== 'true') {
+      if (req.body && 'is_cover' in req.body) delete req.body.is_cover; // un-covering would leave the owner with no cover
+      return next();
+    }
     const photo = repos(ctx.db).photos.get(idParam(req));
     if (!photo) throw notFound();
     transaction(ctx.db, () => {
@@ -68,11 +72,16 @@ export function photosRouter(ctx) {
     onDelete: (ctx, row) => {
       trashPhotoFile(ctx.config.dataDir, row.filename);
       if (row.is_cover) {
+        ctx.db.prepare('UPDATE photos SET is_cover = 0 WHERE id = ?').run(row.id);
         const next = ctx.db.prepare('SELECT * FROM photos WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL ORDER BY sort_order, id LIMIT 1').get(row.owner_type, row.owner_id);
         if (next) setCover(ctx.db, next);
       }
     },
-    onRestore: (ctx, row) => restorePhotoFile(ctx.config.dataDir, row.filename),
+    onRestore: (ctx, row) => {
+      restorePhotoFile(ctx.config.dataDir, row.filename);
+      const hasCover = ctx.db.prepare('SELECT 1 FROM photos WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL AND is_cover = 1').get(row.owner_type, row.owner_id);
+      if (!hasCover) setCover(ctx.db, row);
+    },
   }));
   return r;
 }

@@ -54,18 +54,6 @@ it('deleting an item trashes its photos and undo brings them back', async () => 
   expect(fs.existsSync(path.join(t.dataDir, 'photos', photo.filename))).toBe(true);
 });
 
-it('purgeTrash removes old trash files only', async () => {
-  t = makeTestContext();
-  const { purgeTrash } = await import('../../server/services/purge.js');
-  const trash = path.join(t.dataDir, 'photos', '_trash');
-  fs.writeFileSync(path.join(trash, 'old.jpg'), 'x');
-  fs.writeFileSync(path.join(trash, 'new.jpg'), 'x');
-  const old = new Date(Date.now() - 40 * 86400000);
-  fs.utimesSync(path.join(trash, 'old.jpg'), old, old);
-  purgeTrash(t.dataDir, 30);
-  expect(fs.readdirSync(trash)).toEqual(['new.jpg']);
-});
-
 it('does not serve trashed files, even with an encoded path', async () => {
   t = makeTestContext();
   const h = t.http;
@@ -90,7 +78,7 @@ it('blocks trash paths with doubled, backslash and encoded-slash tricks', async 
   }
 });
 
-it('rejects a non-multipart upload with 400 and cleans up on insert failure', async () => {
+it('rejects a non-multipart upload with 400', async () => {
   t = makeTestContext();
   const res = await t.http().post('/api/photos').send({ owner_type: 'item', owner_id: 1 });
   expect(res.status).toBe(400);
@@ -138,4 +126,56 @@ it('deleting a supplier trashes its photos and undo restores them', async () => 
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', photo.filename))).toBe(true);
   await h().post(del.body.restore);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', photo.filename))).toBe(true);
+});
+
+it('hands the cover on when the cover is deleted, and keeps one cover after undo', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const item = (await h().post('/api/items').send({ section_id: 1, name: 'Calendula', amount: 10, unit: 'g' })).body;
+  const a = await upload(h, 'item', item.id);
+  const b = await upload(h, 'item', item.id);
+  const del = await h().delete(`/api/photos/${a.id}`);
+  expect((await h().get(`/api/photos/${b.id}`)).body.is_cover).toBe(1);
+  await h().post(del.body.restore);
+  const list = (await h().get(`/api/photos?owner_type=item&owner_id=${item.id}`)).body;
+  expect(list.map(p => [p.id, p.is_cover])).toEqual([[b.id, 1], [a.id, 0]]);
+});
+
+it('restoring the only photo makes it the cover again', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const item = (await h().post('/api/items').send({ section_id: 1, name: 'Calendula', amount: 10, unit: 'g' })).body;
+  const a = await upload(h, 'item', item.id);
+  const del = await h().delete(`/api/photos/${a.id}`);
+  expect((await h().post(del.body.restore)).body.is_cover).toBe(1);
+});
+
+it('deleting and restoring an item keeps the same single cover', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const item = (await h().post('/api/items').send({ section_id: 1, name: 'Calendula', amount: 10, unit: 'g' })).body;
+  await upload(h, 'item', item.id);
+  const b = await upload(h, 'item', item.id);
+  await h().patch(`/api/photos/${b.id}`).send({ is_cover: true });
+  const del = await h().delete(`/api/items/${item.id}`);
+  await h().post(del.body.restore);
+  const list = (await h().get(`/api/photos?owner_type=item&owner_id=${item.id}`)).body;
+  expect(list.filter(p => p.is_cover).map(p => p.id)).toEqual([b.id]);
+});
+
+it('refuses a non-string owner type', async () => {
+  t = makeTestContext();
+  const res = await t.http().post('/api/photos').field('owner_type', 'item').field('owner_type', 'item').field('owner_id', '1')
+    .attach('file', JPEG, { filename: 'a.jpg', contentType: 'image/jpeg' });
+  expect(res.status).toBe(400);
+});
+
+it('ignores is_cover false so an owner never loses its cover', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const item = (await h().post('/api/items').send({ section_id: 1, name: 'Calendula', amount: 10, unit: 'g' })).body;
+  const a = await upload(h, 'item', item.id);
+  const res = await h().patch(`/api/photos/${a.id}`).send({ is_cover: false, caption: 'Hi' });
+  expect(res.status).toBe(200);
+  expect(res.body).toMatchObject({ is_cover: 1, caption: 'Hi' });
 });
