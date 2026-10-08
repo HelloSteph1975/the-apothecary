@@ -766,7 +766,7 @@ it('shows a not-found page for unknown paths', async () => {
 
 - [ ] **Step 3: Write `client/src/theme/tokens.css`**
 
-Contrast pairs checked: `--ink-on-parchment` on `--parchment` 13:1, `--ink-soft` on `--parchment` 7.1:1, `--oxblood` on `--parchment` 8.6:1, `--forest-ink` on `--parchment` 8.0:1, `--text-on-wood` on `--walnut-800` 12:1, `--brass-light` on `--walnut-800` 7.9:1. `--brass` is for borders and decoration, and for text only on `--walnut-900`/`--walnut-800`.
+Contrast pairs checked: `--ink-green` on `--parchment` 7.4:1, `--ink-green-soft` on `--parchment` 5.2:1, `--ink-on-parchment` on `--parchment` 13:1, `--ink-soft` on `--parchment` 7.1:1, `--oxblood` on `--parchment` 8.6:1, `--forest-ink` on `--parchment` 8.0:1, `--text-on-wood` on `--walnut-800` 12:1, `--brass-light` on `--walnut-800` 7.9:1. `--brass` is for borders and decoration, and for text only on `--walnut-900`/`--walnut-800`.
 
 ```css
 :root {
@@ -790,6 +790,10 @@ Contrast pairs checked: `--ink-on-parchment` on `--parchment` 13:1, `--ink-soft`
   --brass: #b08d57;
   --brass-dark: #7d6238;
   --brass-light: #d4b47a;
+  --ink-green: #2b4a2b;
+  --ink-green-soft: #4a6440;
+  --leaf: #6b8455;
+  --rule: #8c7a52;
 
   --font-head: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'EB Garamond', Georgia, serif;
@@ -822,7 +826,7 @@ body {
 }
 
 h1, h2, h3 { font-family: var(--font-head); font-weight: 600; line-height: 1.1; margin: 0 0 .4em; }
-h1 { font-size: clamp(2.2rem, 1.6rem + 2vw, 3.2rem); color: var(--text-on-wood); }
+h1 { font-size: clamp(2.2rem, 1.6rem + 2vw, 3.2rem); color: var(--ink-green); }
 h2 { font-size: 1.7rem; }
 h3 { font-size: 1.3rem; }
 p { margin: 0 0 1em; }
@@ -836,6 +840,27 @@ a { color: inherit; text-underline-offset: 3px; }
 .skip-link:focus { left: 8px; }
 .main { padding: var(--gutter); outline: none; }
 .page { max-width: 1180px; margin: 0 auto; }
+
+/* The page is one parchment sheet with a double-line border and vines in the corners. */
+.sheet {
+  position: relative;
+  color: var(--ink-on-parchment);
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(255, 255, 255, .4), transparent 50%),
+    radial-gradient(ellipse at 90% 95%, rgba(130, 90, 45, .16), transparent 55%),
+    var(--parchment);
+  padding: clamp(28px, 4vw, 56px);
+  border: 1px solid var(--rule);
+  outline: 1px solid var(--rule); outline-offset: -10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  min-height: calc(100vh - 2 * var(--gutter));
+}
+.sheet-vine { position: absolute; width: 120px; height: 120px; pointer-events: none; }
+.sheet-vine.tl { top: 2px; left: 2px; }
+.sheet-vine.tr { top: 2px; right: 2px; transform: scaleX(-1); }
+.sheet-vine.bl { bottom: 2px; left: 2px; transform: scaleY(-1); }
+.sheet-vine.br { bottom: 2px; right: 2px; transform: scale(-1, -1); }
+.sheet > :not(.sheet-vine) { position: relative; }
 .topbar { display: none; }
 
 /* ---------- Cabinet ---------- */
@@ -875,33 +900,29 @@ a { color: inherit; text-underline-offset: 3px; }
 .cabinet-key[aria-current='page'] { color: var(--text-on-wood); text-decoration: underline; }
 .demo-ribbon { background: var(--forest); color: var(--text-on-wood); text-align: center; font-family: var(--font-head); border-radius: 2px; }
 
-/* ---------- Page header ---------- */
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-.page-header .subtitle { color: var(--brass-light); font-style: italic; margin: 0; }
+/* ---------- Page header and flourish lines ---------- */
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.page-header .subtitle { color: var(--ink-soft); font-variant: small-caps; letter-spacing: .08em; margin: 0; }
+.flourish-line {
+  text-align: center; font-variant: small-caps; letter-spacing: .14em; color: var(--ink-green-soft);
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  padding: 4px 12px; margin: 0 auto 28px; width: fit-content;
+}
 
-/* ---------- Parchment card ---------- */
-.parchment {
+/* ---------- Framed panel (the ParchmentCard component) ---------- */
+.panel {
   position: relative;
   color: var(--ink-on-parchment);
-  background:
-    radial-gradient(ellipse at 20% 15%, rgba(255, 255, 255, .35), transparent 55%),
-    radial-gradient(ellipse at 85% 90%, rgba(120, 80, 40, .18), transparent 60%),
-    var(--parchment);
-  padding: 22px 24px;
-  /* Soft torn edge: an SVG mask drawn in this repo (see ParchmentCard.jsx). */
-  -webkit-mask: var(--torn-mask) center / 100% 100% no-repeat;
-  mask: var(--torn-mask) center / 100% 100% no-repeat;
+  background: rgba(255, 250, 235, .45);
+  border: 1px solid var(--rule);
+  outline: 1px solid var(--rule); outline-offset: -6px;
+  padding: 30px 24px 22px;
 }
-.parchment-frame { position: relative; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
-.parchment::after { content: ''; position: absolute; inset: 9px; border: 1px solid var(--parchment-edge); pointer-events: none; }
-.parchment h2 { color: var(--ink-on-parchment); text-align: center; }
-.parchment .muted { color: var(--ink-soft); font-style: italic; }
-.brass-corner { position: absolute; width: 34px; height: 34px; z-index: 1; pointer-events: none; }
-.brass-corner.tl { top: -4px; left: -4px; }
-.brass-corner.tr { top: -4px; right: -4px; transform: scaleX(-1); }
-.brass-corner.bl { bottom: -4px; left: -4px; transform: scaleY(-1); }
-.brass-corner.br { bottom: -4px; right: -4px; transform: scale(-1, -1); }
-.parchment .botanical { position: absolute; right: 14px; bottom: 12px; opacity: .85; pointer-events: none; }
+.panel-ornament { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--parchment); padding: 0 6px; line-height: 0; }
+.panel h2 { color: var(--ink-green); text-align: center; margin-bottom: .1em; }
+.panel .panel-subtitle { text-align: center; font-style: italic; color: var(--ink-soft); margin: 0 0 14px; }
+.panel .muted, .sheet .muted { color: var(--ink-soft); font-style: italic; }
+.panel .botanical { position: absolute; right: 12px; bottom: 10px; opacity: .9; pointer-events: none; }
 
 /* ---------- Wax seal button ---------- */
 .wax-seal {
@@ -1004,6 +1025,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Cabinet, Brand } from './Cabinet.jsx';
+import { VineCorner } from './Botanicals.jsx';
 
 export function Layout() {
   const [open, setOpen] = useState(false);
@@ -1038,7 +1060,10 @@ export function Layout() {
       <Cabinet id="cabinet" open={open} />
       {open && <div className="scrim" onClick={() => setOpen(false)} aria-hidden="true" />}
       <main id="main" className="main" tabIndex={-1} ref={mainRef}>
-        <div className="page"><Outlet /></div>
+        <div className="page sheet">
+          {['tl', 'tr', 'bl', 'br'].map(c => <VineCorner key={c} className={`sheet-vine ${c}`} />)}
+          <Outlet />
+        </div>
       </main>
     </div>
   );
@@ -1218,7 +1243,7 @@ git commit -m "Add the cabinet side bar, theme and client shell" -m "Co-Authored
 
 ---
 
-### Task 6: Parchment cards, brass corners, wax seal, botanicals and the Today page
+### Task 6: Framed panels, vines, wax seal, botanicals and the Today page
 
 **Files:**
 - Create: `client/src/components/ParchmentCard.jsx`, `client/src/components/WaxSeal.jsx`, `client/src/components/Botanicals.jsx`, `client/src/lib/dates.js`, `client/src/screens/Today.jsx`
@@ -1226,7 +1251,7 @@ git commit -m "Add the cabinet side bar, theme and client shell" -m "Co-Authored
 
 **Interfaces:**
 - Consumes: `useSettings()` from Task 5.
-- Produces: `<ParchmentCard title botanical="calendula|chamomile|lavender" children />`, `<WaxSeal onClick>{label}</WaxSeal>`, `Calendula`, `Chamomile`, `Lavender` SVG components (`size` prop), `greeting(date) -> 'Good morning' | 'Good afternoon' | 'Good evening'`, `longDate(date) -> 'Thursday, October 8'`.
+- Produces: `<ParchmentCard title subtitle botanical="calendula|chamomile|lavender" children />` (a framed panel), `<WaxSeal onClick>{label}</WaxSeal>`, `Calendula`, `Chamomile`, `Lavender` SVG components (`size` prop), `VineCorner` (`className` prop), `LeafOrnament`, `greeting(date) -> 'Good morning' | 'Good afternoon' | 'Good evening'`, `longDate(date) -> 'Thursday, October 8'`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1384,52 +1409,52 @@ export function Lavender({ size = 120 }) {
   );
 }
 
+// A climbing vine for the corners of the page sheet. Drawn for the top-left corner; CSS mirrors it for the others.
+export function VineCorner({ className }) {
+  const leaf = (x, y, r) => <path transform={`translate(${x} ${y}) rotate(${r})`} d="M0 0 C4 -6 12 -7 16 -2 C11 2 5 3 0 0 Z" fill="#6b8455" stroke="#4a6440" strokeWidth=".8" />;
+  return (
+    <svg className={className} viewBox="0 0 120 120" aria-hidden="true">
+      <path d="M6 116 C8 80 14 50 30 30 C46 12 76 6 116 6" fill="none" stroke="#4a6440" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M18 60 C26 58 32 52 34 44 M52 18 C56 26 62 30 70 30" fill="none" stroke="#4a6440" strokeWidth="1.1" strokeLinecap="round" />
+      {leaf(10, 92, -70)}{leaf(14, 72, -110)}{leaf(22, 50, -60)}{leaf(34, 44, -150)}
+      {leaf(40, 22, -30)}{leaf(60, 12, -10)}{leaf(70, 30, 20)}{leaf(88, 8, 10)}
+      <g transform="translate(30 30)">
+        {Array.from({ length: 8 }, (_, i) => <ellipse key={i} transform={`rotate(${i * 45}) translate(0 -6)`} rx="2.2" ry="4.5" fill="#f4ecd8" stroke="#5a4330" strokeWidth=".7" />)}
+        <circle r="2.6" fill="#c9a24a" stroke="#5a4330" strokeWidth=".6" />
+      </g>
+    </svg>
+  );
+}
+
+// The small sprig that sits on the top edge of a framed panel.
+export function LeafOrnament() {
+  return (
+    <svg viewBox="0 0 60 16" width="60" height="16" aria-hidden="true" fill="none" stroke="#4a6440" strokeWidth="1" strokeLinecap="round">
+      <path d="M4 8 H24 M36 8 H56" />
+      <path d="M30 13 V3 M30 9 C26 8 24 5 24 3 C27 3 29 5 30 8 M30 9 C34 8 36 5 36 3 C33 3 31 5 30 8" fill="#6b8455" />
+    </svg>
+  );
+}
+
 export const BOTANICALS = { calendula: Calendula, chamomile: Chamomile, lavender: Lavender };
 ```
 
 - [ ] **Step 5: Write `client/src/components/ParchmentCard.jsx`**
 
-The torn edge is an SVG mask made in code: a rectangle whose edges wobble a little.
+A framed panel in the printable style: double-line frame, leaf ornament on the top edge, green-ink title, optional italic subtitle and ink drawing. The name stays `ParchmentCard` because the panels sit on the parchment sheet.
 
 ```jsx
-import { BOTANICALS } from './Botanicals.jsx';
+import { BOTANICALS, LeafOrnament } from './Botanicals.jsx';
 
-// A rectangle with slightly ragged edges, built once and used as a CSS mask on every card.
-function tornPath() {
-  const pts = [];
-  const step = 2.5;
-  let seed = 7;
-  const jitter = () => { seed = (seed * 9301 + 49297) % 233280; return (seed / 233280) * 1.4; };
-  for (let x = 0; x <= 100; x += step) pts.push(`${x},${jitter()}`);
-  for (let y = 0; y <= 100; y += step) pts.push(`${100 - jitter()},${y}`);
-  for (let x = 100; x >= 0; x -= step) pts.push(`${x},${100 - jitter()}`);
-  for (let y = 100; y >= 0; y -= step) pts.push(`${jitter()},${y}`);
-  return pts.join(' ');
-}
-const MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><polygon points='${tornPath()}' fill='black'/></svg>`,
-)}")`;
-
-function BrassCorner({ at }) {
-  return (
-    <svg className={`brass-corner ${at}`} viewBox="0 0 34 34" aria-hidden="true">
-      <path d="M2 2 H30 L26 7 H9 Q7 7 7 9 V26 L2 30 Z" fill="#b08d57" stroke="#7d6238" strokeWidth="1" />
-      <path d="M10 10 Q16 12 18 18 Q12 16 10 10 Z" fill="#d4b47a" />
-      <circle cx="5.5" cy="5.5" r="1.6" fill="#7d6238" />
-    </svg>
-  );
-}
-
-export function ParchmentCard({ title, botanical, children, className = '' }) {
+export function ParchmentCard({ title, subtitle, botanical, children, className = '' }) {
   const Art = botanical ? BOTANICALS[botanical] : null;
   return (
-    <section className={`parchment-frame ${className}`} aria-label={title}>
-      {['tl', 'tr', 'bl', 'br'].map(c => <BrassCorner key={c} at={c} />)}
-      <div className="parchment" style={{ '--torn-mask': MASK }}>
-        {title && <h2>{title}</h2>}
-        {children}
-        {Art && <span className="botanical"><Art size={110} /></span>}
-      </div>
+    <section className={`panel ${className}`} aria-label={title}>
+      <span className="panel-ornament"><LeafOrnament /></span>
+      {title && <h2>{title}</h2>}
+      {subtitle && <p className="panel-subtitle">{subtitle}</p>}
+      {children}
+      {Art && <span className="botanical"><Art size={100} /></span>}
     </section>
   );
 }
@@ -1484,10 +1509,11 @@ export function Today() {
         subtitle={longDate(now)}
         actions={<WaxSeal onClick={() => navigate('/batches')}>Log a batch</WaxSeal>}
       />
+      <p className="flourish-line">gather ✦ steep ✦ strain ✦ keep</p>
       <div className="card-grid">
-        <ParchmentCard title="Batches due" botanical="calendula"><p className="muted">{EMPTY}</p></ParchmentCard>
-        <ParchmentCard title="Running low" botanical="chamomile"><p className="muted">{EMPTY}</p></ParchmentCard>
-        <ParchmentCard title="Nearing expiry" botanical="lavender"><p className="muted">{EMPTY}</p></ParchmentCard>
+        <ParchmentCard title="Batches due" subtitle="what's steeping, and when it's ready" botanical="calendula"><p className="muted">{EMPTY}</p></ParchmentCard>
+        <ParchmentCard title="Running low" subtitle="jars to refill soon" botanical="chamomile"><p className="muted">{EMPTY}</p></ParchmentCard>
+        <ParchmentCard title="Nearing expiry" subtitle="use these first" botanical="lavender"><p className="muted">{EMPTY}</p></ParchmentCard>
       </div>
     </>
   );
@@ -1506,13 +1532,13 @@ npm run build
 APOTHECARY_DATA_DIR="$(mktemp -d)" APOTHECARY_PORT=4203 node --disable-warning=ExperimentalWarning server/index.js
 ```
 
-Open http://localhost:4203 and compare with `docs/design/today-reference.jpg`. Check: drawers read as wood with brass plates, the active drawer is oxblood, cards look like torn parchment with brass corners, text is easy to read, the seal looks like wax. Adjust CSS until it's close. Stop the server with Ctrl+C.
+Open http://localhost:4203 and compare with `docs/design/today-reference.jpg` and the look section of the spec. Check: drawers read as wood with brass plates, the active drawer is oxblood, the page is a light parchment sheet with vines in the corners, panels have double-line frames with a leaf ornament and green-ink titles, the flourish line is in small caps, text is easy to read, the seal looks like wax. Adjust CSS until it's close. Stop the server with Ctrl+C.
 
 - [ ] **Step 10: Commit**
 
 ```bash
 git add -A
-git commit -m "Add parchment cards, wax seal, botanical drawings and the Today page" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -m "Add framed panels, vines, wax seal, botanical drawings and the Today page" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1929,7 +1955,7 @@ Sections: what it is (two sentences, witchy and warm), what works in this stage 
 - EB Garamond, by Georg Duffner and Octavio Pardo. SIL Open Font License 1.1. Bundled through @fontsource/eb-garamond.
 - Lucide icons. ISC License.
 
-All botanical drawings, the icon, the brass corners and the wax seal are original to this repository.
+All botanical drawings, the icon, the corner vines, the frame ornaments and the wax seal are original to this repository.
 ```
 
 Check the font authors on each package's page (`npm view @fontsource/cormorant-garamond` and `npm view @fontsource/eb-garamond`) and correct them if they differ.

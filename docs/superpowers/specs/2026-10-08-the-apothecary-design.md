@@ -41,12 +41,16 @@ Hearth & Larder's browser tests already use 4199, so the demo skips it. The glob
 
 ## Look and feel
 
-Target image: `docs/design/today-reference.jpg`. It is a guide, not a pixel spec. Colors and textures can change where that helps readability.
+Target image: `docs/design/today-reference.jpg`, blended with a second direction Stephanie chose on 2026-10-08: illustrated herbal printables (light parchment pages, deep green ink headings, ornate double-line frames, small-caps captions, botanical vines in the corners). Those reference printables are not kept in the repo, because their rights are unknown; they are inspiration only and nothing is copied from them. Both are guides, not pixel specs. Colors and textures can change where that helps readability.
 
-- Dark walnut wood background fading to ink black at the edges, warm candlelit lighting.
+The blend: the dark walnut cabinet stays as the frame around the app; each page inside it is a sheet of light parchment in the printable style.
+
+- Dark walnut wood background fading to ink black at the edges, warm candlelit lighting, visible around the page sheet and behind the side bar.
 - Side bar shaped like an apothecary cabinet of stacked wooden drawers, each with a brass label plate and a round brass knob. The active drawer is oxblood and pulled out slightly. Drawers: Today, Calendar, To-do, Herb cabinet, Grimoire, Recipe book, Batch journal, Journal, Labels, Shopping list, Garden log, with Settings as a small brass key at the bottom.
-- Content on aged parchment cards with soft torn edges, a thin inner rule and brass corner pieces.
-- Accents: oxblood for attention (due, low, cautions), forest green for good states (ready, in stock), brass for details and the moon-phase mark.
+- Each page is one large parchment sheet with an ornate double-line border and original botanical vines climbing two or more corners.
+- Content on the sheet sits in framed panels: a double-line frame with a small leaf ornament at the top centre, a title in deep green ink, an optional italic one-line description under it, and an optional ink botanical drawing.
+- Small-caps captions and flourish rules (a short line of words separated by small star or leaf marks) for section breaks and page subtitles.
+- Headings and titles in deep green ink. Accents: oxblood for attention (due, low, cautions), forest green for good states (ready, in stock), brass for details on the cabinet and the moon-phase mark.
 - Headings in an old-style serif, body in a readable book serif. Candidates: Cormorant Garamond and EB Garamond (both SIL Open Font License, bundled through `@fontsource`).
 - Small touches: moon-phase mark next to the greeting, zodiac and planet glyphs, botanical ink line drawings in card margins, wax-seal style primary buttons.
 - All textures are made in CSS or SVG in this repo. All botanical drawings and glyph art are drawn originally as SVG for this repo. No third-party images.
@@ -140,6 +144,7 @@ Starter herbs: chamomile, lavender, calendula, peppermint, lemon balm, elderberr
 - A batch has: recipe, start date (with the moon phase, moon sign and day ruler recorded automatically), jars used, amounts, steps to do later with due dates (for example "strain" after the recipe's wait time), finished date, yield, expiry, notes, photos.
 - Finishing a batch can add the result to the cabinet as a new jar (for example the finished tincture).
 - Due steps appear on Today, the calendar and the to-do list.
+- Each batch can be printed as a one-page record sheet in the printable style: date, recipe, herbs used, base (oil, alcohol, vinegar, honey), preparation type, why I made it, how I prepared it, what I noticed, what I would change, and label and shelf-life notes. The journal fields "why I made it", "what I noticed" and "what I would change" are part of the batch record.
 
 ### Journal
 
