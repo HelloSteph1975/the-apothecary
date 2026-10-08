@@ -32,6 +32,10 @@ try {
   console.error(`Could not open the data folder at ${config.dataDir}:`, err.message);
   process.exit(1);
 }
+if (demo) {
+  const { seedDemo } = await import('./demo/seed.js');
+  seedDemo(ctx, { reset: process.argv.includes('--reset') });
+}
 runMaintenance(ctx);
 
 let server;
