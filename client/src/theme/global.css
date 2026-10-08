@@ -216,3 +216,7 @@ textarea.input { resize: vertical; }
   border-radius: var(--radius); box-shadow: 0 8px 20px rgba(0, 0, 0, .55);
 }
 .toast-action { font: 600 1rem var(--font-head); color: var(--brass-light); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 4px; }
+
+.backup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.backup-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dotted var(--ink-soft); }
+.backup-list li span { overflow-wrap: anywhere; }
