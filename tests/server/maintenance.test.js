@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { makeTestContext } from './helpers.js';
 import { migrations } from '../../server/db/migrations.js';
 import { restoreBackup } from '../../server/services/backup.js';
-import { runMaintenance, grimoireMaintenance } from '../../server/services/maintenance.js';
+import { runMaintenance, contentMaintenance } from '../../server/services/maintenance.js';
 
 let t;
 afterEach(() => { t?.cleanup(); vi.restoreAllMocks(); });
@@ -37,7 +37,7 @@ it('keeps going when the grimoire seed throws, and skips linking cleanly', () =>
   t = makeTestContext();
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
   const link = vi.fn(() => ({ linked: 0 }));
-  expect(() => grimoireMaintenance(t.ctx.db, { seed: () => { throw new Error('bad seed'); }, link })).not.toThrow();
+  expect(() => contentMaintenance(t.ctx.db, { seed: () => { throw new Error('bad seed'); }, link })).not.toThrow();
   expect(errors).toHaveBeenCalledWith(expect.stringMatching(/Seeding the grimoire failed/), expect.any(Error));
   expect(link).toHaveBeenCalled();
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM herbs').get().n).toBe(0);
@@ -51,4 +51,24 @@ it('runMaintenance still runs every step when the seed throws', () => {
   expect(fs.readdirSync(path.join(t.dataDir, 'backups')).some(n => n.startsWith('apothecary-'))).toBe(true);
   const linked = t.ctx.db.prepare("SELECT value FROM settings WHERE key LIKE '%link%'").all();
   expect(linked).toHaveLength(0);
+});
+
+it('runMaintenance keeps going when the recipe type seed throws', () => {
+  t = makeTestContext();
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  expect(() => runMaintenance(t.ctx, { seedTypes: () => { throw new Error('bad types'); } })).not.toThrow();
+  expect(errors).toHaveBeenCalledTimes(1);
+  expect(errors).toHaveBeenCalledWith(expect.stringMatching(/Seeding the recipe types failed/), expect.any(Error));
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM herbs').get().n).toBe(30);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM recipe_types').get().n).toBe(0);
+  expect(fs.readdirSync(path.join(t.dataDir, 'backups')).some(n => n.startsWith('apothecary-'))).toBe(true);
+});
+
+it('contentMaintenance seeds the grimoire, links jars, then seeds recipe types', () => {
+  t = makeTestContext();
+  const calls = [];
+  contentMaintenance(t.ctx.db, {
+    seed: () => calls.push('seed'), link: () => calls.push('link'), seedTypes: () => calls.push('types'),
+  });
+  expect(calls).toEqual(['seed', 'link', 'types']);
 });

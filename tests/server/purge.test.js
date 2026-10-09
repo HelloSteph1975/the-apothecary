@@ -112,3 +112,33 @@ it('purges old herbs with their photos and sources, and unlinks their jars', () 
   expect(db.prepare('SELECT herb_id FROM items WHERE id = ?').get(jar2).herb_id).toBe(kept);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '5-eeeeeeee.jpg'))).toBe(false);
 });
+
+it('purges old recipes with their ingredients and photos, unlinks purged herbs, and keeps a type still in use', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const recent = new Date().toISOString();
+  const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
+  const usedType = run("INSERT INTO recipe_types (name, deleted_at) VALUES ('Used', ?)", old);
+  const freeType = run("INSERT INTO recipe_types (name, deleted_at) VALUES ('Free', ?)", old);
+  const liveType = run("INSERT INTO recipe_types (name) VALUES ('Live')");
+  const herbGone = run("INSERT INTO herbs (common_name, deleted_at) VALUES ('Gone herb', ?)", old);
+  const gone = run('INSERT INTO recipes (name, type_id, deleted_at) VALUES (?, ?, ?)', 'Old salve', liveType, old);
+  const fresh = run('INSERT INTO recipes (name, type_id, deleted_at) VALUES (?, ?, ?)', 'Fresh tea', usedType, recent);
+  const kept = run('INSERT INTO recipes (name, type_id) VALUES (?, ?)', 'Kept oil', liveType);
+  run("INSERT INTO recipe_ingredients (recipe_id, name) VALUES (?, 'of gone')", gone);
+  run("INSERT INTO recipe_ingredients (recipe_id, name, deleted_at) VALUES (?, 'replaced', ?)", kept, old);
+  const linked = run("INSERT INTO recipe_ingredients (recipe_id, herb_id, name) VALUES (?, ?, 'Gone herb')", kept, herbGone);
+  run("INSERT INTO recipe_ingredients (recipe_id, name) VALUES (?, 'of fresh')", fresh);
+  run("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('recipe', ?, '6-ffffffff.jpg')", gone);
+  fs.writeFileSync(path.join(t.dataDir, 'photos', '6-ffffffff.jpg'), 'x');
+
+  const counts = purgeSoftDeleted(db, t.dataDir);
+  expect(counts).toMatchObject({ photos: 1, recipes: 1, recipe_types: 1, herbs: 1 });
+  expect(db.prepare('SELECT id FROM recipes ORDER BY id').all().map(r => r.id)).toEqual([fresh, kept]);
+  expect(db.prepare('SELECT name FROM recipe_ingredients ORDER BY id').all().map(r => r.name)).toEqual(['Gone herb', 'of fresh']);
+  expect(db.prepare('SELECT herb_id, name FROM recipe_ingredients WHERE id = ?').get(linked)).toEqual({ herb_id: null, name: 'Gone herb' });
+  expect(db.prepare('SELECT id FROM recipe_types ORDER BY id').all().map(r => r.id)).toEqual([usedType, liveType]);
+  expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(freeType)).toBeUndefined();
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '6-ffffffff.jpg'))).toBe(false);
+});

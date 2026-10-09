@@ -56,6 +56,26 @@ export const migrations = [
   CREATE INDEX idx_herb_sources_herb ON herb_sources(herb_id);
   CREATE INDEX idx_items_herb ON items(herb_id);
   `,
+  // 4: the recipe book. Starter types are seeded at startup; units are checked by the service against RECIPE_UNITS.
+  `
+  CREATE TABLE recipe_types (id INTEGER PRIMARY KEY, slug TEXT, name TEXT NOT NULL, description TEXT,
+    wait_days INTEGER CHECK (wait_days IS NULL OR wait_days >= 0),
+    shelf_life_days INTEGER CHECK (shelf_life_days IS NULL OR shelf_life_days >= 0),
+    label_caution TEXT, is_topical INTEGER NOT NULL DEFAULT 0, icon TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+    is_starter INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE UNIQUE INDEX idx_recipe_types_slug ON recipe_types(slug) WHERE slug IS NOT NULL;
+  CREATE TABLE recipes (id INTEGER PRIMARY KEY, name TEXT NOT NULL, type_id INTEGER NOT NULL REFERENCES recipe_types(id),
+    yield_amount REAL CHECK (yield_amount IS NULL OR yield_amount > 0), yield_unit TEXT, steps TEXT,
+    wait_days INTEGER CHECK (wait_days IS NULL OR wait_days >= 0),
+    shelf_life_days INTEGER CHECK (shelf_life_days IS NULL OR shelf_life_days >= 0),
+    intention TEXT, timing_notes TEXT, notes TEXT, ${TS});
+  CREATE INDEX idx_recipes_type ON recipes(type_id);
+  CREATE TABLE recipe_ingredients (id INTEGER PRIMARY KEY, recipe_id INTEGER NOT NULL REFERENCES recipes(id),
+    herb_id INTEGER REFERENCES herbs(id), name TEXT NOT NULL, amount REAL CHECK (amount IS NULL OR amount >= 0),
+    unit TEXT, form TEXT, plant_part TEXT, note TEXT, sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE INDEX idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
+  CREATE INDEX idx_recipe_ingredients_herb ON recipe_ingredients(herb_id);
+  `,
 ];
 
 export function migrate(db) {

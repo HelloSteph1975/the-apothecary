@@ -1,11 +1,11 @@
 import { purgeSoftDeleted, purgeTrash } from './purge.js';
 import { ensureRecentBackup, rotateBackups } from './backup.js';
-import { grimoireMaintenance } from './grimoire.js';
+import { contentMaintenance } from './content.js';
 
-export { grimoireMaintenance };
+export { contentMaintenance };
 
 // Startup housekeeping. A failed step is logged and the rest still run.
-export function runMaintenance(ctx, grimoireSteps) {
+export function runMaintenance(ctx, contentSteps) {
   const { db, config } = ctx;
   const steps = [
     ['Startup backup', () => ensureRecentBackup(db, config.dataDir)],
@@ -16,5 +16,5 @@ export function runMaintenance(ctx, grimoireSteps) {
   for (const [label, fn] of steps) {
     try { fn(); } catch (err) { console.error(`${label} failed (the app will still run):`, err); }
   }
-  grimoireMaintenance(db, grimoireSteps);
+  contentMaintenance(db, contentSteps);
 }
