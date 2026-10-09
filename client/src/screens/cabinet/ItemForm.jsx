@@ -56,6 +56,7 @@ export function ItemForm() {
   const [suggested, setSuggested] = useState(false);
   const typedExpiry = useRef(false);
   const saved = useRef(false);
+  const initialKey = useRef('');
 
   useEffect(() => {
     if (form || !sections.data || (editing && !item.data)) return;
@@ -65,6 +66,7 @@ export function ItemForm() {
     setForm(start);
     setInitial(JSON.stringify(start));
     typedExpiry.current = Boolean(start.expires_on);
+    initialKey.current = editing ? `${start.form}|${start.acquired_on}` : '';
   }, [form, sections.data, item.data, editing, params]);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
@@ -75,6 +77,8 @@ export function ItemForm() {
   const date = form?.acquired_on;
   useEffect(() => {
     if (!formKind || !date || typedExpiry.current) return undefined;
+    // Editing: wait until she changes Form or Date before suggesting.
+    if (`${formKind}|${date}` === initialKey.current) return undefined;
     let live = true;
     api.get(`/api/expiry-suggestion?form=${encodeURIComponent(formKind)}&acquired_on=${encodeURIComponent(date)}`).then(r => {
       if (!live || typedExpiry.current || !r?.expires_on) return;
@@ -124,12 +128,12 @@ export function ItemForm() {
       <form onSubmit={save} noValidate>
         <div className="card-grid">
           <ParchmentCard title="What it is">
-            <Field label="Section" error={err('section_id')}>
-              <Select value={form.section_id} onChange={e => set('section_id', e.target.value)} placeholder="Choose a section"
+            <Field label="Section (required)" error={err('section_id')}>
+              <Select required aria-required="true" value={form.section_id} onChange={e => set('section_id', e.target.value)} placeholder="Choose a section"
                 options={sections.data.map(x => ({ value: String(x.id), label: x.name }))} />
             </Field>
-            <Field label="Name" error={err('name')}>
-              <TextInput value={form.name} onChange={e => set('name', e.target.value)} />
+            <Field label="Name (required)" error={err('name')}>
+              <TextInput required aria-required="true" value={form.name} onChange={e => set('name', e.target.value)} />
             </Field>
             {herb && (
               <>
@@ -147,8 +151,8 @@ export function ItemForm() {
             <Field label="Size or capacity" hint="For example 30 ml amber dropper, 2 oz tin" error={err('size_label')}>
               <TextInput value={form.size_label} onChange={e => set('size_label', e.target.value)} />
             </Field>
-            <Field label="Amount" error={err('amount')}>
-              <NumberInput min="0" value={form.amount} onChange={e => set('amount', e.target.value)} />
+            <Field label="Amount (required)" error={err('amount')}>
+              <NumberInput required aria-required="true" min="0" value={form.amount} onChange={e => set('amount', e.target.value)} />
             </Field>
             <Field label="Unit" error={err('unit')}>
               <Select value={form.unit} onChange={e => set('unit', e.target.value)} options={UNITS} />

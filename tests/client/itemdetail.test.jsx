@@ -11,7 +11,7 @@ HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open'
 HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
 
 const today = todayString();
-const item = {
+const baseItem = {
   id: 7, name: 'Nettle', latin_name: 'Urtica dioica', section_id: 1, section_name: 'Herbs', section_kind: 'herb',
   amount: 50, unit: 'g', size_label: '1 pint jar', low_threshold: 20, expires_on: '2026-10-20', storage_spot: 'Pantry shelf',
   form: 'dried leaf', plant_part: 'leaf', source_kind: 'bought', last_supplier_id: 2, last_supplier_name: 'Mountain Rose',
@@ -24,9 +24,11 @@ const item = {
   photos: [],
 };
 
+let item = baseItem;
 let calls;
 beforeEach(() => {
   calls = [];
+  item = baseItem;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     calls.push({ method, url, body: opts.body ? JSON.parse(opts.body) : undefined });
@@ -36,6 +38,7 @@ beforeEach(() => {
     if (url.startsWith('/api/expiry-suggestion')) return json({ expires_on: '2027-10-08' });
     if (url === '/api/items/7/restock') return json({ ok: true }, 201);
     if (url === '/api/items/7' && method === 'PATCH') return json(item);
+    if (url.startsWith('/api/purchases/') && method === 'PATCH') return json({ ok: true });
     if (url === '/api/items/7' && method === 'DELETE') return json({ ok: true, restore: '/api/items/7/restore' });
     if (url === '/api/sections' || url === '/api/storage-spots') return json([]);
     if (url.startsWith('/api/items?')) return json([]);
@@ -93,4 +96,30 @@ it('asks before deleting, then returns to the shelves', async () => {
   await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
   await waitFor(() => expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/items/7')).toBe(true));
   expect(await screen.findByText('Your cabinet is empty')).toBeInTheDocument();
+});
+
+it('keeps keyboard focus when editing a purchase row', async () => {
+  const user = userEvent.setup();
+  open();
+  const edit = await screen.findByRole('button', { name: 'Edit purchase from 2026-09-01' });
+  await user.click(edit);
+  expect(screen.getByLabelText('Date')).toHaveFocus();
+  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.getByRole('button', { name: 'Edit purchase from 2026-09-01' })).toHaveFocus();
+  await user.click(screen.getByRole('button', { name: 'Edit purchase from 2026-09-01' }));
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'PATCH' && c.url === '/api/purchases/11')).toBe(true));
+  expect(screen.getByRole('button', { name: 'Edit purchase from 2026-09-01' })).toHaveFocus();
+});
+
+it('does not default restock to a removed supplier', async () => {
+  const user = userEvent.setup();
+  item = { ...baseItem, last_supplier_id: 5, last_supplier_name: 'Gone Shop' };
+  open();
+  await user.click(await screen.findByRole('button', { name: 'Restock' }));
+  const dialog = screen.getByRole('dialog');
+  await user.type(within(dialog).getByLabelText('Quantity'), '3');
+  await user.click(within(dialog).getByRole('button', { name: 'Restock' }));
+  await waitFor(() => expect(calls.some(c => c.url === '/api/items/7/restock')).toBe(true));
+  expect(calls.find(c => c.url === '/api/items/7/restock').body.supplier_id).toBeNull();
 });

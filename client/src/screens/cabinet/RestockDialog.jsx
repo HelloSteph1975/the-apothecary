@@ -10,7 +10,7 @@ import { UNITS } from '../../lib/cabinet.js';
 
 const toNum = v => (v === '' || v == null ? null : Number(v));
 const blank = item => ({
-  quantity: '', supplier_id: item.last_supplier_id ? String(item.last_supplier_id) : '', price: '',
+  quantity: '', supplier_id: '', price: '',
   purchased_on: todayString(), expires_on: '', order_note: '',
 });
 
@@ -27,6 +27,13 @@ export function RestockDialog({ item, open, onClose, onDone }) {
     if (open) { setForm(blank(item)); setErrors({}); typedExpiry.current = false; }
     // Start fresh each time the dialog opens, not on every refetch of the item.
   }, [open]);
+
+  // Default to the last supplier only if it is still in the list.
+  useEffect(() => {
+    const last = item.last_supplier_id;
+    if (!open || !last || !suppliers.data) return;
+    if (suppliers.data.some(x => x.id === last)) setForm(f => (f.supplier_id ? f : { ...f, supplier_id: String(last) }));
+  }, [open, suppliers.data, item.last_supplier_id]);
 
   // Offer a new use by date from the form; she can change or clear it.
   useEffect(() => {
