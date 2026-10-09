@@ -238,3 +238,11 @@ export function updateHerb(db, id, body) {
   });
   return id;
 }
+
+// The grimoire steps run at startup and after a restore. Each step logs its own failure so the app still opens;
+// linking skips itself when the seed didn't finish.
+export function grimoireMaintenance(db, { seed = seedGrimoire, link = linkItemsOnce } = {}) {
+  for (const [label, fn] of [['Seeding the grimoire', seed], ['Linking jars to the grimoire', link]]) {
+    try { fn(db); } catch (err) { console.error(`${label} failed (the app will still run):`, err); }
+  }
+}
