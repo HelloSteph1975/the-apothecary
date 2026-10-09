@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ParchmentCard } from '../components/ParchmentCard.jsx';
-import { Field, TextInput, Select } from '../components/Field.jsx';
+import { Field, TextInput, NumberInput, Select } from '../components/Field.jsx';
 import { WaxSeal } from '../components/WaxSeal.jsx';
 import { useSettings } from '../components/SettingsProvider.jsx';
 import { useConfirm } from '../components/ConfirmProvider.jsx';
@@ -14,6 +14,18 @@ const FIELDS = [
   { key: 'location_name', label: 'Place name' },
   { key: 'latitude', label: 'Latitude', hint: 'For moon and sky timing. Mexico City is 19.4326.' },
   { key: 'longitude', label: 'Longitude', hint: 'West is negative. Mexico City is -99.1332.' },
+];
+
+const SHELF_LIFE = [
+  { key: 'expiry_dried_leaf', label: 'Dried leaf' },
+  { key: 'expiry_dried_flower', label: 'Dried flower' },
+  { key: 'expiry_root', label: 'Root' },
+  { key: 'expiry_bark', label: 'Bark' },
+  { key: 'expiry_seed', label: 'Seed' },
+  { key: 'expiry_resin', label: 'Resin' },
+  { key: 'expiry_powder', label: 'Powder' },
+  { key: 'expiry_tincture', label: 'Tincture' },
+  { key: 'expiry_oil', label: 'Infused oil' },
 ];
 
 export function Settings() {
@@ -85,6 +97,18 @@ export function Settings() {
                 options={[{ value: 'metric', label: 'Metric (g, ml)' }, { value: 'us', label: 'US (oz, fl oz)' }]} />
             </Field>
             <WaxSeal type="submit">Save settings</WaxSeal>
+          </form>
+        </ParchmentCard>
+
+        <ParchmentCard title="Shelf life">
+          <p className="muted">Used to suggest a use-by date when you add an herb. 0 means no suggestion.</p>
+          <form onSubmit={save} noValidate>
+            {SHELF_LIFE.map(f => (
+              <Field key={f.key} label={f.label} hint="months" error={errors[f.key]}>
+                <NumberInput min="0" max="120" step="1" value={form[f.key]} onChange={e => set(f.key, e.target.value)} />
+              </Field>
+            ))}
+            <WaxSeal type="submit">Save shelf life</WaxSeal>
           </form>
         </ParchmentCard>
 

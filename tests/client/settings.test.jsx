@@ -12,7 +12,7 @@ HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open')
 let saved;
 let calls;
 beforeEach(() => {
-  saved = { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
+  saved = { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric', expiry_dried_leaf: '24', expiry_dried_flower: '18', expiry_root: '36', expiry_bark: '36', expiry_seed: '36', expiry_resin: '60', expiry_powder: '12', expiry_tincture: '60', expiry_oil: '12' };
   calls = [];
   global.fetch = vi.fn(async (url, opts = {}) => {
     calls.push(`${opts.method ?? 'GET'} ${url}`);
@@ -20,6 +20,7 @@ beforeEach(() => {
     if (url === '/api/health') return json({ ok: true, demo: false });
     if (url === '/api/settings' && opts.method === 'PUT') {
       const body = JSON.parse(opts.body);
+      if (body.expiry_root === '999') return new Response(JSON.stringify({ error: 'Please fix the highlighted fields.', details: { expiry_root: 'Use 0 to 120 months' } }), { status: 400 });
       if (body.latitude === '99') return new Response(JSON.stringify({ error: 'Please fix the highlighted fields.', details: { latitude: 'Not a valid value' } }), { status: 400 });
       saved = { ...saved, ...body };
       return json(saved);
@@ -47,6 +48,28 @@ it('saves the keeper name and location', async () => {
   await user.type(screen.getByLabelText('Place name'), 'Oaxaca');
   await user.click(screen.getByRole('button', { name: 'Save settings' }));
   await waitFor(() => expect(saved).toMatchObject({ keeper_name: 'Stephanie', location_name: 'Oaxaca' }));
+});
+
+it('saves a changed shelf life', async () => {
+  const user = userEvent.setup();
+  open();
+  const powder = await screen.findByLabelText('Powder');
+  expect(powder).toHaveValue(12);
+  await user.clear(powder);
+  await user.type(powder, '9');
+  await user.click(screen.getByRole('button', { name: 'Save shelf life' }));
+  await waitFor(() => expect(saved.expiry_powder).toBe('9'));
+});
+
+it('shows a shelf life error next to its field', async () => {
+  const user = userEvent.setup();
+  open();
+  const root = await screen.findByLabelText('Root');
+  await user.clear(root);
+  await user.type(root, '999');
+  await user.click(screen.getByRole('button', { name: 'Save shelf life' }));
+  expect(await screen.findByText('Use 0 to 120 months')).toBeInTheDocument();
+  expect(root).toHaveAttribute('aria-invalid', 'true');
 });
 
 it('shows the server error next to the field', async () => {

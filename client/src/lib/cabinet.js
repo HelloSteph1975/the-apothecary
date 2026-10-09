@@ -55,3 +55,10 @@ export function safeUrl(v) {
   const t = typeof v === 'string' ? v.trim() : '';
   return /^https?:\/\//i.test(t) ? t : null;
 }
+
+// 'YYYY-MM-DD' to 'Oct 20', for dates that are always close by.
+export function formatShortDay(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}

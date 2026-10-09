@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { formatAmount, formatMoney, statusBadges, sourceText, UNITS } from '../../client/src/lib/cabinet.js';
+import { formatShortDay, formatAmount, formatMoney, statusBadges, sourceText, UNITS } from '../../client/src/lib/cabinet.js';
 import { todayString } from '../../client/src/lib/today.js';
 
 it('formats amounts and money', () => {
@@ -32,4 +32,9 @@ it('safeUrl only passes http and https addresses', async () => {
   expect(safeUrl('javascript:alert(1)')).toBeNull();
   expect(safeUrl('example.com')).toBeNull();
   expect(safeUrl(null)).toBeNull();
+});
+
+it('formats a short month and day', () => {
+  expect(formatShortDay('2026-10-20')).toBe('Oct 20');
+  expect(formatShortDay('')).toBe('');
 });
