@@ -117,16 +117,18 @@ export function listHerbs(db, f = {}) {
   const args = [];
   const q = str(f.q);
   if (q) {
-    where.push('(h.common_name LIKE ? OR h.other_names LIKE ? OR h.latin_name LIKE ? OR h.associations LIKE ?)');
+    where.push(`(h.common_name LIKE ? OR h.latin_name LIKE ?
+      OR EXISTS (SELECT 1 FROM json_each(h.other_names) WHERE value LIKE ?)
+      OR EXISTS (SELECT 1 FROM json_each(h.associations) WHERE value LIKE ?))`);
     args.push(...Array(4).fill(`%${q}%`));
   }
   if (str(f.part)) { where.push('EXISTS (SELECT 1 FROM json_each(h.parts_used) WHERE value = ?)'); args.push(f.part); }
   if (str(f.planet)) { where.push('h.planet = ?'); args.push(f.planet); }
   if (str(f.element)) { where.push('h.element = ?'); args.push(f.element); }
-  if (f.has_jars === '1') where.push('EXISTS (SELECT 1 FROM items i WHERE i.herb_id = h.id AND i.deleted_at IS NULL)');
+  if (f.has_jars === '1') where.push('EXISTS (SELECT 1 FROM items i WHERE i.herb_id = h.id AND i.deleted_at IS NULL AND i.used_up_at IS NULL)');
   if (CAUTIONS.includes(f.caution)) where.push(`h.caution_${f.caution} IS NOT NULL`);
   const rows = db.prepare(`SELECT h.*, ${COVER_SQL} AS cover,
-      (SELECT COUNT(*) FROM items i WHERE i.herb_id = h.id AND i.deleted_at IS NULL) AS jar_count
+      (SELECT COUNT(*) FROM items i WHERE i.herb_id = h.id AND i.deleted_at IS NULL AND i.used_up_at IS NULL) AS jar_count
     FROM herbs h WHERE h.deleted_at IS NULL${where.map(w => ` AND ${w}`).join('')}
     ORDER BY h.common_name COLLATE NOCASE, h.id`).all(...args);
   return rows.map(h => ({
@@ -143,7 +145,7 @@ export function getHerbDetail(db, id, today = new Date().toISOString().slice(0, 
   for (const f of LIST_FIELDS) herb[f] = parseList(herb[f]);
   const sources = r.herbSources.list({ herb_id: id }).map(s => ({ ...s, covers: parseList(s.covers) }));
   const jars = db.prepare(`SELECT id, name, amount, unit, size_label, expires_on, low_threshold, used_up_at FROM items
-    WHERE herb_id = ? AND deleted_at IS NULL ORDER BY name COLLATE NOCASE, id`).all(id)
+    WHERE herb_id = ? AND deleted_at IS NULL AND used_up_at IS NULL ORDER BY name COLLATE NOCASE, id`).all(id)
     .map(({ low_threshold, used_up_at, ...j }) => ({ ...j, status: itemStatus({ ...j, low_threshold, used_up_at }, today) }));
   return { ...herb, sources, photos: r.photos.list({ owner_type: 'herb', owner_id: id }), jars };
 }

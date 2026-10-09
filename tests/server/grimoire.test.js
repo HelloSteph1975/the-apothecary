@@ -225,3 +225,26 @@ it('does not link a hybrid or spp. Latin name by its first two words', () => {
   expect(r.items.get(x.id).herb_id).toBeNull();
   expect(r.items.get(exact.id).herb_id).not.toBeNull();
 });
+
+it('does not count or show used-up jars', async () => {
+  const { h, byName } = setup();
+  const items = repos(t.ctx.db).items;
+  const cal = byName('Calendula');
+  const cham = byName('Chamomile');
+  items.create({ section_id: 1, name: 'Live', herb_id: cal.id });
+  items.create({ section_id: 1, name: 'Empty', herb_id: cal.id, used_up_at: '2026-09-01T00:00:00.000Z' });
+  items.create({ section_id: 1, name: 'Only empty', herb_id: cham.id, used_up_at: '2026-09-01T00:00:00.000Z' });
+  const list = (await h().get('/api/herbs?has_jars=1')).body;
+  expect(list.map(x => x.common_name)).toEqual(['Calendula']);
+  expect(list[0].jar_count).toBe(1);
+  const all = (await h().get('/api/herbs')).body;
+  expect(all.find(x => x.common_name === 'Chamomile').jar_count).toBe(0);
+  expect((await h().get(`/api/herbs/${cal.id}?today=${TODAY}`)).body.jars.map(j => j.name)).toEqual(['Live']);
+});
+
+it('searches list values, not their JSON punctuation', async () => {
+  const { h } = setup();
+  const names = async q => (await h().get(`/api/herbs?q=${encodeURIComponent(q)}`)).body.map(x => x.common_name);
+  expect(await names('"')).toEqual([]);
+  expect(await names('pot marig')).toEqual(['Calendula']);
+});
