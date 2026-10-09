@@ -68,6 +68,8 @@ export function Shelves() {
         <ParchmentCard title="Your cabinet is empty" botanical="calendula">
           <p><Link to="/cabinet/new">Add your first jar</Link></p>
         </ParchmentCard>
+      ) : items.data.length === 0 ? (
+        <ParchmentCard title="No matches"><p>Nothing matches those filters.</p></ParchmentCard>
       ) : sections.data.map(s => {
         const list = bySection.get(s.id) || [];
         if (!list.length && filtered) return null;

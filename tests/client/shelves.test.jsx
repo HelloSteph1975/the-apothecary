@@ -32,6 +32,8 @@ beforeEach(() => {
     if (url === '/api/storage-spots') return json(['Top shelf']);
     if (url.startsWith('/api/items')) {
       const u = new URL(url, 'http://x');
+      if (u.searchParams.get('q') === 'zzz') return json([]);
+      if (u.searchParams.get('include_used_up') === '1') return json([...ITEMS, { id: 9, section_id: 3, section_name: 'Waxes', name: 'Beeswax', amount: 0, unit: 'g', status: {}, source_kind: 'bought', used_up_at: '2026-10-01T00:00:00Z', cover: null }]);
       return json(u.searchParams.get('status') === 'low' ? ITEMS.slice(0, 1) : ITEMS);
     }
     return json({});
@@ -75,8 +77,20 @@ it('moves items to another section before deleting one', async () => {
   await user.click(screen.getByRole('button', { name: 'Manage sections' }));
   await user.click(await screen.findByRole('button', { name: 'Delete Waxes' }));
   const select = await screen.findByLabelText('Move its 2 items to:');
+  expect(select).toHaveFocus();
   await user.selectOptions(select, 'Herbs');
   await user.click(screen.getByRole('button', { name: 'Move and delete' }));
   await waitFor(() => expect(requests).toContain('/api/sections/3?move_to=1'));
   expect(await screen.findByText('Deleted Waxes')).toBeInTheDocument();
+});
+
+it('shows a Used up badge for used-up items', async () => {
+  open('/cabinet?include_used_up=1');
+  const waxes = await screen.findByRole('region', { name: /Waxes/ });
+  expect(within(waxes).getByText('Used up')).toBeInTheDocument();
+});
+
+it('says so when filters match nothing', async () => {
+  open('/cabinet?q=zzz');
+  expect(await screen.findByText('Nothing matches those filters.')).toBeInTheDocument();
 });

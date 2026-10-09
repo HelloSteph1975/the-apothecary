@@ -13,7 +13,7 @@ function Jar() {
 
 export function ItemRow({ item }) {
   const badges = statusBadges(item.status);
-  if (item.used_up) badges.push({ key: 'used_up', label: 'Used up', tone: 'brass' });
+  if (item.used_up_at) badges.push({ key: 'used_up', label: 'Used up', tone: 'brass' });
   return (
     <Link to={`/cabinet/items/${item.id}`} className="item-row">
       {item.cover ? <img src={`/photos/${item.cover}`} alt="" /> : <Jar />}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Dialog } from '../../components/Dialog.jsx';
 import { Button } from '../../components/Button.jsx';
@@ -11,6 +11,9 @@ export function SectionManager({ open, onClose, sections, onChange }) {
   const [drafts, setDrafts] = useState({});
   const [newName, setNewName] = useState('');
   const [moving, setMoving] = useState(null); // { section, items, to }
+  const panel = useRef();
+  const askingFor = moving?.section.id;
+  useEffect(() => { if (askingFor) panel.current?.querySelector('select')?.focus(); }, [askingFor]);
 
   const fail = err => toast.show({ message: err.message, duration: 6000 });
   const run = async fn => { try { await fn(); onChange(); } catch (err) { fail(err); } };
@@ -74,7 +77,7 @@ export function SectionManager({ open, onClose, sections, onChange }) {
         ))}
       </ul>
       {moving && (
-        <div role="group" aria-label={`Deleting ${moving.section.name}`} className="toolbar">
+        <div ref={panel} role="group" aria-label={`Deleting ${moving.section.name}`} className="toolbar">
           <Field label={`Move its ${moving.items} items to:`}>
             <Select value={moving.to} onChange={e => setMoving(m => ({ ...m, to: e.target.value }))}
               options={sections.filter(s => s.id !== moving.section.id).map(s => ({ value: String(s.id), label: s.name }))} />
