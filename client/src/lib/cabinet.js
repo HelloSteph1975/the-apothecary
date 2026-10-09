@@ -42,3 +42,10 @@ export function sourceText(item) {
     default: return '';
   }
 }
+
+// 'YYYY-MM-DD' to 'Oct 1, 2026', read as a local date so it never slips a day.
+export function formatDay(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}

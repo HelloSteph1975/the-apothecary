@@ -273,3 +273,4 @@ textarea.input { resize: vertical; }
 .purchase-table { width: 100%; border-collapse: collapse; }
 .purchase-table th, .purchase-table td { text-align: left; padding: 6px 10px; border: 1px solid var(--rule); }
 .purchase-table th { font-variant: small-caps; letter-spacing: .08em; color: var(--ink-green); }
+.stars { color: var(--ink-green); letter-spacing: .12em; }

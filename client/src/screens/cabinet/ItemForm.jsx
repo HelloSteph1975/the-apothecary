@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
 import { Field, TextInput, NumberInput, DateInput, TextArea, Select } from '../../components/Field.jsx';
 import { WaxSeal } from '../../components/WaxSeal.jsx';
-import { useConfirm } from '../../components/ConfirmProvider.jsx';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { api } from '../../lib/api.js';
 import { useApi } from '../../lib/useApi.js';
+import { useLeaveGuard } from '../../lib/useLeaveGuard.js';
 import { todayString } from '../../lib/today.js';
 import { UNITS, FORMS, PLANT_PARTS } from '../../lib/cabinet.js';
 import { SourceFields } from './SourceFields.jsx';
@@ -42,7 +42,6 @@ export function ItemForm() {
   const editing = Boolean(id);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const confirm = useConfirm();
   const toast = useToast();
   const sections = useApi('/api/sections');
   const suppliers = useApi('/api/suppliers');
@@ -55,7 +54,6 @@ export function ItemForm() {
   const [extraSuppliers, setExtraSuppliers] = useState([]);
   const [suggested, setSuggested] = useState(false);
   const typedExpiry = useRef(false);
-  const saved = useRef(false);
   const initialKey = useRef('');
 
   useEffect(() => {
@@ -89,12 +87,7 @@ export function ItemForm() {
   }, [formKind, date]);
 
   const dirty = Boolean(form) && JSON.stringify(form) !== initial;
-  const blocker = useBlocker(() => dirty && !saved.current);
-  useEffect(() => {
-    if (blocker.state !== 'blocked') return;
-    confirm({ title: 'Leave without saving?', body: 'Your changes will be lost.', confirmLabel: 'Leave', danger: true })
-      .then(ok => (ok ? blocker.proceed() : blocker.reset()));
-  }, [blocker, confirm]);
+  const markSaved = useLeaveGuard(dirty);
 
   const sectionKind = sections.data?.find(x => String(x.id) === form?.section_id)?.kind;
   const herb = sectionKind === 'herb';
@@ -107,7 +100,7 @@ export function ItemForm() {
     }
     try {
       const result = editing ? await api.patch(`/api/items/${id}`, body) : await api.post('/api/items', body);
-      saved.current = true;
+      markSaved();
       toast.show({ message: 'Saved' });
       navigate(`/cabinet/items/${result?.id ?? id}`);
     } catch (ex) {
