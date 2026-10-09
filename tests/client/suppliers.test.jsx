@@ -169,3 +169,28 @@ it('never links an unsafe website on the detail page', async () => {
   expect(document.querySelector('a[href^="javascript"]')).toBeNull();
   expect(screen.queryByText('Website')).not.toBeInTheDocument();
 });
+
+it('shows each purchase in the unit it was bought in, not the item unit now', async () => {
+  const fetchBase = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/suppliers/2') {
+      return new Response(JSON.stringify({ ...detail, purchases: [{ ...detail.purchases[0], item_unit: 'oz', unit: 'kg', quantity: 2 }] }));
+    }
+    return fetchBase(url, opts);
+  });
+  open('/cabinet/suppliers/2');
+  const table = within(await screen.findByRole('table'));
+  expect(table.getByText('2 kg')).toBeInTheDocument();
+  expect(table.queryByText(/oz/)).not.toBeInTheDocument();
+});
+
+it('goes back to the supplier when a delete is undone', async () => {
+  const user = userEvent.setup();
+  const router = open('/cabinet/suppliers/2');
+  await user.click(await screen.findByRole('button', { name: 'Delete' }));
+  await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/cabinet/suppliers'));
+  await user.click(await screen.findByRole('button', { name: 'Undo' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/cabinet/suppliers/2'));
+  expect(calls.some(c => c.method === 'POST' && c.url === '/api/suppliers/2/restore')).toBe(true);
+});

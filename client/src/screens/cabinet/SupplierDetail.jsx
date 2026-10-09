@@ -37,7 +37,7 @@ export function SupplierDetail() {
           <>
             <Button as={Link} variant="secondary" to={`/cabinet/suppliers/${sup.id}/edit`}>Edit</Button>
             <Button variant="danger" onClick={async () => {
-              if (await del({ url: `/api/suppliers/${sup.id}`, label: sup.name })) navigate('/cabinet/suppliers');
+              if (await del({ url: `/api/suppliers/${sup.id}`, label: sup.name, onUndo: () => navigate(`/cabinet/suppliers/${sup.id}`) })) navigate('/cabinet/suppliers');
             }}>Delete</Button>
           </>
         )} />
@@ -62,7 +62,7 @@ export function SupplierDetail() {
                     <tr key={p.id}>
                       <td>{formatDay(p.purchased_on)}</td>
                       <td><Link to={`/cabinet/items/${p.item_id}`}>{p.item_name}</Link></td>
-                      <td>{formatAmount(p.quantity, p.item_unit)}</td>
+                      <td>{formatAmount(p.quantity, p.unit)}</td>
                       <td>{formatMoney(p.price)}</td>
                     </tr>
                   ))}

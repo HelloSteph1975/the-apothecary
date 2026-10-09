@@ -22,7 +22,7 @@ beforeEach(() => {
     if (url === '/api/sections') return json([{ id: 1, name: 'Herbs', kind: 'herb' }, { id: 2, name: 'Containers', kind: 'supply' }]);
     if (url === '/api/suppliers' && method === 'GET') return json([{ id: 2, name: 'Mountain Rose' }]);
     if (url === '/api/storage-spots') return json(['Pantry shelf']);
-    if (url.startsWith('/api/expiry-suggestion')) return json({ expires_on: '2027-10-08' });
+    if (url.startsWith('/api/expiry-suggestion')) return json(url.includes('form=fresh') ? null : { expires_on: '2027-10-08' });
     if (url === '/api/items' && method === 'POST') {
       if (postFails) return json({ error: 'Please fix the highlighted fields.', details: { name: 'Required' } }, 400);
       return json({ id: 9 }, 201);
@@ -153,4 +153,33 @@ it('does not suggest a date or prompt when an untouched edit form is cancelled',
   expect(await screen.findByRole('heading', { name: 'Yarrow' })).toBeInTheDocument();
   expect(screen.queryByText('Leave without saving?')).not.toBeInTheDocument();
   expect(calls.some(c => c.url.startsWith('/api/expiry-suggestion'))).toBe(false);
+});
+
+async function fillSuggested(user) {
+  open();
+  await user.selectOptions(await screen.findByLabelText(/^Section/), 'Herbs');
+  await user.selectOptions(screen.getByLabelText('Source'), 'Bought');
+  fireEvent.change(screen.getByLabelText('Date bought'), { target: { value: '2026-10-08' } });
+  await user.selectOptions(screen.getByLabelText('Form'), 'dried leaf');
+  await waitFor(() => expect(screen.getByLabelText('Use by')).toHaveValue('2027-10-08'));
+}
+
+it('clears a suggested use by date when the new form has no suggestion', async () => {
+  const user = userEvent.setup();
+  await fillSuggested(user);
+  await user.selectOptions(screen.getByLabelText('Form'), 'fresh');
+  await waitFor(() => expect(screen.getByLabelText('Use by')).toHaveValue(''));
+  expect(screen.queryByText('Suggested from the form. Change it if you like.')).not.toBeInTheDocument();
+});
+
+it('keeps a typed use by date when the new form has no suggestion', async () => {
+  const user = userEvent.setup();
+  await fillSuggested(user);
+  fireEvent.change(screen.getByLabelText('Use by'), { target: { value: '2028-01-01' } });
+  const count = () => calls.filter(c => c.url.startsWith('/api/expiry-suggestion')).length;
+  const before = count();
+  await user.selectOptions(screen.getByLabelText('Form'), 'fresh');
+  await user.click(screen.getByLabelText(/^Name/));
+  expect(count()).toBe(before);
+  expect(screen.getByLabelText('Use by')).toHaveValue('2028-01-01');
 });

@@ -54,6 +54,7 @@ export function ItemForm() {
   const [extraSuppliers, setExtraSuppliers] = useState([]);
   const [suggested, setSuggested] = useState(false);
   const typedExpiry = useRef(false);
+  const suggestedRef = useRef(false);
   const initialKey = useRef('');
 
   useEffect(() => {
@@ -79,8 +80,14 @@ export function ItemForm() {
     if (`${formKind}|${date}` === initialKey.current) return undefined;
     let live = true;
     api.get(`/api/expiry-suggestion?form=${encodeURIComponent(formKind)}&acquired_on=${encodeURIComponent(date)}`).then(r => {
-      if (!live || typedExpiry.current || !r?.expires_on) return;
+      if (!live || typedExpiry.current) return;
+      if (!r?.expires_on) {
+        // The old suggestion no longer applies. Clear it, but never a typed date.
+        if (suggestedRef.current) { setForm(f => ({ ...f, expires_on: '' })); suggestedRef.current = false; setSuggested(false); }
+        return;
+      }
       setForm(f => ({ ...f, expires_on: r.expires_on }));
+      suggestedRef.current = true;
       setSuggested(true);
     }, () => {});
     return () => { live = false; };
@@ -166,7 +173,7 @@ export function ItemForm() {
             <SourceFields form={form} set={set} err={err} editing={editing} suppliers={allSuppliers}
               onSupplierAdded={created => { setExtraSuppliers(x => [...x, created]); suppliers.reload(); }} />
             <Field label="Use by" hint={suggested ? 'Suggested from the form. Change it if you like.' : undefined} error={err('expires_on')}>
-              <DateInput value={form.expires_on} onChange={e => { typedExpiry.current = e.target.value !== ''; setSuggested(false); set('expires_on', e.target.value); }} />
+              <DateInput value={form.expires_on} onChange={e => { typedExpiry.current = e.target.value !== ''; suggestedRef.current = false; setSuggested(false); set('expires_on', e.target.value); }} />
             </Field>
           </ParchmentCard>
         </div>

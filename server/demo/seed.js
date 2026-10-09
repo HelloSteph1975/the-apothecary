@@ -3,6 +3,7 @@ import { repos } from '../db/repos.js';
 import { saveSettings } from '../services/settings.js';
 import { createItem } from '../services/cabinet.js';
 import { addDays, addMonths } from '../lib/dates.js';
+import { trashPhotoFile } from '../services/photos.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
 const SEED_VERSION = '2';
@@ -15,18 +16,32 @@ function localToday(d = new Date()) {
 }
 
 // Clears what the demo stocks (not the sections) so a reset doesn't double up.
-function clearCabinet(db) {
+function clearCabinet(db, dataDir) {
+  // Photo files go to the trash first (purgeTrash removes them later), so none are left in the live folder.
+  for (const { filename } of db.prepare("SELECT filename FROM photos WHERE owner_type IN ('item', 'supplier')").all()) {
+    trashPhotoFile(dataDir, filename);
+  }
   db.exec(`DELETE FROM purchases; DELETE FROM items; DELETE FROM suppliers;
     DELETE FROM photos WHERE owner_type IN ('item', 'supplier')`);
 }
 
+// Finds the live section with this name. If she renamed or deleted it, brings back a deleted one
+// or adds a new one at the end. Never renames her sections.
+function ensureSection(db, name) {
+  const live = db.prepare('SELECT id FROM cabinet_sections WHERE name = ? AND deleted_at IS NULL ORDER BY id').get(name);
+  if (live) return live.id;
+  const gone = db.prepare('SELECT id FROM cabinet_sections WHERE name = ? AND deleted_at IS NOT NULL ORDER BY id DESC').get(name);
+  if (gone) {
+    db.prepare('UPDATE cabinet_sections SET deleted_at = NULL WHERE id = ?').run(gone.id);
+    return gone.id;
+  }
+  const next = db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM cabinet_sections').get().n;
+  return repos(db).sections.create({ name, kind: name === 'Herbs' ? 'herb' : 'supply', sort_order: next }).id;
+}
+
 function stockCabinet(db, today) {
   const r = repos(db);
-  const section = name => {
-    const row = r.sections.list().find(s => s.name === name);
-    if (!row) throw new Error(`Demo needs a "${name}" section`);
-    return row.id;
-  };
+  const section = name => ensureSection(db, name);
   const moonvale = r.suppliers.create({ name: 'Moonvale Botanicals', rating: 5, good_for: 'Dried herbs and resins' });
   const tinGlass = r.suppliers.create({ name: 'Tin & Glass Co', rating: 4, good_for: 'Bottles, tins and droppers' });
   const bought = (supplier, ageDays, price) => ({ supplier_id: supplier.id, purchased_on: addDays(today, -ageDays), price });
@@ -64,7 +79,7 @@ export function seedDemo(ctx, { reset = false } = {}) {
   }
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
-    clearCabinet(db);
+    clearCabinet(db, ctx.config.dataDir);
     stockCabinet(db, localToday());
     db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });

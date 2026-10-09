@@ -1,6 +1,8 @@
 import { it, expect, afterEach } from 'vitest';
 import { makeTestContext } from './helpers.js';
 import { seedDemo } from '../../server/demo/seed.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import { getSettings } from '../../server/services/settings.js';
 
 let t;
@@ -74,4 +76,42 @@ it('leaves an older demo folder alone when it already has items', async () => {
   await t.http().post('/api/items').send({ section_id: 1, name: 'My own herb', amount: 1, unit: 'g' });
   expect(seedDemo(t.ctx)).toBe(false);
   expect((await t.http().get(`/api/items?today=${localToday()}`)).body).toHaveLength(1);
+});
+
+it('reset still works after the Herbs section was renamed, and leaves her name alone', async () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.prepare("UPDATE cabinet_sections SET name = 'My plants' WHERE name = 'Herbs'").run();
+  expect(() => seedDemo(t.ctx, { reset: true })).not.toThrow();
+  const names = (await t.http().get(`/api/items?today=${localToday()}`)).body.map(i => i.name);
+  expect(names).toEqual(expect.arrayContaining(['Calendula', 'Mugwort']));
+  const sections = (await t.http().get('/api/sections')).body;
+  expect(sections.map(s => s.name)).toContain('My plants');
+  const herbs = sections.filter(s => s.name === 'Herbs');
+  expect(herbs).toHaveLength(1);
+  expect(herbs[0].kind).toBe('herb');
+});
+
+it('reset brings back a deleted starter section instead of adding a copy', async () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.prepare("UPDATE items SET deleted_at = datetime('now')").run();
+  t.ctx.db.prepare("UPDATE cabinet_sections SET deleted_at = datetime('now') WHERE name = 'Waxes'").run();
+  seedDemo(t.ctx, { reset: true });
+  expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM cabinet_sections WHERE name = 'Waxes'").get().n).toBe(1);
+  expect(t.ctx.db.prepare("SELECT deleted_at FROM cabinet_sections WHERE name = 'Waxes'").get().deleted_at).toBeNull();
+});
+
+it('reset moves demo photo files to the trash', async () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const item = t.ctx.db.prepare('SELECT id FROM items LIMIT 1').get();
+  const filename = '1700000000000-abcdef12.jpg';
+  fs.mkdirSync(path.join(t.dataDir, 'photos', '_trash'), { recursive: true });
+  fs.writeFileSync(path.join(t.dataDir, 'photos', filename), 'x');
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('item', ?, ?)").run(item.id, filename);
+  seedDemo(t.ctx, { reset: true });
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', filename))).toBe(false);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM photos').get().n).toBe(0);
 });
