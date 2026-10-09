@@ -121,3 +121,18 @@ it('shows the garden panel with harvest part and timing', async () => {
   expect(within(garden).getByText('Part harvested').nextElementSibling).toHaveTextContent('Flower spikes');
   expect(within(garden).getByText('Harvest timing').nextElementSibling).toHaveTextContent('Midsummer');
 });
+
+it('shows other names and parts used', async () => {
+  herb = { ...base, other_names: ['Tulsi', 'Holy lavender'], parts_used: ['flower', 'leaf'] };
+  open();
+  expect(await screen.findByText('Also called Tulsi, Holy lavender')).toBeInTheDocument();
+  expect(screen.getByText('Parts used')).toBeInTheDocument();
+  expect(screen.getByText('Flower, leaf')).toBeInTheDocument();
+});
+
+it('shows the uses panel when only parts used is set', async () => {
+  herb = { ...base, uses: null, preparations: [], taste: null, energetics: null, other_names: [], parts_used: ['root'] };
+  open();
+  expect(await screen.findByRole('heading', { name: 'Uses in tradition' })).toBeInTheDocument();
+  expect(screen.getByText('Root')).toBeInTheDocument();
+});

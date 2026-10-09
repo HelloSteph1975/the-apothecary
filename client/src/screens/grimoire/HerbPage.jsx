@@ -45,7 +45,8 @@ export function HerbPage() {
   const herbSection = (sections.data ?? []).find(s => s.kind === 'herb');
   const cautions = CAUTION_FIELDS.filter(([f]) => herb[f]);
   const preparations = list(herb.preparations);
-  const hasUses = herb.uses || preparations.length > 0 || herb.taste || herb.energetics;
+  const partsUsed = list(herb.parts_used);
+  const hasUses = herb.uses || partsUsed.length > 0 || preparations.length > 0 || herb.taste || herb.energetics;
   const zodiac = list(herb.zodiac);
   const associations = list(herb.associations);
   const hasCorr = herb.planet || herb.element || herb.gender || zodiac.length > 0 || associations.length > 0;
@@ -53,6 +54,7 @@ export function HerbPage() {
   const hasGarden = herb.garden_harvest_part || herb.garden_harvest_timing || herb.garden_sun || herb.garden_water || companions.length > 0;
   const jars = list(herb.jars);
   const sources = list(herb.sources);
+  const otherNames = list(herb.other_names);
   const subtitle = [herb.latin_name, herb.family].filter(Boolean).join(', ');
   const addJar = herbSection ? `/cabinet/new?section=${herbSection.id}&herb=${herb.id}` : `/cabinet/new?herb=${herb.id}`;
 
@@ -67,6 +69,7 @@ export function HerbPage() {
             }}>Delete</Button>
           </>
         )} />
+      {otherNames.length > 0 && <p className="muted">Also called {otherNames.join(', ')}</p>}
       <div className="card-grid">
         <ParchmentCard title="Before you use it" className="panel-caution panel-wide">
           {cautions.length === 0 && !herb.ahpa_class && (
@@ -87,7 +90,7 @@ export function HerbPage() {
           <ParchmentCard title="Uses in tradition">
             {herb.uses && <p>{herb.uses}</p>}
             {preparations.length > 0 && <ul>{preparations.map(p => <li key={p}>{cap(p)}</li>)}</ul>}
-            <Rows rows={[['Taste', herb.taste], ['Energetics', herb.energetics]]} />
+            <Rows rows={[['Parts used', cap(partsUsed.join(', '))], ['Taste', herb.taste], ['Energetics', herb.energetics]]} />
           </ParchmentCard>
         )}
 

@@ -168,3 +168,13 @@ it('loads the other herb when moving from one edit page to another', async () =>
   expect(screen.getByRole('heading', { level: 1, name: 'Edit Mugwort' })).toBeInTheDocument();
   expect(screen.queryAllByLabelText('Title (required)')).toHaveLength(0);
 });
+
+it('sends one POST when Save is pressed twice quickly', async () => {
+  const user = userEvent.setup();
+  open('/grimoire/new');
+  await user.type(await screen.findByLabelText('Common name (required)'), 'Sage');
+  const save = screen.getByRole('button', { name: 'Save' });
+  await user.dblClick(save);
+  await waitFor(() => expect(calls.some(c => c.method === 'POST')).toBe(true));
+  expect(calls.filter(c => c.method === 'POST')).toHaveLength(1);
+});

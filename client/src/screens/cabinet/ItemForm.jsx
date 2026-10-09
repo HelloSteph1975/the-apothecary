@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
 import { Field, TextInput, NumberInput, DateInput, TextArea, Select } from '../../components/Field.jsx';
+import { Button } from '../../components/Button.jsx';
 import { WaxSeal } from '../../components/WaxSeal.jsx';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { api } from '../../lib/api.js';
@@ -19,7 +20,9 @@ const orNull = v => (v === '' || v == null ? null : v);
 const fromItem = it => ({
   section_id: s(it.section_id), name: s(it.name), size_label: s(it.size_label), amount: s(it.amount), unit: it.unit || 'g',
   low_threshold: s(it.low_threshold), storage_spot: s(it.storage_spot), notes: s(it.notes),
-  herb_id: it.herb_name ? s(it.herb_id) : '', latin_name: s(it.latin_name), form: s(it.form), plant_part: s(it.plant_part),
+  herb_id: it.herb_name ? s(it.herb_id) : '',
+  // A link to a deleted herb stays on the server unless she picks another herb.
+  herb_kept: !it.herb_name && it.herb_id ? s(it.herb_id) : '', latin_name: s(it.latin_name), form: s(it.form), plant_part: s(it.plant_part),
   source_kind: s(it.source_kind), source_place: s(it.source_place), source_from: s(it.source_from),
   acquired_on: s(it.acquired_on), expires_on: s(it.expires_on),
   supplier_id: '', price: '', order_note: '',
@@ -29,7 +32,7 @@ const toPayload = (f, herb) => ({
   section_id: toNum(f.section_id), name: f.name.trim(), size_label: orNull(f.size_label),
   amount: toNum(f.amount), unit: f.unit, low_threshold: toNum(f.low_threshold),
   storage_spot: orNull(f.storage_spot), notes: orNull(f.notes),
-  herb_id: herb ? toNum(f.herb_id) : null,
+  ...(herb && f.herb_kept ? {} : { herb_id: herb ? toNum(f.herb_id) : null }),
   latin_name: herb ? orNull(f.latin_name) : null, form: herb ? orNull(f.form) : null, plant_part: herb ? orNull(f.plant_part) : null,
   source_kind: orNull(f.source_kind),
   source_place: f.source_kind === 'foraged' ? orNull(f.source_place) : null,
@@ -63,7 +66,7 @@ export function ItemForm() {
 
   useEffect(() => {
     if (form || !sections.data || (editing && !item.data)) return;
-    if (!editing && wantedHerb && !herbsApi.data && !herbsApi.error) return;
+    if (!editing && wantedHerb && !herbsApi.data) return;
     const wantedSection = sections.data.find(x => String(x.id) === params.get('section'));
     const start = editing ? fromItem(item.data) : { ...fromItem({}), section_id: wantedSection ? String(wantedSection.id) : '' };
     const linked = !editing && herbList.find(h => String(h.id) === wantedHerb);
@@ -110,7 +113,7 @@ export function ItemForm() {
   function pickHerb(value) {
     const h = herbList.find(x => String(x.id) === value);
     setForm(f => ({
-      ...f, herb_id: value,
+      ...f, herb_id: value, herb_kept: '',
       name: h && !f.name.trim() ? h.common_name : f.name,
       latin_name: h && !f.latin_name.trim() ? (h.latin_name ?? '') : f.latin_name,
     }));
@@ -138,6 +141,15 @@ export function ItemForm() {
   }
 
   const loadError = sections.error || item.error;
+  if (!loadError && !editing && wantedHerb && herbsApi.error) {
+    return (
+      <>
+        <PageHeader title="Add to the cabinet" />
+        <p role="alert">The herb list couldn't load, so this jar can't be linked to its herb yet.</p>
+        <Button onClick={herbsApi.reload}>Try again</Button>
+      </>
+    );
+  }
   if (loadError) return <><PageHeader title="Add to the cabinet" /><p role="alert">{loadError.message}</p></>;
   if (!form) return <PageHeader title={editing ? 'Edit item' : 'Add to the cabinet'} />;
 

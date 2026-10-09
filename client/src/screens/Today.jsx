@@ -110,6 +110,11 @@ export function Today() {
             </>
           ))}
         </ParchmentCard>
+        {herbApi.error && (
+          <ParchmentCard title="Herb of the day" subtitle="from the grimoire" botanical="lavender">
+            <p role="alert">The herb of the day couldn't load. <button type="button" className="btn" onClick={herbApi.reload}>Try again</button></p>
+          </ParchmentCard>
+        )}
         {herb && (
           <ParchmentCard title="Herb of the day" subtitle="from the grimoire" botanical="lavender">
             <p><Link to={`/grimoire/${herb.id}`}>{herb.common_name}</Link></p>

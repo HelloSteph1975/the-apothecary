@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -60,6 +60,8 @@ export function HerbForm() {
     setInitial(JSON.stringify([f, plainSources(src)]));
   }, [form, editing, herb.data]);
 
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const dirty = Boolean(form) && JSON.stringify([form, plainSources(sources)]) !== initial;
   const markSaved = useLeaveGuard(dirty);
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
@@ -73,6 +75,9 @@ export function HerbForm() {
 
   async function save(e) {
     e.preventDefault();
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     const body = {
       parts_used: order(HERB_PARTS, form.parts_used), preparations: order(RECIPE_TYPES, form.preparations),
       sources: sources.map(x => {
@@ -93,6 +98,8 @@ export function HerbForm() {
     } catch (ex) {
       setErrors(ex.details ?? {});
       toast.show({ message: ex.message, duration: 6000 });
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
@@ -179,7 +186,7 @@ export function HerbForm() {
           <SourcesEditor sources={sources} onChange={changeSources} errors={errors} />
         </ParchmentCard>
         <p className="page-actions">
-          <WaxSeal type="submit">Save</WaxSeal>
+          <WaxSeal type="submit" disabled={saving}>Save</WaxSeal>
           <Link to={editing ? `/grimoire/${id}` : '/grimoire'}>Cancel</Link>
         </p>
       </form>

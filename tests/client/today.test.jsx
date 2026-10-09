@@ -9,6 +9,7 @@ let summary;
 let items;
 let failToday;
 let herbOfDay;
+let failHerb;
 const item = (id, name, extra = {}) => ({ id, name, size_label: null, amount: 40, unit: 'g', low_threshold: 50, expires_on: null, section_name: 'Shelf A', cover: null, ...extra });
 beforeEach(() => {
   settings = { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
@@ -16,10 +17,11 @@ beforeEach(() => {
   items = [];
   failToday = false;
   herbOfDay = null;
+  failHerb = false;
   global.fetch = vi.fn(async url => {
     const json = body => new Response(JSON.stringify(body), { status: 200 });
     if (url === '/api/health') return json({ ok: true, demo: false });
-    if (url.startsWith('/api/herb-of-the-day')) return json(herbOfDay);
+    if (url.startsWith('/api/herb-of-the-day')) return failHerb ? new Response(JSON.stringify({ error: 'nope' }), { status: 500 }) : json(herbOfDay);
     if (url.startsWith('/api/today')) return failToday ? new Response(JSON.stringify({ error: 'nope' }), { status: 500 }) : json(summary);
     if (url.startsWith('/api/items')) return json(items);
     return json(settings);
@@ -133,4 +135,19 @@ it('hides the herb of the day card when there is none', async () => {
   today();
   await screen.findByRole('heading', { level: 2, name: 'Running low' });
   expect(screen.queryByRole('heading', { name: 'Herb of the day' })).not.toBeInTheDocument();
+});
+
+it('shows an error line on the herb card when it fails, and retries only that request', async () => {
+  const user = userEvent.setup();
+  failHerb = true;
+  today();
+  expect(await screen.findByText("The herb of the day couldn't load.")).toBeInTheDocument();
+  const before = global.fetch.mock.calls.filter(c => String(c[0]).startsWith('/api/today')).length;
+  failHerb = false;
+  herbOfDay = { id: 3, common_name: 'Lavender', latin_name: null, uses: null, planet: null, element: null };
+  const card = screen.getByRole('heading', { level: 2, name: 'Herb of the day' }).closest('section, article, div');
+  await user.click(screen.getAllByRole('button', { name: 'Try again' }).pop());
+  expect(await screen.findByRole('link', { name: 'Lavender' })).toBeInTheDocument();
+  expect(global.fetch.mock.calls.filter(c => String(c[0]).startsWith('/api/today')).length).toBe(before);
+  expect(card).toBeTruthy();
 });
