@@ -18,6 +18,7 @@ import { HerbPage } from './screens/grimoire/HerbPage.jsx';
 import { HerbForm } from './screens/grimoire/HerbForm.jsx';
 import { RecipeBook } from './screens/recipes/RecipeBook.jsx';
 import { RecipeTypes } from './screens/recipes/RecipeTypes.jsx';
+import { RecipePage } from './screens/recipes/RecipePage.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -47,6 +48,7 @@ export const routes = [
       { path: 'grimoire/:id/edit', element: <HerbFormRoute /> },
       { path: 'recipes', element: <RecipeBook /> },
       { path: 'recipes/types', element: <RecipeTypes /> },
+      { path: 'recipes/:id', element: <RecipePage /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },
