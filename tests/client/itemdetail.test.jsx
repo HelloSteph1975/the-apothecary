@@ -159,12 +159,13 @@ it('links to the grimoire herb when the jar is linked', async () => {
   open();
   const link = await screen.findByRole('link', { name: 'Nettle' });
   expect(link).toHaveAttribute('href', '/grimoire/3');
-  expect(link.closest('dd, p')).toHaveTextContent('In the grimoire: Nettle');
+  expect(link.closest('dd')).toHaveTextContent(/^Nettle$/);
+  expect(link.closest('dd').previousElementSibling).toHaveTextContent('Grimoire');
 });
 
 it('shows no grimoire line when the jar is not linked', async () => {
   item = { ...baseItem, herb_id: null, herb_name: null };
   open();
   await screen.findByRole('heading', { name: 'Nettle' });
-  expect(screen.queryByText(/In the grimoire/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Grimoire', { selector: 'dt' })).not.toBeInTheDocument();
 });

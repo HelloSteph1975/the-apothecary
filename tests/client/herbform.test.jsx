@@ -108,6 +108,7 @@ it('shows the starter note when editing a starter herb only', async () => {
 it('has no starter note on a new herb', async () => {
   open('/grimoire/new');
   await screen.findByLabelText('Common name (required)');
+  expect(screen.getByRole('heading', { level: 1, name: 'Add an herb' })).toBeInTheDocument();
   expect(screen.queryByText(/starter herbs/)).not.toBeInTheDocument();
 });
 

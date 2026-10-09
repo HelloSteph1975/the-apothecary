@@ -43,11 +43,11 @@ beforeEach(() => {
   });
 });
 
-const open = () => render(
-  <ToastProvider><ConfirmProvider>
-    <RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/grimoire/5'] })} />
-  </ConfirmProvider></ToastProvider>,
-);
+const open = () => {
+  const router = createMemoryRouter(routes, { initialEntries: ['/grimoire/5'] });
+  render(<ToastProvider><ConfirmProvider><RouterProvider router={router} /></ConfirmProvider></ToastProvider>);
+  return router;
+};
 
 it('puts the cautions panel before the uses, with labels and the AHPA class', async () => {
   open();
@@ -61,7 +61,7 @@ it('puts the cautions panel before the uses, with labels and the AHPA class', as
   const uses = screen.getByRole('region', { name: 'Uses in tradition' });
   expect(cautions.compareDocumentPosition(uses) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Lavender' })).toBeInTheDocument();
-  expect(screen.getByText(/Lavandula angustifolia/)).toBeInTheDocument();
+  expect(screen.getByText('Lavandula angustifolia, Lamiaceae')).toBeInTheDocument();
   expect(screen.getByText('Folk tradition, not fact.')).toBeInTheDocument();
 });
 
@@ -100,15 +100,19 @@ it('shows sources with safe links only', async () => {
   expect(within(src).queryByRole('link', { name: 'Odd Link' })).not.toBeInTheDocument();
 });
 
-it('deletes with undo and returns to the grimoire', async () => {
+it('deletes with undo and returns to the grimoire, and undo comes back to the herb', async () => {
   const user = userEvent.setup();
-  open();
-  await screen.findByRole('heading', { name: 'Lavender' });
+  const router = open();
+  await screen.findByRole('heading', { level: 1, name: 'Lavender' });
   await user.click(screen.getByRole('button', { name: 'Delete' }));
-  const dialog = screen.queryByRole('dialog');
-  if (dialog) await user.click(within(dialog).getByRole('button', { name: /delete/i }));
-  await waitFor(() => expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/herbs/5')).toBe(true));
-  expect(await screen.findByRole('heading', { name: 'Grimoire' })).toBeInTheDocument();
+  await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+  await waitFor(() => expect(calls.filter(c => c.method === 'DELETE').map(c => c.url)).toEqual(['/api/herbs/5']));
+  expect(await screen.findByRole('heading', { level: 1, name: 'Grimoire' })).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe('/grimoire');
+  await user.click(await screen.findByRole('button', { name: 'Undo' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/herbs/5/restore')).toBe(true));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/grimoire/5'));
+  expect(await screen.findByRole('heading', { level: 1, name: 'Lavender' })).toBeInTheDocument();
 });
 
 it('shows the garden panel with harvest part and timing', async () => {

@@ -53,7 +53,7 @@ export function HerbPage() {
   const hasGarden = herb.garden_harvest_part || herb.garden_harvest_timing || herb.garden_sun || herb.garden_water || companions.length > 0;
   const jars = list(herb.jars);
   const sources = list(herb.sources);
-  const subtitle = [herb.latin_name, herb.family].filter(Boolean).join(' · ');
+  const subtitle = [herb.latin_name, herb.family].filter(Boolean).join(', ');
   const addJar = herbSection ? `/cabinet/new?section=${herbSection.id}&herb=${herb.id}` : `/cabinet/new?herb=${herb.id}`;
 
   return (

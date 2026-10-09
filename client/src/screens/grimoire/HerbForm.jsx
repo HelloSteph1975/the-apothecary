@@ -96,7 +96,7 @@ export function HerbForm() {
     }
   }
 
-  const heading = editing ? 'Edit herb' : 'Add a herb';
+  const heading = editing ? 'Edit herb' : 'Add an herb';
   if (herb.error) return <><PageHeader title={heading} /><p role="alert">{herb.error.message}</p></>;
   if (!form) return <PageHeader title={heading} />;
 

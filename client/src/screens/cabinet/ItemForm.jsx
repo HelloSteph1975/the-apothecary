@@ -69,7 +69,7 @@ export function ItemForm() {
     const linked = !editing && herbList.find(h => String(h.id) === wantedHerb);
     if (linked) {
       Object.assign(start, { herb_id: String(linked.id), name: linked.common_name, latin_name: linked.latin_name ?? '' });
-      // A jar of a grimoire herb belongs on a herb shelf.
+      // A jar of a grimoire herb belongs on an herb shelf.
       const herbShelf = wantedSection?.kind === 'herb' ? wantedSection : sections.data.find(x => x.kind === 'herb');
       if (herbShelf) start.section_id = String(herbShelf.id);
     }
