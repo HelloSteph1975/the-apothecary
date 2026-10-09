@@ -11,7 +11,7 @@ import { formatAmount } from '../../lib/cabinet.js';
 import { CAUTION_FIELDS } from '../../lib/grimoire.js';
 import { daysText, shelfText } from '../../lib/recipes.jsx';
 
-const PRESETS = [['0.5', '1/2×'], ['1', '1×'], ['2', '2×'], ['3', '3×']];
+const PRESETS = [['0.5', 'Half'], ['1', 'As written'], ['2', 'Double'], ['3', 'Triple']];
 const FIELD_LABELS = Object.fromEntries(CAUTION_FIELDS);
 const num = n => String(Math.round(n * 100) / 100);
 
@@ -57,18 +57,17 @@ function ScalePanel({ recipe, scaleParam, yieldParam, setScale, error, badLink }
           </Field>
         )}
         {recipe.yield_amount > 0 && (
-          <Field label={`or make (${unit || 'amount'})`} error={error?.yield}>
+          <Field label={`Or make (${unit || 'amount'})`} error={error?.yield}>
             <NumberInput min="0" value={target} onChange={onTarget} />
           </Field>
         )}
       </div>
-      {badLink && !scaled && <p className="muted" role="status">The scale in that link wasn't valid, so this is the recipe as written.</p>}
-      {scaled && (
-        <p>
-          Scaled to {num(recipe.factor)}×{recipe.scaled_yield_amount != null && `: makes ${formatAmount(recipe.scaled_yield_amount, unit)}`}{' '}
-          <Button variant="secondary" onClick={reset}>Reset</Button>
-        </p>
-      )}
+      <p role="status" className={scaled ? undefined : 'muted'}>
+        {scaled
+          ? `Scaled to ${num(recipe.factor)}×${recipe.scaled_yield_amount != null ? `: makes ${formatAmount(recipe.scaled_yield_amount, unit)}` : ''}`
+          : badLink ? "The scale in that link wasn't valid, so this is the recipe as written." : ''}
+      </p>
+      {scaled && <p><Button variant="secondary" onClick={reset}>Reset</Button></p>}
     </ParchmentCard>
   );
 }
@@ -133,6 +132,7 @@ export function RecipePage() {
   const subtitle = [recipe.type?.name, yieldText].filter(Boolean).join(', ');
   const wait = daysText(recipe.effective_wait_days);
   const shelf = shelfText(recipe.effective_shelf_life_days);
+  const goneHerbs = recipe.ingredients.filter(i => i.herb_deleted);
   const hasCautions = recipe.needs_patch_test || recipe.label_caution || recipe.cautions.length > 0;
   const aboutRows = [['Wait', wait], ['Shelf life', shelf], ['Intention', recipe.intention], ['Best timing', recipe.timing_notes], ['Notes', recipe.notes]].filter(([, v]) => v);
 
@@ -161,7 +161,12 @@ export function RecipePage() {
               </dl>
             </Fragment>
           ))}
-          {!hasCautions && <p>No cautions recorded for these ingredients. Check each herb before you make it.</p>}
+          {goneHerbs.map(i => (
+            <p key={i.id} className="muted">{i.name} is no longer in the grimoire, so its cautions can't be shown here.</p>
+          ))}
+          {!hasCautions && (
+            <p>No cautions recorded for {goneHerbs.length ? 'the other' : 'these'} ingredients. Check each herb before you make it.</p>
+          )}
           <p className="muted">For learning and folk tradition. Not medical advice; check with a qualified practitioner, especially if you're pregnant, nursing or take medicines.</p>
         </ParchmentCard>
 
@@ -176,7 +181,7 @@ export function RecipePage() {
                 return (
                   <li key={i.id}>
                     {amount && <span>{amount} </span>}
-                    {i.herb_name ? <Link to={`/grimoire/${i.herb_id}`}>{i.herb_name}</Link> : <span>{i.name}</span>}
+                    {i.herb_name ? <Link to={`/grimoire/${i.herb_id}`}>{i.name}</Link> : <span>{i.name}</span>}
                     {i.herb_deleted && <span className="muted"> (no longer in the grimoire)</span>}
                     {meta && <span className="muted">, {meta}</span>}
                   </li>

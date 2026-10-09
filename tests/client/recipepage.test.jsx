@@ -16,7 +16,7 @@ const base = {
   type: { id: 2, name: 'Salve', is_topical: 1, label_caution: 'Keep away from eyes.' },
   effective_wait_days: 14, effective_shelf_life_days: 365, factor: 1, scaled_yield_amount: 100,
   ingredients: [
-    { id: 1, herb_id: 3, herb_name: 'Calendula', herb_deleted: false, name: 'Calendula', amount: 30, base_amount: 30, unit: 'g', form: 'dried', plant_part: 'flower', note: 'packed' },
+    { id: 1, herb_id: 3, herb_name: 'Calendula', herb_deleted: false, name: 'Calendula-infused olive oil', amount: 30, base_amount: 30, unit: 'g', form: 'dried', plant_part: 'flower', note: 'packed' },
     { id: 2, herb_id: 4, herb_name: null, herb_deleted: true, name: 'Old comfrey', amount: 10, base_amount: 10, unit: 'g', form: null, plant_part: null, note: null },
     { id: 3, herb_id: null, herb_name: null, herb_deleted: false, name: 'Beeswax', amount: null, base_amount: null, unit: null, form: null, plant_part: null, note: null },
   ],
@@ -75,24 +75,45 @@ it('shows the patch test line for topical types', async () => {
 });
 
 it('hides the patch test line for other types and says so when there are no cautions', async () => {
-  recipe = { ...base, needs_patch_test: false, label_caution: null, cautions: [], type: { ...base.type, is_topical: 0, label_caution: null } };
+  recipe = {
+    ...base, needs_patch_test: false, label_caution: null, cautions: [], type: { ...base.type, is_topical: 0, label_caution: null },
+    ingredients: base.ingredients.filter(i => !i.herb_deleted),
+  };
   open();
   const panel = await screen.findByRole('region', { name: 'Before you make it' });
   expect(within(panel).queryByText(/Patch test first/)).not.toBeInTheDocument();
   expect(within(panel).getByText('No cautions recorded for these ingredients. Check each herb before you make it.')).toBeInTheDocument();
 });
 
+it('says when a linked herb is gone from the grimoire, so its cautions are missing', async () => {
+  open();
+  const panel = await screen.findByRole('region', { name: 'Before you make it' });
+  expect(within(panel).getByText("Old comfrey is no longer in the grimoire, so its cautions can't be shown here.")).toBeInTheDocument();
+});
+
+it('does not claim there are no cautions when a linked herb is gone', async () => {
+  recipe = { ...base, needs_patch_test: false, label_caution: null, cautions: [], type: { ...base.type, is_topical: 0, label_caution: null } };
+  open();
+  const panel = await screen.findByRole('region', { name: 'Before you make it' });
+  expect(within(panel).getByText("Old comfrey is no longer in the grimoire, so its cautions can't be shown here.")).toBeInTheDocument();
+  expect(within(panel).queryByText(/No cautions recorded for these ingredients/)).not.toBeInTheDocument();
+  expect(within(panel).getByText('No cautions recorded for the other ingredients. Check each herb before you make it.')).toBeInTheDocument();
+});
+
 it('scales with ?scale= and shows the scaled amounts', async () => {
   const user = userEvent.setup();
   const router = open();
   await screen.findByRole('region', { name: 'Ingredients' });
-  await user.selectOptions(screen.getByLabelText('Make'), '2');
-  expect(await screen.findByText('Scaled to 2×: makes 200 ml', {}, { timeout: 4000 })).toBeInTheDocument();
+  const scalePanel = screen.getByRole('region', { name: 'Scale' });
+  expect(within(scalePanel).getByRole('status')).toBeEmptyDOMElement();
+  expect(within(screen.getByLabelText('Make')).getAllByRole('option').map(o => o.textContent)).toEqual(['Half', 'As written', 'Double', 'Triple', 'Other']);
+  await user.selectOptions(screen.getByLabelText('Make'), 'Double');
+  await waitFor(() => expect(within(scalePanel).getByRole('status')).toHaveTextContent('Scaled to 2×: makes 200 ml'), { timeout: 4000 });
   expect(calls.some(c => c.url === '/api/recipes/7?scale=2')).toBe(true);
   expect(screen.getByText('60 g')).toBeInTheDocument();
   expect(router.state.location.search).toBe('?scale=2');
   await user.click(screen.getByRole('button', { name: 'Reset' }));
-  await waitFor(() => expect(screen.queryByText(/Scaled to/)).not.toBeInTheDocument());
+  await waitFor(() => expect(within(scalePanel).getByRole('status')).toBeEmptyDOMElement());
   expect(router.state.location.search).toBe('');
 });
 
@@ -106,7 +127,7 @@ it('sends ?yield= for a target yield', async () => {
   const user = userEvent.setup();
   open();
   await screen.findByRole('region', { name: 'Ingredients' });
-  await user.type(screen.getByLabelText('or make (ml)'), '50');
+  await user.type(screen.getByLabelText('Or make (ml)'), '50');
   expect(await screen.findByText('Scaled to 0.5×: makes 50 ml', {}, { timeout: 4000 })).toBeInTheDocument();
   expect(calls.some(c => c.url === '/api/recipes/7?yield=50')).toBe(true);
 });
@@ -124,7 +145,8 @@ it('shows a server error by the field and keeps the page', async () => {
 it('lists ingredients, the deleted herb note, and steps as an ordered list', async () => {
   open();
   const ing = await screen.findByRole('region', { name: 'Ingredients' });
-  expect(within(ing).getByRole('link', { name: 'Calendula' })).toHaveAttribute('href', '/grimoire/3');
+  expect(within(ing).getByRole('link', { name: 'Calendula-infused olive oil' })).toHaveAttribute('href', '/grimoire/3');
+  expect(within(ing).queryByText('Calendula')).not.toBeInTheDocument();
   expect(within(ing).getByText('30 g')).toBeInTheDocument();
   expect(within(ing).getByText(/dried/)).toBeInTheDocument();
   expect(within(ing).getByText('(no longer in the grimoire)')).toBeInTheDocument();

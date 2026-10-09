@@ -55,7 +55,7 @@ test('adds a type and a recipe, scales it, and handles delete, undo and type mov
   await page.screenshot({ path: 'test-results/recipe.png', fullPage: true });
 
   // Scale to 2x.
-  await page.getByLabel('Make', { exact: true }).selectOption({ label: '2×' });
+  await page.getByLabel('Make', { exact: true }).selectOption({ label: 'Double' });
   await slowExpect(page.getByText(/Scaled to 2×/)).toBeVisible();
   await slowExpect(page.getByRole('listitem').filter({ hasText: 'Apple cider vinegar' })).toContainText('500 ml');
 
@@ -69,9 +69,10 @@ test('adds a type and a recipe, scales it, and handles delete, undo and type mov
   await page.goto(recipeUrl);
   await page.getByRole('button', { name: 'Delete' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
-  await slowExpect(page.getByRole('heading', { level: 1, name: 'Recipe book' })).toBeVisible();
-  await slowExpect(page.getByRole('link', { name: 'Rosemary hair rinse' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Undo' }).click();
+  // Click Undo as soon as the toast shows, before it can time out.
+  const undo = page.getByRole('button', { name: 'Undo' });
+  await slowExpect(undo).toBeVisible();
+  await undo.click();
   await slowExpect(page.getByRole('heading', { level: 1, name: 'Rosemary hair rinse' })).toBeVisible();
 
   await page.goto('/recipes');
