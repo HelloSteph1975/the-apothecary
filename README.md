@@ -6,16 +6,21 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-This is Stage 2A of 8: the herb cabinet.
+This is Stage 2B of 8. It adds the grimoire to the herb cabinet from Stage 2A.
 
 - Today shows a greeting and the date; moon and sky timing arrive in a later stage.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
 - Backups run every night, and Settings has Back up now and Restore.
 - The herb cabinet holds your herbs and supplies, jar by jar. Each item records whether you bought, grew, foraged, made or were given it, keeps a purchase history, and takes photos. Suppliers get their own pages and ratings.
 - Today lists jars that are running low, close to their use-by date, or past it.
+- The grimoire holds 30 starter herbs: traditional uses, parts used, garden notes, and the planet and element where an old herbal gives one. Cautions come first on every herb page. You can add, edit and delete your own herbs and their sources. Herb jars in the cabinet link to their grimoire page, and Today shows an herb of the day.
 - The other drawers say so when they are not built yet.
 
 ![The herb cabinet](docs/screenshots/shelves.jpg)
+
+The grimoire is for learning and record keeping, not medical advice. Ask a doctor or pharmacist before using herbs, especially if you are pregnant, nursing, or take medicines. `docs/grimoire/research-log.md` explains how the starter entries were researched, and `docs/grimoire/safety-check.md` explains how every caution was checked against its sources.
+
+![The grimoire](docs/screenshots/grimoire.jpg)
 
 ## Install on Windows
 
@@ -46,7 +51,7 @@ You can move the data folder by setting `dataDir` in `config.json`.
 
 ## Not medical advice
 
-The grimoire to come will hold traditional uses and folklore for plants. It is a keepsake, not medical guidance. Talk to a doctor or pharmacist before you use any herb, especially if you are pregnant, nursing, on medication or treating a child.
+The grimoire holds traditional uses and folklore for plants. It is a keepsake, not medical guidance. Talk to a doctor or pharmacist before you use any herb, especially if you are pregnant, nursing, on medication or treating a child.
 
 ## License
 
