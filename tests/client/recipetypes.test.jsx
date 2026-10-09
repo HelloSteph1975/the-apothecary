@@ -103,7 +103,28 @@ it('reaches the icon picker with the keyboard', async () => {
   const picker = within(dialog).getByRole('radiogroup', { name: 'Icon' });
   expect(within(picker).getAllByRole('radio')).toHaveLength(14);
   expect(within(picker).getByLabelText('Droplet')).toBeChecked();
-  within(picker).getByLabelText('Droplet').focus();
+  await user.click(within(dialog).getByLabelText('Label caution'));
+  await user.tab();
+  await user.tab();
+  expect(within(picker).getByLabelText('Droplet')).toHaveFocus();
   await user.keyboard('{ArrowRight}');
   expect(within(picker).getByLabelText('Cup')).toBeChecked();
+});
+
+it('shows a non-field save error inside the dialog and returns focus on close', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Salve');
+  const base = global.fetch.getMockImplementation();
+  global.fetch.mockImplementation(async (url, opts = {}) => (opts.method === 'POST' && url === '/api/recipe-types'
+    ? new Response(JSON.stringify({ error: 'Something went wrong on our side.' }), { status: 500 }) : base(url, opts)));
+  const add = screen.getByRole('button', { name: 'Add a type' });
+  add.focus();
+  await user.click(add);
+  const dialog = await screen.findByRole('dialog', { name: 'Add a recipe type' });
+  await user.type(within(dialog).getByLabelText('Name'), 'Oil');
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  expect(await within(dialog).findByText('Something went wrong on our side.')).toBeInTheDocument();
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Add a recipe type' })).toBeNull());
 });

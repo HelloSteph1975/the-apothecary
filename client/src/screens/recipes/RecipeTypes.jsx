@@ -16,19 +16,21 @@ const orNull = v => (v.trim() === '' ? null : v.trim());
 const dayOrNull = v => (v === '' || v == null ? null : Number(v));
 const blank = { name: '', description: '', wait_days: '', shelf_life_days: '', label_caution: '', is_topical: false, icon: 'sprout' };
 
-function TypeForm({ type, onClose, onSaved }) {
+function TypeForm({ type, open, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState(() => (type ? {
     name: type.name, description: type.description ?? '', wait_days: type.wait_days ?? '', shelf_life_days: type.shelf_life_days ?? '',
     label_caution: type.label_caution ?? '', is_topical: Boolean(type.is_topical), icon: type.icon || 'sprout',
   } : blank));
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
 
   async function save(e) {
     e.preventDefault();
     if (saving) return;
+    setFormError('');
     if (!form.name.trim()) { setErrors({ name: 'Give this type a name.' }); return; }
     const body = {
       name: form.name.trim(), description: orNull(form.description), wait_days: dayOrNull(form.wait_days),
@@ -40,15 +42,18 @@ function TypeForm({ type, onClose, onSaved }) {
       onSaved();
       onClose();
     } catch (ex) {
-      setErrors(ex.details ?? {});
-      toast.show({ message: ex.message, duration: 6000 });
+      const details = ex.details ?? {};
+      setErrors(details);
+      if (Object.keys(details).length === 0) setFormError(ex.message);
+      else toast.show({ message: ex.message, duration: 6000 });
     } finally { setSaving(false); }
   }
 
   return (
-    <Dialog open onClose={onClose} title={type ? `Edit ${type.name}` : 'Add a recipe type'}
+    <Dialog open={open} onClose={onClose} title={type ? `Edit ${type.name}` : 'Add a recipe type'}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" form="recipe-type-form" disabled={saving}>Save</Button></>}>
       <form id="recipe-type-form" onSubmit={save} noValidate>
+        {formError && <p role="alert" className="field-error">{formError}</p>}
         <Field label="Name" error={errors.name}><TextInput data-autofocus value={form.name} onChange={e => set('name', e.target.value)} /></Field>
         <Field label="Description" error={errors.description}><TextArea rows={2} value={form.description} onChange={e => set('description', e.target.value)} /></Field>
         <Field label="Wait in days" hint="How long it sits before it is ready. Leave empty for none." error={errors.wait_days}>
@@ -59,7 +64,7 @@ function TypeForm({ type, onClose, onSaved }) {
         </Field>
         <Field label="Label caution" error={errors.label_caution}><TextInput value={form.label_caution} onChange={e => set('label_caution', e.target.value)} /></Field>
         <p><Checkbox label="For the skin (shows a patch-test reminder)" checked={form.is_topical} onChange={e => set('is_topical', e.target.checked)} /></p>
-        <div role="radiogroup" aria-labelledby="icon-picker-label" className="icon-picker">
+        <div role="radiogroup" aria-labelledby="icon-picker-label" aria-describedby={errors.icon ? 'icon-picker-error' : undefined} className="icon-picker">
           <span id="icon-picker-label" className="icon-picker-label">Icon</span>
           <div className="icon-picker-options">
             {RECIPE_ICONS.map(o => (
@@ -71,7 +76,7 @@ function TypeForm({ type, onClose, onSaved }) {
             ))}
           </div>
         </div>
-        {errors.icon && <small className="field-error" role="alert">{errors.icon}</small>}
+        {errors.icon && <small id="icon-picker-error" className="field-error" role="alert">{errors.icon}</small>}
       </form>
     </Dialog>
   );
@@ -81,7 +86,10 @@ export function RecipeTypes() {
   const toast = useToast();
   const deleteWithUndo = useDeleteWithUndo();
   const types = useApi('/api/recipe-types');
-  const [editing, setEditing] = useState(null); // 'new' or a type
+  const [editing, setEditing] = useState(null); // 'new' or a type; kept after closing so the dialog can close cleanly
+  const [formOpen, setFormOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
+  const openForm = t => { setEditing(t); setFormKey(k => k + 1); setFormOpen(true); };
   const [moving, setMoving] = useState(null); // { type, count, to }
   const panel = useRef();
   const movingId = moving?.type.id;
@@ -131,7 +139,7 @@ export function RecipeTypes() {
   return (
     <>
       {header}
-      <p><Button onClick={() => setEditing('new')}>Add a type</Button></p>
+      <p><Button onClick={() => openForm('new')}>Add a type</Button></p>
       <ParchmentCard title="Your types">
         <ul className="type-list">
           {list.map((t, i) => (
@@ -146,7 +154,7 @@ export function RecipeTypes() {
                 </p>
               </div>
               <div className="type-actions">
-                <Button variant="secondary" size="sm" icon={Pencil} aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)} />
+                <Button variant="secondary" size="sm" icon={Pencil} aria-label={`Edit ${t.name}`} onClick={() => openForm(t)} />
                 <Button variant="secondary" size="sm" icon={ArrowUp} aria-label={`Move ${t.name} up`} disabled={i === 0} onClick={() => shift(i, -1)} />
                 <Button variant="secondary" size="sm" icon={ArrowDown} aria-label={`Move ${t.name} down`} disabled={i === list.length - 1} onClick={() => shift(i, 1)} />
                 <Button variant="secondary" size="sm" icon={Trash2} aria-label={`Delete ${t.name}`} onClick={() => remove(t)} />
@@ -155,11 +163,12 @@ export function RecipeTypes() {
           ))}
         </ul>
       </ParchmentCard>
-      {editing && <TypeForm key={editing === 'new' ? 'new' : editing.id} type={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={types.reload} />}
+      {editing && <TypeForm key={formKey} type={editing === 'new' ? null : editing} open={formOpen} onClose={() => setFormOpen(false)} onSaved={types.reload} />}
       <Dialog open={Boolean(moving)} onClose={() => setMoving(null)} title={moving ? `Delete ${moving.type.name}` : ''}
         footer={moving && <><Button variant="secondary" onClick={() => setMoving(null)}>Cancel</Button><Button onClick={confirmMove} disabled={!moving.to}>Move and delete</Button></>}>
         {moving && (
           <div ref={panel}>
+            {!moving.to && <p className="muted">Add another type first.</p>}
             <Field label={`Move its ${moving.count} ${moving.count === 1 ? 'recipe' : 'recipes'} to`}>
               <Select value={moving.to} onChange={e => setMoving(m => ({ ...m, to: e.target.value }))}
                 options={list.filter(t => t.id !== moving.type.id).map(t => ({ value: String(t.id), label: t.name }))} />
