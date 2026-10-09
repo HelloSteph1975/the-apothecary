@@ -3,6 +3,7 @@ import { makeTestContext } from './helpers.js';
 import { seedDemo } from '../../server/demo/seed.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { seedGrimoire, linkItemsOnce } from '../../server/services/grimoire.js';
 import { getSettings } from '../../server/services/settings.js';
 
 let t;
@@ -64,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('2');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('3');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -114,4 +115,32 @@ it('reset moves demo photo files to the trash', async () => {
   expect(fs.existsSync(path.join(t.dataDir, 'photos', filename))).toBe(false);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM photos').get().n).toBe(0);
+});
+
+const DEMO_HERBS = ['Calendula', 'Chamomile', 'Lavender', 'Mugwort', 'Rose petals'];
+const linked = db => db.prepare("SELECT name FROM items WHERE herb_id IS NOT NULL AND deleted_at IS NULL ORDER BY name").all().map(r => r.name);
+
+it('links the demo herbs to the grimoire on a fresh demo, and after a reset', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  expect(linked(t.ctx.db)).toEqual(DEMO_HERBS);
+  // Startup maintenance runs after the seed; it must not undo anything.
+  seedGrimoire(t.ctx.db);
+  linkItemsOnce(t.ctx.db);
+  expect(linked(t.ctx.db)).toEqual(DEMO_HERBS);
+  t.ctx.db.prepare('UPDATE items SET herb_id = NULL').run();
+  seedDemo(t.ctx, { reset: true });
+  expect(linked(t.ctx.db)).toEqual(DEMO_HERBS);
+  expect(t.ctx.db.prepare("SELECT h.slug FROM items i JOIN herbs h ON h.id = i.herb_id WHERE i.name = 'Rose petals'").get().slug).toBeTruthy();
+});
+
+it('links the demo herbs of an existing v2 demo folder', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.prepare('UPDATE items SET herb_id = NULL').run();
+  t.ctx.db.prepare("UPDATE settings SET value = '2' WHERE key = 'demo_seeded'").run();
+  t.ctx.db.prepare("INSERT INTO settings (key, value) VALUES ('grimoire_link_version', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(linked(t.ctx.db)).toEqual(DEMO_HERBS);
+  expect(seedDemo(t.ctx)).toBe(false);
 });

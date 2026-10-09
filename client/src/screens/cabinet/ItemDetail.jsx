@@ -79,6 +79,7 @@ export function ItemDetail() {
             {item.section_kind === 'herb' && item.form && <><dt>Form</dt><dd>{cap(item.form)}</dd></>}
             {item.section_kind === 'herb' && item.plant_part && <><dt>Plant part</dt><dd>{cap(item.plant_part)}</dd></>}
             {source && <><dt>Source</dt><dd>{source}</dd></>}
+            {item.herb_name && <><dt>Grimoire</dt><dd><Link to={`/grimoire/${item.herb_id}`}>{item.herb_name}</Link></dd></>}
             {item.notes && <><dt>Notes</dt><dd>{item.notes}</dd></>}
           </dl>
         </ParchmentCard>

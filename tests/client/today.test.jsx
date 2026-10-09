@@ -8,15 +8,20 @@ let settings;
 let summary;
 let items;
 let failToday;
+let herbOfDay;
+let failHerb;
 const item = (id, name, extra = {}) => ({ id, name, size_label: null, amount: 40, unit: 'g', low_threshold: 50, expires_on: null, section_name: 'Shelf A', cover: null, ...extra });
 beforeEach(() => {
   settings = { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
   summary = { runningLow: [], nearingExpiry: [], expired: [], batchesDue: [], counts: { runningLow: 0, nearingExpiry: 0, expired: 0 } };
   items = [];
   failToday = false;
+  herbOfDay = null;
+  failHerb = false;
   global.fetch = vi.fn(async url => {
     const json = body => new Response(JSON.stringify(body), { status: 200 });
     if (url === '/api/health') return json({ ok: true, demo: false });
+    if (url.startsWith('/api/herb-of-the-day')) return failHerb ? new Response(JSON.stringify({ error: 'nope' }), { status: 500 }) : json(herbOfDay);
     if (url.startsWith('/api/today')) return failToday ? new Response(JSON.stringify({ error: 'nope' }), { status: 500 }) : json(summary);
     if (url.startsWith('/api/items')) return json(items);
     return json(settings);
@@ -109,4 +114,40 @@ it('moves from morning to afternoon without a reload', async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+it('shows the herb of the day, linking to its page', async () => {
+  herbOfDay = { id: 3, common_name: 'Lavender', latin_name: 'Lavandula angustifolia', uses: 'Calms the evening. Scents linens.', planet: 'Mercury', element: 'Air', cover: null };
+  today();
+  expect(await screen.findByRole('heading', { level: 2, name: 'Herb of the day' })).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: 'Lavender' })).toHaveAttribute('href', '/grimoire/3');
+  expect(screen.getByText('Lavandula angustifolia')).toBeInTheDocument();
+  expect(screen.getByText('Calms the evening.')).toBeInTheDocument();
+  expect(screen.queryByText(/Scents linens/)).not.toBeInTheDocument();
+  expect(screen.getByText(/Mercury/)).toHaveTextContent('Mercury, Air');
+  const cautions = screen.getByRole('link', { name: 'Read its cautions before you use it.' });
+  expect(cautions).toHaveAttribute('href', '/grimoire/3');
+  expect(cautions.closest('p')).toHaveClass('muted');
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/herb-of-the-day\?today=\d{4}-\d{2}-\d{2}$/), expect.anything());
+});
+
+it('hides the herb of the day card when there is none', async () => {
+  today();
+  await screen.findByRole('heading', { level: 2, name: 'Running low' });
+  expect(screen.queryByRole('heading', { name: 'Herb of the day' })).not.toBeInTheDocument();
+});
+
+it('shows an error line on the herb card when it fails, and retries only that request', async () => {
+  const user = userEvent.setup();
+  failHerb = true;
+  today();
+  expect(await screen.findByText("The herb of the day couldn't load.")).toBeInTheDocument();
+  const before = global.fetch.mock.calls.filter(c => String(c[0]).startsWith('/api/today')).length;
+  failHerb = false;
+  herbOfDay = { id: 3, common_name: 'Lavender', latin_name: null, uses: null, planet: null, element: null };
+  const card = screen.getByRole('heading', { level: 2, name: 'Herb of the day' }).closest('section, article, div');
+  await user.click(screen.getAllByRole('button', { name: 'Try again' }).pop());
+  expect(await screen.findByRole('link', { name: 'Lavender' })).toBeInTheDocument();
+  expect(global.fetch.mock.calls.filter(c => String(c[0]).startsWith('/api/today')).length).toBe(before);
+  expect(card).toBeTruthy();
 });

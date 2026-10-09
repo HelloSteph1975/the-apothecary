@@ -112,9 +112,12 @@ a { color: inherit; text-underline-offset: 3px; }
   outline: 1px solid var(--rule); outline-offset: -6px;
   padding: 30px 24px 22px;
 }
+.panel-caution { border-color: var(--oxblood); outline-color: var(--oxblood); }
+.panel.panel-caution h2 { color: var(--oxblood); }
 .panel-ornament { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); line-height: 0; }
 .panel h2 { color: var(--ink-green); text-align: center; margin-bottom: .1em; }
 .panel .panel-subtitle { text-align: center; font-style: italic; color: var(--ink-soft); margin: 0 0 14px; }
+.muted { color: var(--ink-soft); }
 .panel .muted, .sheet .muted { color: var(--ink-soft); font-style: italic; }
 .panel .botanical { position: absolute; right: 12px; bottom: 10px; opacity: .9; pointer-events: none; }
 .panel:has(> .botanical) > .muted { margin-right: 84px; }
@@ -132,6 +135,7 @@ a { color: inherit; text-underline-offset: 3px; }
 
 /* ---------- Grid and forms ---------- */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 24px; }
+.card-grid > .panel-wide { grid-column: 1 / -1; }
 .field { display: grid; gap: 4px; margin-bottom: 14px; }
 .field label { font-weight: 600; }
 .field input, .field select {
@@ -203,6 +207,8 @@ a { color: inherit; text-underline-offset: 3px; }
 textarea.input { resize: vertical; }
 .field-hint { color: var(--ink-soft); font-size: .95rem; }
 .field-error { color: var(--oxblood); font-size: .95rem; font-weight: 600; }
+.check-group { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+.check-group legend { padding: 0; }
 .field.has-error .input { border-color: var(--oxblood); }
 .checkbox { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .checkbox input { width: 18px; height: 18px; accent-color: var(--forest); }
@@ -270,6 +276,7 @@ textarea.input { resize: vertical; }
 .dl-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0 0 1em; }
 .dl-grid dt { color: var(--ink-soft); font-weight: 600; }
 .dl-grid dd { margin: 0; overflow-wrap: anywhere; }
+.dl-cautions { grid-template-columns: minmax(9em, 12em) minmax(0, 1fr); }
 @media (max-width: 640px) { .dl-grid { grid-template-columns: 1fr; gap: 0; } .dl-grid dd { margin-bottom: 8px; } }
 
 .table-wrap { overflow-x: auto; }
@@ -277,3 +284,8 @@ textarea.input { resize: vertical; }
 .purchase-table th, .purchase-table td { text-align: left; padding: 6px 10px; border: 1px solid var(--rule); }
 .purchase-table th { font-variant: small-caps; letter-spacing: .08em; color: var(--ink-green); }
 .stars { color: var(--ink-green); letter-spacing: .12em; }
+
+.herb-card-head { display: flex; gap: 12px; align-items: center; }
+.herb-card-head h2, .herb-card-head p { margin: 0; }
+.herb-card .herb-cover, .herb-card .herb-glyph { flex: none; width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--rule); border-radius: var(--radius); color: var(--brass-dark); }
+.herb-card .herb-glyph { padding: 6px; }

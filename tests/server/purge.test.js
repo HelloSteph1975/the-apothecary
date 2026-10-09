@@ -84,3 +84,31 @@ it('keeps the file of a purged item photo that a kept backup still needs', () =>
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', '3-cccccccc.jpg'))).toBe(true);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '3-cccccccc.jpg'))).toBe(false);
 });
+
+it('purges old herbs with their photos and sources, and unlinks their jars', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const recent = new Date().toISOString();
+  const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
+  const gone = run("INSERT INTO herbs (common_name, deleted_at) VALUES ('Gone', ?)", old);
+  const kept = run("INSERT INTO herbs (common_name) VALUES ('Kept')");
+  const fresh = run("INSERT INTO herbs (common_name, deleted_at) VALUES ('Fresh', ?)", recent);
+  run("INSERT INTO herb_sources (herb_id, title) VALUES (?, 'of gone')", gone);
+  run("INSERT INTO herb_sources (herb_id, title, deleted_at) VALUES (?, 'replaced', ?)", kept, old);
+  run("INSERT INTO herb_sources (herb_id, title) VALUES (?, 'live')", kept);
+  run("INSERT INTO herb_sources (herb_id, title) VALUES (?, 'of fresh')", fresh);
+  run("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('herb', ?, '5-eeeeeeee.jpg')", gone);
+  fs.writeFileSync(path.join(t.dataDir, 'photos', '5-eeeeeeee.jpg'), 'x');
+  const jar = run("INSERT INTO items (section_id, name, amount, unit, herb_id) VALUES (1, 'Jar', 1, 'g', ?)", gone);
+  const jar2 = run("INSERT INTO items (section_id, name, amount, unit, herb_id) VALUES (1, 'Jar 2', 1, 'g', ?)", kept);
+
+  const counts = purgeSoftDeleted(db, t.dataDir);
+  expect(counts.herbs).toBe(1);
+  expect(counts.photos).toBe(1);
+  expect(db.prepare('SELECT title FROM herb_sources ORDER BY id').all().map(r => r.title)).toEqual(['live', 'of fresh']);
+  expect(db.prepare('SELECT id FROM herbs ORDER BY id').all().map(r => r.id)).toEqual([kept, fresh]);
+  expect(db.prepare('SELECT herb_id FROM items WHERE id = ?').get(jar).herb_id).toBeNull();
+  expect(db.prepare('SELECT herb_id FROM items WHERE id = ?').get(jar2).herb_id).toBe(kept);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '5-eeeeeeee.jpg'))).toBe(false);
+});

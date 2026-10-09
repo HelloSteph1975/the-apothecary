@@ -38,6 +38,24 @@ export const migrations = [
     ('Containers','supply',10), ('Labels and packaging','supply',11), ('Cloth and bags','supply',12),
     ('Tools and equipment','supply',13), ('Other','supply',14);
   `,
+  // 3: the grimoire. Herb reference entries with their sources; items.herb_id (from migration 2) links jars to them.
+  `
+  CREATE TABLE herbs (id INTEGER PRIMARY KEY, slug TEXT, common_name TEXT NOT NULL, other_names TEXT NOT NULL DEFAULT '[]',
+    latin_name TEXT, family TEXT, parts_used TEXT NOT NULL DEFAULT '[]', uses TEXT, preparations TEXT NOT NULL DEFAULT '[]',
+    taste TEXT, energetics TEXT, caution_pregnancy TEXT, caution_medications TEXT, caution_conditions TEXT,
+    caution_duration TEXT, caution_topical TEXT,
+    ahpa_class TEXT CHECK (ahpa_class IN ('1','2a','2b','2c','2d','3','4')),
+    planet TEXT CHECK (planet IN ('Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn')),
+    element TEXT CHECK (element IN ('Fire','Water','Air','Earth')),
+    zodiac TEXT NOT NULL DEFAULT '[]', gender TEXT CHECK (gender IN ('masculine','feminine')),
+    associations TEXT NOT NULL DEFAULT '[]', garden_harvest_part TEXT, garden_harvest_timing TEXT, garden_sun TEXT,
+    garden_water TEXT, garden_companions TEXT NOT NULL DEFAULT '[]', notes TEXT, is_starter INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE UNIQUE INDEX idx_herbs_slug ON herbs(slug) WHERE slug IS NOT NULL;
+  CREATE TABLE herb_sources (id INTEGER PRIMARY KEY, herb_id INTEGER NOT NULL REFERENCES herbs(id), title TEXT NOT NULL,
+    author TEXT, year INTEGER, url TEXT, covers TEXT NOT NULL DEFAULT '[]', sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE INDEX idx_herb_sources_herb ON herb_sources(herb_id);
+  CREATE INDEX idx_items_herb ON items(herb_id);
+  `,
 ];
 
 export function migrate(db) {

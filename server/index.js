@@ -1,21 +1,7 @@
 import { loadConfig } from './config.js';
 import { createContext } from './context.js';
 import { createApp, ROOT } from './app.js';
-import { purgeSoftDeleted, purgeTrash } from './services/purge.js';
-import { ensureRecentBackup, rotateBackups } from './services/backup.js';
-
-export function runMaintenance(ctx) {
-  const { db, config } = ctx;
-  const steps = [
-    ['Startup backup', () => ensureRecentBackup(db, config.dataDir)],
-    ['Purging old deleted rows', () => purgeSoftDeleted(db, config.dataDir)],
-    ['Purging photo trash', () => purgeTrash(config.dataDir)],
-    ['Rotating backups', () => rotateBackups(config.dataDir)],
-  ];
-  for (const [label, fn] of steps) {
-    try { fn(); } catch (err) { console.error(`${label} failed (the app will still run):`, err); }
-  }
-}
+import { runMaintenance } from './services/maintenance.js';
 
 const demo = process.argv.includes('--demo');
 let config;

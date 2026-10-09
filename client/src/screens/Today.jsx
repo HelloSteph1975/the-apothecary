@@ -11,6 +11,11 @@ import { useApi } from '../lib/useApi.js';
 
 const EMPTY = 'Nothing here yet. This fills in once the herb cabinet is stocked.';
 
+const firstSentence = text => {
+  const t = (text ?? '').trim();
+  return t.match(/^.*?[.!?](?=\s|$)/s)?.[0] ?? t;
+};
+
 const leftText = it => `${formatAmount(it.amount, it.unit)} left`;
 const seeAll = (count, shown, to) => (count > shown ? <p><Link to={to}>See all {count}</Link></p> : null);
 
@@ -62,6 +67,8 @@ export function Today() {
   const items = useApi(allZero ? `/api/items?today=${day}` : null);
   const cabinetEmpty = allZero && !items.loading && !items.error && (items.data ?? []).length === 0;
   const failed = today.error || (allZero && items.error);
+  const herbApi = useApi(`/api/herb-of-the-day?today=${day}`);
+  const herb = herbApi.data?.id ? herbApi.data : null;
   const retry = () => { today.reload(); items.reload(); };
   const nearing = data
     ? [
@@ -103,6 +110,20 @@ export function Today() {
             </>
           ))}
         </ParchmentCard>
+        {herbApi.error && (
+          <ParchmentCard title="Herb of the day" subtitle="from the grimoire" botanical="lavender">
+            <p role="alert">The herb of the day couldn't load. <button type="button" className="btn" onClick={herbApi.reload}>Try again</button></p>
+          </ParchmentCard>
+        )}
+        {herb && (
+          <ParchmentCard title="Herb of the day" subtitle="from the grimoire" botanical="lavender">
+            <p><Link to={`/grimoire/${herb.id}`}>{herb.common_name}</Link></p>
+            {herb.latin_name && <p className="muted"><em>{herb.latin_name}</em></p>}
+            {herb.uses && <p>{firstSentence(herb.uses)}</p>}
+            {(herb.planet || herb.element) && <p className="muted">{[herb.planet, herb.element].filter(Boolean).join(', ')}</p>}
+            <p className="muted"><Link to={`/grimoire/${herb.id}`}>Read its cautions before you use it.</Link></p>
+          </ParchmentCard>
+        )}
       </div>
     </>
   );

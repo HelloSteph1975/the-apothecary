@@ -5,6 +5,7 @@ import { settingsRouter } from './settings.js';
 import { sectionsRouter, itemsRouter, purchasesRouter, expirySuggestionRoute, storageSpotsRoute } from './cabinet.js';
 import { suppliersRouter } from './suppliers.js';
 import { photosRouter } from './photos.js';
+import { herbsRouter, herbOfTheDayRoute } from './grimoire.js';
 import { todayRoute } from './today.js';
 
 export function apiRouter(ctx, { onShutdown }) {
@@ -16,6 +17,8 @@ export function apiRouter(ctx, { onShutdown }) {
   r.use('/purchases', purchasesRouter(ctx));
   r.use('/suppliers', suppliersRouter(ctx));
   r.use('/photos', photosRouter(ctx));
+  r.use('/herbs', herbsRouter(ctx));
+  r.get('/herb-of-the-day', herbOfTheDayRoute(ctx));
   r.get('/expiry-suggestion', expirySuggestionRoute(ctx));
   r.get('/storage-spots', storageSpotsRoute(ctx));
   r.get('/today', todayRoute(ctx));

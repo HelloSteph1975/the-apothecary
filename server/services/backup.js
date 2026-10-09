@@ -3,6 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { HttpError } from '../http.js';
 import { untrashLivePhotos } from './photos.js';
+import { grimoireMaintenance } from './grimoire.js';
 import { migrations } from '../db/migrations.js';
 import { photoFilenamesIn } from '../db/backups.js';
 
@@ -131,6 +132,8 @@ export function restoreBackup(ctx, name) {
     throw new HttpError(500, `Restore failed and the database could not be reopened. Please restart The Apothecary; your safety copy is ${safetyCopy} in the backups folder.`);
   }
   if (failure) throw new HttpError(500, FAILED);
+  // A backup from before the grimoire comes back with empty herb tables; seed and link it like a fresh start.
+  grimoireMaintenance(ctx.db);
   let photosBack = 0;
   try { photosBack = untrashLivePhotos(ctx.db, ctx.config.dataDir); } catch (err) { console.error('Could not bring back trashed photos:', err); }
   return { restored: name, safetyCopy, photosBack };
