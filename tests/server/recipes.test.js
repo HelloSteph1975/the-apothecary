@@ -114,6 +114,7 @@ it('lists recipes with filters, herb names and counts', async () => {
   expect(await names('q=%25')).toEqual(['100% Lavender_bag']);
   expect(await names('q=_')).toEqual(['100% Lavender_bag']);
   expect(await names('q[]=x')).toHaveLength(3);
+  expect((await s.h().get('/api/recipes?type_id=abc')).status).toBe(400);
   expect(await names(`type_id=${s.tea.id}`)).toEqual(['100% Lavender_bag', 'Mint tea']);
   expect(await names(`herb_id=${s.mint.id}`)).toEqual(['Mint tea']);
   expect(await names('topical=1')).toEqual(['Calendula salve']);
@@ -162,6 +163,7 @@ it('rejects bad input with field errors', async () => {
   expect((await details({ name: 'X', type_id: s.salve.id })).type_id).toBeTruthy();
   expect((await details({ name: 'X', type_id: 9999 })).type_id).toBeTruthy();
   expect((await details({ name: 'X', type_id: s.tea.id, yield_amount: 5 })).yield_unit).toBeTruthy();
+  expect((await details({ name: 'X', type_id: s.tea.id, yield_amount: 0, yield_unit: 'ml' })).yield_amount).toBeTruthy();
   expect((await details({ name: 'X', type_id: s.tea.id, yield_amount: 5, yield_unit: 'bucket' })).yield_unit).toBeTruthy();
   expect((await details({ name: 'X', type_id: s.tea.id, ingredients: 'oops' })).ingredients).toBeTruthy();
   expect((await details({ name: 'X', type_id: s.tea.id, ingredients: Array(61).fill({ name: 'a' }) })).ingredients).toBeTruthy();
@@ -181,4 +183,15 @@ it('rejects bad input with field errors', async () => {
   expect((await s.h().patch(`/api/recipes/${ok.id}`).send({ yield_amount: null, yield_unit: null })).status).toBe(200);
   expect((await s.h().patch('/api/recipes/9999').send({ name: 'x' })).status).toBe(404);
   expect((await s.h().get('/api/recipes/9999')).status).toBe(404);
+});
+
+it('undoes a recipe delete after its type was moved and deleted, keeping the old type cautions', async () => {
+  const s = setup();
+  const d = await makeSalve(s.h, s);
+  expect((await s.h().delete(`/api/recipes/${d.id}`)).status).toBe(200);
+  expect((await s.h().delete(`/api/recipe-types/${s.salve.id}?move_to=${s.tea.id}`)).status).toBe(200);
+  const res = await s.h().post(`/api/recipes/${d.id}/restore`);
+  expect(res.status).toBe(200);
+  expect(res.body).toMatchObject({ label_caution: 'For outside use only.', needs_patch_test: true });
+  expect((await s.h().get('/api/recipes')).body.map(x => x.name)).toContain('Calendula salve');
 });

@@ -25,6 +25,8 @@ export function recipeTypesRouter(ctx) {
     list: () => listRecipeTypes(ctx.db),
     prepareCreate: data => ({ sort_order: nextTypeOrder(ctx.db), ...data, slug: null, is_starter: 0 }),
     validateRow: (ctx, data, row) => assertUniqueTypeName(ctx.db, data.name, row?.id ?? null),
+    // Runs after the row is live again, inside the transaction, so a clash rolls the undo back.
+    onRestore: (ctx, row) => assertUniqueTypeName(ctx.db, row.name, row.id),
   }));
   return r;
 }

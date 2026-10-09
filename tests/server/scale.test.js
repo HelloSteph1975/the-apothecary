@@ -36,6 +36,7 @@ it('works out the factor from scale or from a target yield', () => {
   expect(factorFor(recipe, { scale: '0.5' })).toBe(0.5);
   expect(factorFor(recipe, { yield: '50' })).toBe(0.25);
   expect(factorFor(recipe, { scale: '' })).toBe(1);
+  expect(factorFor(recipe, { scale: '2', yield: '50' })).toBe(2);
 });
 
 it('refuses a scale out of range or not a number', () => {

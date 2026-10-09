@@ -40,7 +40,7 @@ function clearRecipes(db, dataDir) {
 function stockRecipes(db) {
   seedGrimoire(db);
   seedRecipeTypes(db);
-  const typeId = slug => db.prepare('SELECT id FROM recipe_types WHERE slug = ?').get(slug)?.id;
+  const typeId = slug => db.prepare('SELECT id FROM recipe_types WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id;
   const herbId = slug => db.prepare('SELECT id FROM herbs WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id ?? null;
   const herb = (slug, name, amount, unit, extra = {}) => ({ herb_id: herbId(slug), name, amount, unit, ...extra });
   const add = (slug, recipe) => {

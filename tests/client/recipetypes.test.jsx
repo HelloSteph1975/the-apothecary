@@ -111,7 +111,7 @@ it('reaches the icon picker with the keyboard', async () => {
   expect(within(picker).getByLabelText('Cup')).toBeChecked();
 });
 
-it('shows a non-field save error inside the dialog and returns focus on close', async () => {
+it('shows a non-field save error inside the dialog and closes on Cancel', async () => {
   const user = userEvent.setup();
   open();
   await screen.findByText('Salve');

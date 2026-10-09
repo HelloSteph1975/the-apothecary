@@ -209,3 +209,13 @@ it('reset re-adds the demo recipes, trashes their photos and leaves recipe types
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
   expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'recipe'").get().n).toBe(0);
 });
+
+it('reset skips a demo recipe whose starter type she deleted', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec("DELETE FROM recipe_ingredients WHERE recipe_id IN (SELECT r.id FROM recipes r JOIN recipe_types y ON y.id = r.type_id WHERE y.slug = 'serum')");
+  t.ctx.db.exec("DELETE FROM recipes WHERE type_id = (SELECT id FROM recipe_types WHERE slug = 'serum')");
+  t.ctx.db.prepare("UPDATE recipe_types SET deleted_at = ? WHERE slug = 'serum'").run(new Date().toISOString());
+  expect(() => seedDemo(t.ctx, { reset: true })).not.toThrow();
+  expect(recipeNames(t.ctx.db)).toEqual(['Calendula skin salve', 'Sleepy chamomile tea']);
+});

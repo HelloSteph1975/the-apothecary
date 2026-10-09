@@ -84,3 +84,23 @@ it('reorders types', async () => {
   expect(res.body.map(x => x.name)).toEqual(['syrup', 'salve', 'tea blend']);
   expect((await h().put('/api/recipe-types/order').send({ ids: 'nope' })).status).toBe(400);
 });
+
+it('will not undo a type delete when a live type now has its name', async () => {
+  const { h, r, syrup } = setup();
+  let res = await h().delete(`/api/recipe-types/${syrup.id}`);
+  expect(res.status).toBe(200);
+  res = await h().post('/api/recipe-types').send({ name: 'Syrup' });
+  expect(res.status).toBe(201);
+  res = await h().post(`/api/recipe-types/${syrup.id}/restore`);
+  expect(res.status).toBe(400);
+  expect(res.body.details.name).toBe('You already have a type with this name.');
+  expect(r.recipeTypes.get(syrup.id)).toBeNull();
+});
+
+it('restores a type whose own name is unchanged', async () => {
+  const { h, tea } = setup();
+  await h().delete(`/api/recipe-types/${tea.id}`);
+  const res = await h().post(`/api/recipe-types/${tea.id}/restore`);
+  expect(res.status).toBe(200);
+  expect(res.body.name).toBe('tea blend');
+});

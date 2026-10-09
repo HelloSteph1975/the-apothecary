@@ -147,7 +147,7 @@ it('lists recipes with this herb and always offers a link to write one', async (
   expect(within(panel).getByRole('link', { name: 'Write a recipe with this herb' })).toHaveAttribute('href', '/recipes/new?herb=5');
 });
 
-it('hides the recipes panel when there are none but keeps the write link', async () => {
+it('shows only the write link when there are no recipes', async () => {
   herb = { ...base, recipes: [] };
   open();
   await screen.findByRole('region', { name: 'In your cabinet' });
