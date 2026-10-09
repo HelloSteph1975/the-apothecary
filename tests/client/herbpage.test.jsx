@@ -14,7 +14,7 @@ const base = {
   other_names: [], parts_used: ['flower'], preparations: ['tea', 'oil'], uses: 'Calming evening tea.', taste: 'Floral', energetics: 'Cooling',
   caution_pregnancy: 'Skip in early pregnancy.', caution_medications: 'May add to sedatives.', caution_conditions: '', caution_duration: '', caution_topical: '',
   ahpa_class: '1', planet: 'Venus', element: 'Air', gender: 'Feminine', zodiac: ['Gemini'], associations: ['peace', 'sleep'],
-  garden_part_harvested: 'Flower spikes', garden_timing: 'Midsummer', garden_sun: 'Full sun', garden_water: 'Low', garden_companions: ['Rosemary'],
+  garden_harvest_part: 'Flower spikes', garden_harvest_timing: 'Midsummer', garden_sun: 'Full sun', garden_water: 'Low', garden_companions: ['Rosemary'],
   notes: 'Grows by the gate.', is_starter: 1,
   sources: [
     { id: 1, title: 'Herbal Book', author: 'A. Author', year: 2010, url: 'https://example.com/book', covers: ['uses', 'safety'] },
@@ -64,7 +64,7 @@ it('puts the cautions panel before the uses, with labels and the AHPA class', as
 });
 
 it('says so when no cautions are recorded and hides empty panels', async () => {
-  herb = { ...base, caution_pregnancy: '', caution_medications: '', ahpa_class: null, garden_part_harvested: '', garden_timing: '', garden_sun: '', garden_water: '', garden_companions: [], sources: [], jars: [], notes: '' };
+  herb = { ...base, caution_pregnancy: '', caution_medications: '', ahpa_class: null, garden_harvest_part: '', garden_harvest_timing: '', garden_sun: '', garden_water: '', garden_companions: [], sources: [], jars: [], notes: '' };
   open();
   const cautions = await screen.findByRole('region', { name: 'Before you use it' });
   expect(within(cautions).getByText("No cautions recorded. That doesn't mean it's safe for everyone.")).toBeInTheDocument();
@@ -100,4 +100,11 @@ it('deletes with undo and returns to the grimoire', async () => {
   if (dialog) await user.click(within(dialog).getByRole('button', { name: /delete/i }));
   await waitFor(() => expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/herbs/5')).toBe(true));
   expect(await screen.findByRole('heading', { name: 'Grimoire' })).toBeInTheDocument();
+});
+
+it('shows the garden panel with harvest part and timing', async () => {
+  open();
+  const garden = await screen.findByRole('region', { name: 'In the garden' });
+  expect(within(garden).getByText('Part harvested').nextElementSibling).toHaveTextContent('Flower spikes');
+  expect(within(garden).getByText('Harvest timing').nextElementSibling).toHaveTextContent('Midsummer');
 });

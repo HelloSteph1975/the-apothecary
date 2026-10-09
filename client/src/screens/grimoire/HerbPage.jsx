@@ -49,7 +49,7 @@ export function HerbPage() {
   const associations = list(herb.associations);
   const hasCorr = herb.planet || herb.element || herb.gender || zodiac.length > 0 || associations.length > 0;
   const companions = list(herb.garden_companions);
-  const hasGarden = herb.garden_part_harvested || herb.garden_timing || herb.garden_sun || herb.garden_water || companions.length > 0;
+  const hasGarden = herb.garden_harvest_part || herb.garden_harvest_timing || herb.garden_sun || herb.garden_water || companions.length > 0;
   const jars = list(herb.jars);
   const sources = list(herb.sources);
   const subtitle = [herb.latin_name, herb.family].filter(Boolean).join(' · ');
@@ -103,7 +103,7 @@ export function HerbPage() {
         {hasGarden && (
           <ParchmentCard title="In the garden">
             <Rows rows={[
-              ['Part harvested', herb.garden_part_harvested], ['Harvest timing', herb.garden_timing],
+              ['Part harvested', herb.garden_harvest_part], ['Harvest timing', herb.garden_harvest_timing],
               ['Sun', herb.garden_sun], ['Water', herb.garden_water], ['Grows well with', companions.join(', ')],
             ]} />
           </ParchmentCard>
