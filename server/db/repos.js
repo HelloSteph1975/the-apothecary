@@ -20,6 +20,12 @@ export function repos(db) {
         { orderBy: 'purchased_on DESC, id DESC' }),
       herbs: createRepo(db, 'herbs', HERB_COLUMNS, { orderBy: 'common_name COLLATE NOCASE' }),
       herbSources: createRepo(db, 'herb_sources', ['herb_id', 'title', 'author', 'year', 'url', 'covers', 'sort_order'], { orderBy: 'sort_order, id' }),
+      recipeTypes: createRepo(db, 'recipe_types', ['slug', 'name', 'description', 'wait_days', 'shelf_life_days', 'label_caution',
+        'is_topical', 'icon', 'sort_order', 'is_starter'], { orderBy: 'sort_order, id' }),
+      recipes: createRepo(db, 'recipes', ['name', 'type_id', 'yield_amount', 'yield_unit', 'steps', 'wait_days', 'shelf_life_days',
+        'intention', 'timing_notes', 'notes'], { orderBy: 'name COLLATE NOCASE' }),
+      recipeIngredients: createRepo(db, 'recipe_ingredients', ['recipe_id', 'herb_id', 'name', 'amount', 'unit', 'form', 'plant_part',
+        'note', 'sort_order', 'herb_gone'], { orderBy: 'sort_order, id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);

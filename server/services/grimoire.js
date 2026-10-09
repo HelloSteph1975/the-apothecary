@@ -109,7 +109,7 @@ export function linkItemsOnce(db) {
 
 const COVER_SQL = `(SELECT filename FROM photos p WHERE p.owner_type = 'herb' AND p.owner_id = h.id AND p.deleted_at IS NULL
   ORDER BY p.is_cover DESC, p.sort_order, p.id LIMIT 1)`;
-const CAUTIONS = ['pregnancy', 'medications', 'conditions', 'duration', 'topical'];
+export const CAUTIONS = ['pregnancy', 'medications', 'conditions', 'duration', 'topical'];
 const str = v => (typeof v === 'string' && v !== '' ? v : null);
 
 export function listHerbs(db, f = {}) {
@@ -147,7 +147,11 @@ export function getHerbDetail(db, id, today = new Date().toISOString().slice(0, 
   const jars = db.prepare(`SELECT id, name, amount, unit, size_label, expires_on, low_threshold, used_up_at FROM items
     WHERE herb_id = ? AND deleted_at IS NULL AND used_up_at IS NULL ORDER BY name COLLATE NOCASE, id`).all(id)
     .map(({ low_threshold, used_up_at, ...j }) => ({ ...j, status: itemStatus({ ...j, low_threshold, used_up_at }, today) }));
-  return { ...herb, sources, photos: r.photos.list({ owner_type: 'herb', owner_id: id }), jars };
+  const recipes = db.prepare(`SELECT DISTINCT r.id, r.name, t.name AS type_name FROM recipes r
+    JOIN recipe_types t ON t.id = r.type_id
+    JOIN recipe_ingredients ri ON ri.recipe_id = r.id AND ri.deleted_at IS NULL
+    WHERE ri.herb_id = ? AND r.deleted_at IS NULL ORDER BY r.name COLLATE NOCASE, r.id`).all(id);
+  return { ...herb, sources, photos: r.photos.list({ owner_type: 'herb', owner_id: id }), jars, recipes };
 }
 
 export function herbOfTheDay(db, today) {
@@ -237,12 +241,4 @@ export function updateHerb(db, id, body) {
     if (sources) replaceSources(db, id, sources, new Date().toISOString());
   });
   return id;
-}
-
-// The grimoire steps run at startup and after a restore. Each step logs its own failure so the app still opens;
-// linking skips itself when the seed didn't finish.
-export function grimoireMaintenance(db, { seed = seedGrimoire, link = linkItemsOnce } = {}) {
-  for (const [label, fn] of [['Seeding the grimoire', seed], ['Linking jars to the grimoire', link]]) {
-    try { fn(db); } catch (err) { console.error(`${label} failed (the app will still run):`, err); }
-  }
 }

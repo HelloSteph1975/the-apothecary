@@ -289,3 +289,20 @@ textarea.input { resize: vertical; }
 .herb-card-head h2, .herb-card-head p { margin: 0; }
 .herb-card .herb-cover, .herb-card .herb-glyph { flex: none; width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--rule); border-radius: var(--radius); color: var(--brass-dark); }
 .herb-card .herb-glyph { padding: 6px; }
+
+.recipe-card .recipe-glyph { display: inline-flex; align-items: center; justify-content: center; }
+.type-list { list-style: none; margin: 0; padding: 0; }
+.type-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.type-row:last-child { border-bottom: 0; }
+.type-icon { color: var(--brass-dark); display: inline-flex; }
+.type-main { flex: 1 1 220px; min-width: 0; }
+.type-main p { margin: 2px 0 0; }
+.type-actions { display: flex; gap: 6px; }
+.icon-picker { margin: 12px 0; }
+.icon-picker-label { display: block; font-weight: 600; margin-bottom: 6px; }
+.icon-picker-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.icon-option { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: var(--radius); cursor: pointer; }
+.icon-option:has(input:checked) { border-color: var(--forest); background: var(--oxblood-wash); }
+.icon-option:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.icon-option input { accent-color: var(--forest); }
+.page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }

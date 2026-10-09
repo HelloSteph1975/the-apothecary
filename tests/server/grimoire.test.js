@@ -85,6 +85,31 @@ it('returns a detail with parsed lists, sources and jars', async () => {
   expect((await h().get('/api/herbs/9999')).status).toBe(404);
 });
 
+it('lists the live recipes that use a herb, once each, by name', async () => {
+  const { h, byName } = setup();
+  const cal = byName('Calendula');
+  const r = repos(t.ctx.db);
+  const salve = r.recipeTypes.create({ name: 'salve' });
+  const tea = r.recipeTypes.create({ name: 'tea blend' });
+  const add = (name, type, herbIds) => {
+    const rec = r.recipes.create({ name, type_id: type.id });
+    herbIds.forEach((id, i) => r.recipeIngredients.create({ recipe_id: rec.id, herb_id: id, name: 'x', sort_order: i }));
+    return rec;
+  };
+  const z = add('Zinnia salve', salve, [cal.id, cal.id]);
+  add('Bright tea', tea, [cal.id]);
+  const gone = add('Gone tea', tea, [cal.id]);
+  r.recipes.remove(gone.id);
+  const swapped = add('Swapped out', tea, [cal.id]);
+  r.recipeIngredients.list({ recipe_id: swapped.id }).forEach(i => r.recipeIngredients.remove(i.id));
+  add('Mint only', tea, [byName('Peppermint').id]);
+  const res = await h().get(`/api/herbs/${cal.id}`);
+  expect(res.body.recipes).toEqual([
+    { id: z.id + 1, name: 'Bright tea', type_name: 'tea blend' },
+    { id: z.id, name: 'Zinnia salve', type_name: 'salve' },
+  ]);
+});
+
 it('creates a herb with sources, never taking a slug from the client', async () => {
   const { h } = setup();
   const res = await h().post('/api/herbs').send({

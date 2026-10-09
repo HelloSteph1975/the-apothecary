@@ -1,0 +1,222 @@
+[
+  {
+    "slug": "tincture",
+    "name": "tincture",
+    "description": "Herbs steeped in alcohol, then strained.",
+    "wait_days": 42,
+    "shelf_life_days": 1095,
+    "label_caution": "Contains alcohol. Keep away from children.",
+    "is_topical": 0,
+    "icon": "flask"
+  },
+  {
+    "slug": "glycerite",
+    "name": "glycerite",
+    "description": "Herbs steeped in vegetable glycerin, an alcohol-free extract.",
+    "wait_days": 28,
+    "shelf_life_days": 365,
+    "label_caution": "Store cool and dark.",
+    "is_topical": 0,
+    "icon": "flask"
+  },
+  {
+    "slug": "tea-blend",
+    "name": "tea blend",
+    "description": "Dried herbs mixed for steeping.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "Check each herb's cautions before drinking.",
+    "is_topical": 0,
+    "icon": "cup"
+  },
+  {
+    "slug": "infusion",
+    "name": "infusion",
+    "description": "Herbs steeped in hot or cold water, drunk the same day.",
+    "wait_days": null,
+    "shelf_life_days": 1,
+    "label_caution": "Keep refrigerated and use within a day.",
+    "is_topical": 0,
+    "icon": "cup"
+  },
+  {
+    "slug": "decoction",
+    "name": "decoction",
+    "description": "Roots, bark or seeds simmered in water.",
+    "wait_days": null,
+    "shelf_life_days": 2,
+    "label_caution": "Keep refrigerated and use within two days.",
+    "is_topical": 0,
+    "icon": "pot"
+  },
+  {
+    "slug": "infused-oil",
+    "name": "infused oil",
+    "description": "Dried herbs steeped in a carrier oil, then strained.",
+    "wait_days": 28,
+    "shelf_life_days": 365,
+    "label_caution": "Use dried herbs only. Throw it out if it turns cloudy or smells off.",
+    "is_topical": 0,
+    "icon": "droplet"
+  },
+  {
+    "slug": "salve",
+    "name": "salve",
+    "description": "Infused oil set with wax, for the skin.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "For external use only.",
+    "is_topical": 1,
+    "icon": "jar"
+  },
+  {
+    "slug": "balm",
+    "name": "balm",
+    "description": "A softer or richer salve, often with butters.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "For external use only.",
+    "is_topical": 1,
+    "icon": "jar"
+  },
+  {
+    "slug": "serum",
+    "name": "serum",
+    "description": "A light blend of oils for the face or hair.",
+    "wait_days": null,
+    "shelf_life_days": 180,
+    "label_caution": "For external use only.",
+    "is_topical": 1,
+    "icon": "droplet"
+  },
+  {
+    "slug": "face-oil",
+    "name": "face oil",
+    "description": "Oils chosen for the face.",
+    "wait_days": null,
+    "shelf_life_days": 180,
+    "label_caution": "For external use only.",
+    "is_topical": 1,
+    "icon": "droplet"
+  },
+  {
+    "slug": "lotion",
+    "name": "lotion",
+    "description": "Oil and water blended together.",
+    "wait_days": null,
+    "shelf_life_days": 90,
+    "label_caution": "Contains water. Keep cool and use within its date.",
+    "is_topical": 1,
+    "icon": "droplet"
+  },
+  {
+    "slug": "syrup",
+    "name": "syrup",
+    "description": "A strong tea sweetened with honey or sugar.",
+    "wait_days": null,
+    "shelf_life_days": 90,
+    "label_caution": "Keep refrigerated. Never give honey to a child under one year old.",
+    "is_topical": 0,
+    "icon": "pot"
+  },
+  {
+    "slug": "oxymel",
+    "name": "oxymel",
+    "description": "Herbs steeped in honey and vinegar.",
+    "wait_days": 14,
+    "shelf_life_days": 180,
+    "label_caution": "Never give honey to a child under one year old.",
+    "is_topical": 0,
+    "icon": "flask"
+  },
+  {
+    "slug": "vinegar",
+    "name": "vinegar",
+    "description": "Herbs steeped in vinegar.",
+    "wait_days": 28,
+    "shelf_life_days": 365,
+    "label_caution": "Store cool and dark.",
+    "is_topical": 0,
+    "icon": "flask"
+  },
+  {
+    "slug": "bath-salts",
+    "name": "bath salts",
+    "description": "Salts blended with herbs or oils.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "For external use only.",
+    "is_topical": 0,
+    "icon": "bath"
+  },
+  {
+    "slug": "bath-blend",
+    "name": "bath blend",
+    "description": "Herbs bundled or bagged for the bath.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "For external use only.",
+    "is_topical": 0,
+    "icon": "bath"
+  },
+  {
+    "slug": "ritual-oil",
+    "name": "ritual oil",
+    "description": "An oil blended for ritual or anointing.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "For external use only.",
+    "is_topical": 1,
+    "icon": "sparkles"
+  },
+  {
+    "slug": "loose-incense",
+    "name": "loose incense",
+    "description": "Resins and herbs for burning on charcoal.",
+    "wait_days": null,
+    "shelf_life_days": 730,
+    "label_caution": "Burn in an airy room, away from children and pets.",
+    "is_topical": 0,
+    "icon": "flame"
+  },
+  {
+    "slug": "smoke-free-herb-bundle",
+    "name": "smoke-free herb bundle",
+    "description": "Herbs bundled to hang or keep, not to burn.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "Not for burning.",
+    "is_topical": 0,
+    "icon": "leaf"
+  },
+  {
+    "slug": "sachet",
+    "name": "sachet",
+    "description": "Herbs sewn or tied in cloth.",
+    "wait_days": null,
+    "shelf_life_days": 365,
+    "label_caution": "Not for eating.",
+    "is_topical": 0,
+    "icon": "package"
+  },
+  {
+    "slug": "moon-water",
+    "name": "moon water",
+    "description": "Water left under the moon.",
+    "wait_days": 1,
+    "shelf_life_days": 7,
+    "label_caution": "Don't drink it unless it began as clean drinking water and was kept covered.",
+    "is_topical": 0,
+    "icon": "moon"
+  },
+  {
+    "slug": "other",
+    "name": "other",
+    "description": "Anything else you make.",
+    "wait_days": null,
+    "shelf_life_days": null,
+    "label_caution": null,
+    "is_topical": 0,
+    "icon": "sprout"
+  }
+]

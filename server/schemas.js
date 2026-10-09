@@ -45,3 +45,22 @@ export const herbSourceSchema = {
   title: 'string!', author: 'string', year: { type: 'int', min: 0, max: 3000 }, url: 'string',
   sort_order: { type: 'int', nullable: false },
 };
+
+// Recipes may also measure in drops, spoons, cups and parts; jars keep the shorter UNITS.
+export const RECIPE_UNITS = ['g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl oz', 'count', 'drops', 'tsp', 'tbsp', 'cup', 'parts'];
+export const RECIPE_ICONS = ['flask', 'droplet', 'cup', 'pot', 'jar', 'bath', 'sparkles', 'flame', 'leaf', 'package', 'moon', 'sprout',
+  'flower', 'wind'];
+export const recipeTypeSchema = {
+  name: 'string!', description: 'string', wait_days: { type: 'int', min: 0, max: 3650 },
+  shelf_life_days: { type: 'int', min: 0, max: 3650 }, label_caution: 'string', is_topical: { type: 'bool', nullable: false },
+  icon: RECIPE_ICONS, sort_order: { type: 'int', nullable: false },
+};
+export const recipeSchema = {
+  name: 'string!', type_id: 'int!', yield_amount: { type: 'number', min: 0 }, yield_unit: RECIPE_UNITS, steps: 'string',
+  wait_days: { type: 'int', min: 0, max: 3650 }, shelf_life_days: { type: 'int', min: 0, max: 3650 },
+  intention: 'string', timing_notes: 'string', notes: 'string',
+};
+export const recipeIngredientSchema = {
+  herb_id: 'int', name: 'string', amount: { type: 'number', min: 0 }, unit: RECIPE_UNITS, form: FORMS, plant_part: PLANT_PARTS,
+  note: 'string', herb_gone: { type: 'bool', nullable: false },
+};

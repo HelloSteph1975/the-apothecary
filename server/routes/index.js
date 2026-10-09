@@ -7,6 +7,7 @@ import { suppliersRouter } from './suppliers.js';
 import { photosRouter } from './photos.js';
 import { herbsRouter, herbOfTheDayRoute } from './grimoire.js';
 import { todayRoute } from './today.js';
+import { recipeTypesRouter, recipesRouter } from './recipes.js';
 
 export function apiRouter(ctx, { onShutdown }) {
   const r = Router();
@@ -18,6 +19,8 @@ export function apiRouter(ctx, { onShutdown }) {
   r.use('/suppliers', suppliersRouter(ctx));
   r.use('/photos', photosRouter(ctx));
   r.use('/herbs', herbsRouter(ctx));
+  r.use('/recipe-types', recipeTypesRouter(ctx));
+  r.use('/recipes', recipesRouter(ctx));
   r.get('/herb-of-the-day', herbOfTheDayRoute(ctx));
   r.get('/expiry-suggestion', expirySuggestionRoute(ctx));
   r.get('/storage-spots', storageSpotsRoute(ctx));

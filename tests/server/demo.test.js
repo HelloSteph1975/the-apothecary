@@ -65,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('3');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('4');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -143,4 +143,79 @@ it('links the demo herbs of an existing v2 demo folder', () => {
   expect(seedDemo(t.ctx)).toBe(false);
   expect(linked(t.ctx.db)).toEqual(DEMO_HERBS);
   expect(seedDemo(t.ctx)).toBe(false);
+});
+
+const recipeNames = db => db.prepare('SELECT name FROM recipes WHERE deleted_at IS NULL ORDER BY name').all().map(r => r.name);
+const DEMO_RECIPES = ['Calendula skin salve', 'Rose face serum', 'Sleepy chamomile tea'];
+
+it('adds three demo recipes linked to grimoire herbs', async () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
+  const links = t.ctx.db.prepare(`SELECT r.name AS recipe, h.slug FROM recipe_ingredients ri
+    JOIN recipes r ON r.id = ri.recipe_id JOIN herbs h ON h.id = ri.herb_id WHERE ri.deleted_at IS NULL ORDER BY r.name, h.slug`).all();
+  expect(links).toEqual([
+    { recipe: 'Calendula skin salve', slug: 'calendula' },
+    { recipe: 'Rose face serum', slug: 'rose' },
+    { recipe: 'Sleepy chamomile tea', slug: 'chamomile' },
+    { recipe: 'Sleepy chamomile tea', slug: 'lavender' },
+    { recipe: 'Sleepy chamomile tea', slug: 'lemon-balm' },
+  ]);
+  const salve = t.ctx.db.prepare("SELECT id FROM recipes WHERE name = 'Calendula skin salve'").get();
+  const detail = (await t.http().get(`/api/recipes/${salve.id}`)).body;
+  expect(detail.needs_patch_test).toBe(true);
+  expect(detail.steps).toBeTruthy();
+  const herb = t.ctx.db.prepare("SELECT id FROM herbs WHERE slug = 'calendula'").get();
+  expect((await t.http().get(`/api/herbs/${herb.id}`)).body.recipes.map(x => x.name)).toEqual(['Calendula skin salve']);
+});
+
+it('running the demo seed again changes nothing', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM recipes').get().n).toBe(3);
+});
+
+it('gives an existing v3 demo folder the recipes once', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec('DELETE FROM recipe_ingredients; DELETE FROM recipes');
+  t.ctx.db.prepare("UPDATE settings SET value = '3' WHERE key = 'demo_seeded'").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('4');
+  t.ctx.db.exec('DELETE FROM recipe_ingredients; DELETE FROM recipes');
+  seedDemo(t.ctx);
+  expect(recipeNames(t.ctx.db)).toEqual([]);
+});
+
+it('reset re-adds the demo recipes, trashes their photos and leaves recipe types alone', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const recipe = t.ctx.db.prepare('SELECT id FROM recipes LIMIT 1').get();
+  const filename = '1700000000001-abcdef12.jpg';
+  fs.mkdirSync(path.join(t.dataDir, 'photos', '_trash'), { recursive: true });
+  fs.writeFileSync(path.join(t.dataDir, 'photos', filename), 'x');
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('recipe', ?, ?)").run(recipe.id, filename);
+  t.ctx.db.prepare("UPDATE recipe_types SET name = 'my salve' WHERE slug = 'salve'").run();
+  const types = () => t.ctx.db.prepare('SELECT COUNT(*) AS n FROM recipe_types').get().n;
+  const before = types();
+  seedDemo(t.ctx, { reset: true });
+  expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM recipes').get().n).toBe(3);
+  expect(types()).toBe(before);
+  expect(t.ctx.db.prepare("SELECT name FROM recipe_types WHERE slug = 'salve'").get().name).toBe('my salve');
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
+  expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'recipe'").get().n).toBe(0);
+});
+
+it('reset skips a demo recipe whose starter type she deleted', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec("DELETE FROM recipe_ingredients WHERE recipe_id IN (SELECT r.id FROM recipes r JOIN recipe_types y ON y.id = r.type_id WHERE y.slug = 'serum')");
+  t.ctx.db.exec("DELETE FROM recipes WHERE type_id = (SELECT id FROM recipe_types WHERE slug = 'serum')");
+  t.ctx.db.prepare("UPDATE recipe_types SET deleted_at = ? WHERE slug = 'serum'").run(new Date().toISOString());
+  expect(() => seedDemo(t.ctx, { reset: true })).not.toThrow();
+  expect(recipeNames(t.ctx.db)).toEqual(['Calendula skin salve', 'Sleepy chamomile tea']);
 });
