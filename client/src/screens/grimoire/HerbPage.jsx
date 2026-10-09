@@ -54,7 +54,7 @@ export function HerbPage() {
   const jars = list(herb.jars);
   const sources = list(herb.sources);
   const subtitle = [herb.latin_name, herb.family].filter(Boolean).join(' · ');
-  const addJar = herbSection ? `/cabinet/new?section=${herbSection.id}&herb=${herb.id}` : null;
+  const addJar = herbSection ? `/cabinet/new?section=${herbSection.id}&herb=${herb.id}` : `/cabinet/new?herb=${herb.id}`;
 
   return (
     <>
@@ -110,24 +110,22 @@ export function HerbPage() {
           </ParchmentCard>
         )}
 
-        {(jars.length > 0 || addJar) && (
-          <ParchmentCard title="In your cabinet">
-            {jars.length > 0 ? (
-              <ul>
-                {jars.map(j => (
-                  <li key={j.id}>
-                    <Link to={`/cabinet/items/${j.id}`}>{j.name}</Link>{' '}
-                    <span>{formatAmount(j.amount, j.unit)}</span>
-                    {j.size_label && <span> ({j.size_label})</span>}
-                    {j.expires_on && <span>, use by {formatDay(j.expires_on)}</span>}{' '}
-                    {statusBadges(j.status).map(b => <span key={b.key} className={`badge badge-${b.tone}`}>{b.label}</span>)}
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="muted">No jar of this herb yet.</p>}
-            {addJar && <p><WaxSealLink to={addJar}>Add a jar of this herb</WaxSealLink></p>}
-          </ParchmentCard>
-        )}
+        <ParchmentCard title="In your cabinet">
+          {jars.length > 0 ? (
+            <ul>
+              {jars.map(j => (
+                <li key={j.id}>
+                  <Link to={`/cabinet/items/${j.id}`}>{j.name}</Link>{' '}
+                  <span>{formatAmount(j.amount, j.unit)}</span>
+                  {j.size_label && <span> ({j.size_label})</span>}
+                  {j.expires_on && <span>, use by {formatDay(j.expires_on)}</span>}{' '}
+                  {statusBadges(j.status).map(b => <span key={b.key} className={`badge badge-${b.tone}`}>{b.label}</span>)}
+                </li>
+              ))}
+            </ul>
+          ) : <p className="muted">No jar of this herb yet.</p>}
+          <p><WaxSealLink to={addJar}>Add a jar of this herb</WaxSealLink></p>
+        </ParchmentCard>
 
         {sources.length > 0 && (
           <ParchmentCard title="Sources">

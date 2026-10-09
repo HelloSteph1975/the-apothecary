@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -48,7 +48,7 @@ export function ItemForm() {
   const suppliers = useApi('/api/suppliers');
   const spots = useApi('/api/storage-spots');
   const herbsApi = useApi('/api/herbs');
-  const herbList = Array.isArray(herbsApi.data) ? herbsApi.data : [];
+  const herbList = useMemo(() => (Array.isArray(herbsApi.data) ? herbsApi.data : []), [herbsApi.data]);
   const wantedHerb = params.get('herb');
   const item = useApi(editing ? `/api/items/${id}?today=${todayString()}` : null);
 
@@ -64,11 +64,15 @@ export function ItemForm() {
   useEffect(() => {
     if (form || !sections.data || (editing && !item.data)) return;
     if (!editing && wantedHerb && !herbsApi.data && !herbsApi.error) return;
-    const start = editing
-      ? fromItem(item.data)
-      : { ...fromItem({}), section_id: sections.data.some(x => String(x.id) === params.get('section')) ? params.get('section') : '' };
+    const wantedSection = sections.data.find(x => String(x.id) === params.get('section'));
+    const start = editing ? fromItem(item.data) : { ...fromItem({}), section_id: wantedSection ? String(wantedSection.id) : '' };
     const linked = !editing && herbList.find(h => String(h.id) === wantedHerb);
-    if (linked) Object.assign(start, { herb_id: String(linked.id), name: linked.common_name, latin_name: linked.latin_name ?? '' });
+    if (linked) {
+      Object.assign(start, { herb_id: String(linked.id), name: linked.common_name, latin_name: linked.latin_name ?? '' });
+      // A jar of a grimoire herb belongs on a herb shelf.
+      const herbShelf = wantedSection?.kind === 'herb' ? wantedSection : sections.data.find(x => x.kind === 'herb');
+      if (herbShelf) start.section_id = String(herbShelf.id);
+    }
     setForm(start);
     setInitial(JSON.stringify(start));
     typedExpiry.current = Boolean(start.expires_on);

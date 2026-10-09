@@ -217,3 +217,18 @@ it('preselects the herb from the link', async () => {
   await waitFor(() => expect(screen.getByLabelText(/^Name/)).toHaveValue('Nettle'));
   expect(screen.getByLabelText('Latin name')).toHaveValue('Urtica dioica');
 });
+
+it('switches to a herb section when the herb link has no section or a supply section', async () => {
+  for (const path of ['/cabinet/new?herb=4', '/cabinet/new?section=2&herb=4']) {
+    const view = open(path);
+    expect(await screen.findByLabelText(/^Section/)).toHaveValue('1');
+    expect(await screen.findByLabelText('Grimoire herb')).toHaveValue('4');
+    await waitFor(() => expect(screen.getByLabelText(/^Name/)).toHaveValue('Nettle'));
+    view.unmount();
+  }
+});
+
+it('keeps the section from the link when there is no herb param', async () => {
+  open('/cabinet/new?section=2');
+  expect(await screen.findByLabelText(/^Section/)).toHaveValue('2');
+});

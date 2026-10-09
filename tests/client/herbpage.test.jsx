@@ -26,16 +26,18 @@ const base = {
 
 let herb;
 let calls;
+let sections;
 beforeEach(() => {
   calls = [];
   herb = base;
+  sections = [{ id: 3, name: 'Tools', kind: 'supply' }, { id: 4, name: 'Herbs', kind: 'herb' }];
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     calls.push({ method, url });
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
     if (url.startsWith('/api/herbs/5?')) return json(herb);
     if (url === '/api/herbs/5' && method === 'DELETE') return json({ ok: true, restore: '/api/herbs/5/restore' });
-    if (url === '/api/sections') return json([{ id: 3, name: 'Tools', kind: 'supply' }, { id: 4, name: 'Herbs', kind: 'herb' }]);
+    if (url === '/api/sections') return json(sections);
     if (url.startsWith('/api/herbs?')) return json([]);
     return json({});
   });
@@ -81,6 +83,13 @@ it('lists jars and links to add one with the herb param', async () => {
   expect(within(cab).getByText(/30 g/)).toBeInTheDocument();
   expect(within(cab).getByText('Use soon')).toBeInTheDocument();
   await waitFor(() => expect(within(cab).getByRole('link', { name: 'Add a jar of this herb' })).toHaveAttribute('href', '/cabinet/new?section=4&herb=5'));
+});
+
+it('links to add a jar without a section when there is no herb section', async () => {
+  sections = [{ id: 3, name: 'Tools', kind: 'supply' }];
+  open();
+  const cab = await screen.findByRole('region', { name: 'In your cabinet' });
+  expect(within(cab).getByRole('link', { name: 'Add a jar of this herb' })).toHaveAttribute('href', '/cabinet/new?herb=5');
 });
 
 it('shows sources with safe links only', async () => {
