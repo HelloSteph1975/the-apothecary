@@ -54,3 +54,24 @@ it('reset restores the demo cabinet without doubling it up', async () => {
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
   expect((await t.http().get('/api/sections')).body).toHaveLength(15);
 });
+
+it('stocks the cabinet of an older demo folder that has none, once', async () => {
+  t = makeTestContext();
+  t.ctx.db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', '1')").run();
+  expect(seedDemo(t.ctx)).toBe(true);
+  const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
+  const stocked = await count();
+  expect(stocked).toBeGreaterThanOrEqual(12);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('2');
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(await count()).toBe(stocked);
+  expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
+});
+
+it('leaves an older demo folder alone when it already has items', async () => {
+  t = makeTestContext();
+  t.ctx.db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', '1')").run();
+  await t.http().post('/api/items').send({ section_id: 1, name: 'My own herb', amount: 1, unit: 'g' });
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect((await t.http().get(`/api/items?today=${localToday()}`)).body).toHaveLength(1);
+});

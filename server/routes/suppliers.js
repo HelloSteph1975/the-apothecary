@@ -14,7 +14,7 @@ export function suppliersRouter(ctx) {
     repo: db => repos(db).suppliers,
     schema: supplierSchema,
     validateRow: (ctx, row) => {
-      if (row.website != null && !/^https?:\/\//i.test(row.website)) {
+      if (row.website != null && !/^https?:\/\/\S+/i.test(row.website)) {
         throw new HttpError(400, 'Please fix the highlighted fields.', { website: 'Enter a web address starting with https://' });
       }
     },

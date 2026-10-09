@@ -37,7 +37,7 @@ export function sectionsRouter(ctx) {
 export function itemsRouter(ctx) {
   const r = Router();
   r.get('/', (req, res) => {
-    check({ supplier_id: 'int' }, { supplier_id: req.query.supplier_id });
+    check({ supplier_id: 'int' }, { supplier_id: typeof req.query.supplier_id === 'string' ? req.query.supplier_id : undefined });
     res.json(listItems(ctx.db, { ...req.query, include_used_up: req.query.include_used_up === '1' }, today(req)));
   });
   r.get('/:id', (req, res) => res.json(getItemDetail(ctx.db, idParam(req), today(req))));
@@ -54,7 +54,9 @@ export function itemsRouter(ctx) {
 }
 
 export function purchasesRouter(ctx) {
-  return crudRouter(ctx, {
+  const r = Router();
+  r.post('/', (req, res) => res.status(405).json({ error: 'Add purchases from the item page.' }));
+  r.use(crudRouter(ctx, {
     repo: db => repos(db).purchases,
     schema: purchaseSchema,
     validateRow: (ctx, row) => {
@@ -62,7 +64,8 @@ export function purchasesRouter(ctx) {
         throw new HttpError(400, 'Please fix the highlighted fields.', { supplier_id: "That supplier doesn't exist" });
       }
     },
-  });
+  }));
+  return r;
 }
 
 export function expirySuggestionRoute(ctx) {

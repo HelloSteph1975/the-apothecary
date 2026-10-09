@@ -4,6 +4,8 @@ import { saveSettings } from '../services/settings.js';
 import { createItem } from '../services/cabinet.js';
 import { addDays, addMonths } from '../lib/dates.js';
 
+// Bump when the demo stock changes, so older demo folders get the new stock once.
+const SEED_VERSION = '2';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
@@ -51,12 +53,20 @@ function stockCabinet(db, today) {
 export function seedDemo(ctx, { reset = false } = {}) {
   const db = ctx.db;
   const seeded = db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get();
-  if (seeded && !reset) return false;
+  if (seeded && !reset) {
+    const stocked = db.prepare('SELECT 1 FROM items WHERE deleted_at IS NULL').get();
+    if (seeded.value === SEED_VERSION || stocked) return false;
+    transaction(db, () => {
+      stockCabinet(db, localToday());
+      db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
+    });
+    return true;
+  }
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
     clearCabinet(db);
     stockCabinet(db, localToday());
-    db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', '1') ON CONFLICT(key) DO UPDATE SET value = '1'").run();
+    db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });
   return true;
 }

@@ -53,3 +53,10 @@ it('rejects websites that are not http or https, and accepts https', async () =>
   expect(patch.body.details.website).toBeTruthy();
   expect((await h().patch(`/api/suppliers/${ok.body.id}`).send({ website: 'http://example.org' })).status).toBe(200);
 });
+
+it('rejects a bare https:// as a website', async () => {
+  t = makeTestContext();
+  const res = await t.http().post('/api/suppliers').send({ name: 'Bare', website: 'https://' });
+  expect(res.status).toBe(400);
+  expect(res.body.details.website).toBeTruthy();
+});

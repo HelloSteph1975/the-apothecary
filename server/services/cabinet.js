@@ -44,16 +44,17 @@ export function listItems(db, f, today) {
   const args = [];
   if (!f.include_used_up) where.push('i.used_up_at IS NULL');
   for (const key of ['section_id', 'source_kind', 'form', 'plant_part', 'storage_spot']) {
-    if (f[key] != null && f[key] !== '') { where.push(`i.${key} = ?`); args.push(f[key]); }
+    if (typeof f[key] === 'string' && f[key] !== '') { where.push(`i.${key} = ?`); args.push(f[key]); }
   }
-  if (f.q) { where.push('(i.name LIKE ? OR i.latin_name LIKE ?)'); args.push(`%${f.q}%`, `%${f.q}%`); }
-  if (f.supplier_id) {
+  if (typeof f.q === 'string' && f.q) { where.push('(i.name LIKE ? OR i.latin_name LIKE ?)'); args.push(`%${f.q}%`, `%${f.q}%`); }
+  if (typeof f.supplier_id === 'string' && f.supplier_id) {
     where.push('EXISTS (SELECT 1 FROM purchases px WHERE px.item_id = i.id AND px.deleted_at IS NULL AND px.supplier_id = ?)');
     args.push(Number(f.supplier_id));
   }
-  if (f.status === 'low') where.push('i.used_up_at IS NULL AND i.low_threshold IS NOT NULL AND i.amount <= i.low_threshold');
-  if (f.status === 'expiring') { where.push('i.used_up_at IS NULL AND i.expires_on >= ? AND i.expires_on <= ?'); args.push(today, addDays(today, 30)); }
-  if (f.status === 'expired') { where.push('i.used_up_at IS NULL AND i.expires_on < ?'); args.push(today); }
+  const status = typeof f.status === 'string' ? f.status : '';
+  if (status === 'low') where.push('i.used_up_at IS NULL AND i.low_threshold IS NOT NULL AND i.amount <= i.low_threshold');
+  if (status === 'expiring') { where.push('i.used_up_at IS NULL AND i.expires_on >= ? AND i.expires_on <= ?'); args.push(today, addDays(today, 30)); }
+  if (status === 'expired') { where.push('i.used_up_at IS NULL AND i.expires_on < ?'); args.push(today); }
   const sql = `${LIST_SQL}${where.map(w => ` AND ${w}`).join('')} ORDER BY s.sort_order, s.id, i.name COLLATE NOCASE`;
   return db.prepare(sql).all(...args).map(r => ({ ...r, status: itemStatus(r, today) }));
 }

@@ -157,3 +157,33 @@ it('rejects a non-numeric supplier filter', async () => {
   expect(res.status).toBe(400);
   expect(res.body.details).toHaveProperty('supplier_id');
 });
+
+it('restock keeps the use by date unless one is sent, and null clears it', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const item = (await h().post('/api/items').send({ section_id: 1, name: 'Nettle', amount: 10, unit: 'g', expires_on: '2027-01-01' })).body;
+  const kept = await h().post(`/api/items/${item.id}/restock`).send({ quantity: 5, purchased_on: '2026-10-05' });
+  expect(kept.status, JSON.stringify(kept.body)).toBe(200);
+  expect(kept.body.expires_on).toBe('2027-01-01');
+  const changed = await h().post(`/api/items/${item.id}/restock`).send({ quantity: 5, purchased_on: '2026-10-06', expires_on: '2027-06-01' });
+  expect(changed.body.expires_on).toBe('2027-06-01');
+  const cleared = await h().post(`/api/items/${item.id}/restock`).send({ quantity: 5, purchased_on: '2026-10-07', expires_on: null });
+  expect(cleared.body.expires_on).toBeNull();
+});
+
+it('does not create purchases directly', async () => {
+  t = makeTestContext();
+  const res = await t.http().post('/api/purchases').send({ item_id: 1, quantity: 1 });
+  expect(res.status).toBe(405);
+  expect(res.body).toEqual({ error: 'Add purchases from the item page.' });
+});
+
+it('ignores repeated query parameters instead of failing', async () => {
+  t = makeTestContext();
+  await t.http().post('/api/items').send({ section_id: 1, name: 'Nettle', amount: 10, unit: 'g' });
+  const res = await t.http().get(`/api/items?today=${TODAY}&section_id=1&section_id=2&q=a&q=b&status=low&status=expired&supplier_id=1&supplier_id=2`);
+  expect(res.status, JSON.stringify(res.body)).toBe(200);
+  expect(res.body).toHaveLength(1);
+  const two = await t.http().get(`/api/items?today=${TODAY}&storage_spot=a&storage_spot=b`);
+  expect(two.status).toBe(200);
+});
