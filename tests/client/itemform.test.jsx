@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
 import { ToastProvider } from '../../client/src/components/ToastProvider.jsx';
 import { ConfirmProvider } from '../../client/src/components/ConfirmProvider.jsx';
+import { todayString } from '../../client/src/lib/today.js';
 
 HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open', ''); };
 HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
@@ -73,6 +74,13 @@ it('shows source fields for bought, foraged and gifted', async () => {
   expect(screen.getByLabelText('Date harvested or made')).toBeInTheDocument();
   await user.selectOptions(source, 'Gifted or traded');
   expect(screen.getByLabelText('From whom')).toBeInTheDocument();
+});
+
+it('fills in today as the date bought when Bought is picked on a new item', async () => {
+  const user = userEvent.setup();
+  open();
+  await user.selectOptions(await screen.findByLabelText('Source'), 'Bought');
+  expect(screen.getByLabelText('Date bought')).toHaveValue(todayString());
 });
 
 it('suggests a use by date but never overwrites one she typed', async () => {

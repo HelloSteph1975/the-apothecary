@@ -5,7 +5,7 @@ import { TextInput, NumberInput, DateInput } from '../../components/Field.jsx';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { api } from '../../lib/api.js';
-import { formatAmount, formatMoney } from '../../lib/cabinet.js';
+import { formatAmount, formatDay, formatMoney } from '../../lib/cabinet.js';
 
 function EditRow({ p, onDone }) {
   const toast = useToast();
@@ -55,7 +55,7 @@ export function PurchasesTable({ purchases, onChange }) {
         <tbody>
           {purchases.map(p => (editing === p.id ? <EditRow key={p.id} p={p} onDone={changed => { setEditing(null); setRefocus(p.id); if (changed) onChange(); }} /> : (
             <tr key={p.id}>
-              <td>{p.purchased_on}</td>
+              <td>{formatDay(p.purchased_on)}</td>
               <td>
                 {p.supplier_id ? <Link to={`/cabinet/suppliers/${p.supplier_id}`}>{p.supplier_name}</Link> : 'Not recorded'}
                 {p.supplier_deleted_at && ' (removed)'}
@@ -64,8 +64,8 @@ export function PurchasesTable({ purchases, onChange }) {
               <td>{formatMoney(p.price)}</td>
               <td>{p.order_note}</td>
               <td>
-                <Button ref={el => { editButtons.current[p.id] = el; }} size="sm" variant="ghost" aria-label={`Edit purchase from ${p.purchased_on}`} onClick={() => setEditing(p.id)}>Edit</Button>{' '}
-                <Button size="sm" variant="ghost" aria-label={`Delete purchase from ${p.purchased_on}`}
+                <Button ref={el => { editButtons.current[p.id] = el; }} size="sm" variant="ghost" aria-label={`Edit purchase from ${formatDay(p.purchased_on)}`} onClick={() => setEditing(p.id)}>Edit</Button>{' '}
+                <Button size="sm" variant="ghost" aria-label={`Delete purchase from ${formatDay(p.purchased_on)}`}
                   onClick={() => del({ url: `/api/purchases/${p.id}`, label: 'this purchase', onChange })}>Delete</Button>
               </td>
             </tr>

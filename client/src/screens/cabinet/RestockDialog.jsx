@@ -48,10 +48,13 @@ export function RestockDialog({ item, open, onClose, onDone }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.post(`/api/items/${item.id}/restock`, {
+      const body = {
         quantity: toNum(form.quantity), supplier_id: toNum(form.supplier_id), price: toNum(form.price),
-        purchased_on: form.purchased_on || null, order_note: form.order_note || null, expires_on: form.expires_on || null,
-      });
+        purchased_on: form.purchased_on || null, order_note: form.order_note || null,
+      };
+      // Leave the use by date out when blank, so the jar keeps the one it has.
+      if (form.expires_on) body.expires_on = form.expires_on;
+      await api.post(`/api/items/${item.id}/restock`, body);
       onClose();
       onDone();
       toast.show({ message: 'Restocked' });
@@ -71,8 +74,8 @@ export function RestockDialog({ item, open, onClose, onDone }) {
         </>
       )}>
       <form id="restock-form" onSubmit={submit} noValidate>
-        <Field label="Quantity" hint={`In ${unit}`} error={errors.quantity}>
-          <NumberInput min="0" value={form.quantity} onChange={e => set('quantity', e.target.value)} data-autofocus="" />
+        <Field label="Quantity (required)" hint={`In ${unit}`} error={errors.quantity}>
+          <NumberInput required aria-required="true" min="0" value={form.quantity} onChange={e => set('quantity', e.target.value)} data-autofocus="" />
         </Field>
         <Field label="Supplier" error={errors.supplier_id}>
           <Select value={form.supplier_id} onChange={e => set('supplier_id', e.target.value)} placeholder="No supplier"

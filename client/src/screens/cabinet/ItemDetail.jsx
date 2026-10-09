@@ -11,7 +11,7 @@ import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { api } from '../../lib/api.js';
 import { useApi } from '../../lib/useApi.js';
 import { todayString } from '../../lib/today.js';
-import { formatAmount, statusBadges, sourceText } from '../../lib/cabinet.js';
+import { formatAmount, formatDay, statusBadges, sourceText } from '../../lib/cabinet.js';
 import { RestockDialog } from './RestockDialog.jsx';
 import { PurchasesTable } from './PurchasesTable.jsx';
 
@@ -74,7 +74,7 @@ export function ItemDetail() {
             <dt>Amount</dt><dd>{formatAmount(item.amount, item.unit)}</dd>
             {item.size_label && <><dt>Size</dt><dd>{item.size_label}</dd></>}
             {item.low_threshold != null && <><dt>Low reminder</dt><dd>Reminds you at {formatAmount(item.low_threshold, item.unit)}</dd></>}
-            {item.expires_on && <><dt>Use by</dt><dd>{item.expires_on}</dd></>}
+            {item.expires_on && <><dt>Use by</dt><dd>{formatDay(item.expires_on)}</dd></>}
             {item.storage_spot && <><dt>Stored</dt><dd>{item.storage_spot}</dd></>}
             {item.section_kind === 'herb' && item.form && <><dt>Form</dt><dd>{cap(item.form)}</dd></>}
             {item.section_kind === 'herb' && item.plant_part && <><dt>Plant part</dt><dd>{cap(item.plant_part)}</dd></>}

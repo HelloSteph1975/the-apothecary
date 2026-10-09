@@ -3,6 +3,7 @@ import { Field, TextInput, NumberInput, DateInput, Select } from '../../componen
 import { Button } from '../../components/Button.jsx';
 import { useToast } from '../../components/ToastProvider.jsx';
 import { api } from '../../lib/api.js';
+import { todayString } from '../../lib/today.js';
 import { SOURCE_KINDS } from '../../lib/cabinet.js';
 
 const ADD = '__add__';
@@ -37,7 +38,10 @@ export function SourceFields({ form, set, err, suppliers, onSupplierAdded, editi
   return (
     <>
       <Field label="Source" error={err('source_kind')}>
-        <Select value={form.source_kind} onChange={e => set('source_kind', e.target.value)}
+        <Select value={form.source_kind} onChange={e => {
+          set('source_kind', e.target.value);
+          if (!editing && e.target.value === 'bought' && !form.acquired_on) set('acquired_on', todayString());
+        }}
           placeholder="Not recorded" options={SOURCE_KINDS} />
       </Field>
       {bought && !editing && (

@@ -50,7 +50,10 @@ it('groups items by section with amounts, badges and sources', async () => {
   const containers = screen.getByRole('region', { name: /Containers/ });
   expect(within(containers).getByText('24')).toBeInTheDocument();
   expect(within(containers).getByText('Gifted by Rowan')).toBeInTheDocument();
-  expect(screen.getByRole('region', { name: /Waxes/ })).toHaveTextContent('Nothing on this shelf yet.');
+  expect(screen.queryByRole('region', { name: /Waxes/ })).toBeNull();
+  const empty = screen.getByRole('region', { name: /Empty shelves/ });
+  expect(empty).toHaveAccessibleName('Empty shelves (1)');
+  expect(within(empty).getByRole('link', { name: 'Add to Waxes' })).toHaveAttribute('href', '/cabinet/new?section=3');
 });
 
 it('filters from the URL and the Show menu, hiding empty shelves', async () => {
@@ -59,6 +62,7 @@ it('filters from the URL and the Show menu, hiding empty shelves', async () => {
   await screen.findByRole('link', { name: /Calendula/ });
   expect(requests.some(u => u.startsWith('/api/items') && u.includes('status=low'))).toBe(true);
   expect(screen.queryByRole('region', { name: /Waxes/ })).toBeNull();
+  expect(screen.queryByRole('region', { name: /Empty shelves/ })).toBeNull();
   await user.selectOptions(screen.getByLabelText('Show'), 'all');
   await waitFor(() => expect(screen.getByRole('link', { name: /Amber dropper bottle/ })).toBeInTheDocument());
 });

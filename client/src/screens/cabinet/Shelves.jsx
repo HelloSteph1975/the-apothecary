@@ -59,6 +59,8 @@ export function Shelves() {
   if (!sections.data || !items.data) return <>{header}<p>Opening the cabinet…</p></>;
 
   const empty = items.data.length === 0 && !filtered;
+  const stocked = sections.data.filter(s => bySection.get(s.id)?.length);
+  const bare = sections.data.filter(s => !bySection.get(s.id)?.length);
   return (
     <>
       {header}
@@ -70,17 +72,27 @@ export function Shelves() {
         </ParchmentCard>
       ) : items.data.length === 0 ? (
         <ParchmentCard title="No matches"><p>Nothing matches those filters.</p></ParchmentCard>
-      ) : sections.data.map(s => {
-        const list = bySection.get(s.id) || [];
-        if (!list.length && filtered) return null;
-        return (
-          <ParchmentCard key={s.id} title={`${s.name} (${list.length})`} className="shelf">
-            {list.length ? list.map(it => <ItemRow key={it.id} item={it} />) : (
-              <p>Nothing on this shelf yet. <Link to={`/cabinet/new?section=${s.id}`}>Add</Link></p>
-            )}
-          </ParchmentCard>
-        );
-      })}
+      ) : (
+        <>
+          {stocked.map(s => {
+            const list = bySection.get(s.id);
+            return (
+              <ParchmentCard key={s.id} title={`${s.name} (${list.length})`} className="shelf">
+                {list.map(it => <ItemRow key={it.id} item={it} />)}
+              </ParchmentCard>
+            );
+          })}
+          {!filtered && bare.length > 0 && (
+            <ParchmentCard title={`Empty shelves (${bare.length})`} className="shelf shelf-empty">
+              <ul className="empty-shelves">
+                {bare.map(s => (
+                  <li key={s.id}>{s.name} <Link to={`/cabinet/new?section=${s.id}`} aria-label={`Add to ${s.name}`}>Add</Link></li>
+                ))}
+              </ul>
+            </ParchmentCard>
+          )}
+        </>
+      )}
       <SectionManager open={managing} onClose={() => setManaging(false)} sections={sections.data} onChange={reloadAll} />
     </>
   );

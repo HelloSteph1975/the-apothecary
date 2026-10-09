@@ -35,11 +35,11 @@ export function PhotoGallery({ ownerType, ownerId, photos, onChange }) {
   }
   return (
     <div className="gallery">
-      {photos.map(p => (
+      {photos.map((p, i) => (
         <figure key={p.id} className="gallery-item">
           <img src={`/photos/${p.filename}`} alt={p.caption || 'Photo'} loading="lazy" />
           <figcaption>
-            <input className="caption-input" defaultValue={p.caption ?? ''} placeholder="Add a caption" aria-label="Photo caption"
+            <input className="caption-input" defaultValue={p.caption ?? ''} placeholder="Add a caption" aria-label={`Caption for photo ${i + 1}`}
               onBlur={e => { if (e.target.value !== (p.caption ?? '')) patch(p, { caption: e.target.value }); }} />
             {p.is_cover
               ? <span className="cover-tag">Cover</span>

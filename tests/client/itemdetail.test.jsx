@@ -64,12 +64,19 @@ it('shows the jar, badges, source and purchases', async () => {
   expect(screen.getByText(/\(removed\)/)).toBeInTheDocument();
 });
 
+it('shows dates in a friendly format', async () => {
+  open();
+  await screen.findByRole('heading', { name: 'Nettle' });
+  expect(screen.getByText('Use by').nextElementSibling).toHaveTextContent('Oct 20, 2026');
+  expect(screen.getByText('Sep 1, 2026')).toBeInTheDocument();
+});
+
 it('restocks with the last supplier and today as defaults', async () => {
   const user = userEvent.setup();
   open();
   await user.click(await screen.findByRole('button', { name: 'Restock' }));
   const dialog = screen.getByRole('dialog');
-  await user.type(within(dialog).getByLabelText('Quantity'), '24');
+  await user.type(within(dialog).getByLabelText(/^Quantity/), '24');
   const before = itemGets();
   await user.click(within(dialog).getByRole('button', { name: 'Restock' }));
   await waitFor(() => expect(calls.some(c => c.url === '/api/items/7/restock')).toBe(true));
@@ -101,15 +108,38 @@ it('asks before deleting, then returns to the shelves', async () => {
 it('keeps keyboard focus when editing a purchase row', async () => {
   const user = userEvent.setup();
   open();
-  const edit = await screen.findByRole('button', { name: 'Edit purchase from 2026-09-01' });
+  const edit = await screen.findByRole('button', { name: 'Edit purchase from Sep 1, 2026' });
   await user.click(edit);
   expect(screen.getByLabelText('Date')).toHaveFocus();
   await user.click(screen.getByRole('button', { name: 'Cancel' }));
-  expect(screen.getByRole('button', { name: 'Edit purchase from 2026-09-01' })).toHaveFocus();
-  await user.click(screen.getByRole('button', { name: 'Edit purchase from 2026-09-01' }));
+  expect(screen.getByRole('button', { name: 'Edit purchase from Sep 1, 2026' })).toHaveFocus();
+  await user.click(screen.getByRole('button', { name: 'Edit purchase from Sep 1, 2026' }));
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(calls.some(c => c.method === 'PATCH' && c.url === '/api/purchases/11')).toBe(true));
-  expect(screen.getByRole('button', { name: 'Edit purchase from 2026-09-01' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Edit purchase from Sep 1, 2026' })).toHaveFocus();
+});
+
+it('leaves the use by date out of the restock when the field is blank', async () => {
+  const user = userEvent.setup();
+  open();
+  await user.click(await screen.findByRole('button', { name: 'Restock' }));
+  const dialog = screen.getByRole('dialog');
+  await user.type(within(dialog).getByLabelText(/^Quantity/), '5');
+  const useBy = within(dialog).getByLabelText('New use by');
+  await waitFor(() => expect(useBy).toHaveValue('2027-10-08'));
+  await user.clear(useBy);
+  await user.click(within(dialog).getByRole('button', { name: 'Restock' }));
+  await waitFor(() => expect(calls.some(c => c.url === '/api/items/7/restock')).toBe(true));
+  expect(calls.find(c => c.url === '/api/items/7/restock').body).not.toHaveProperty('expires_on');
+});
+
+it('marks the restock quantity as required', async () => {
+  const user = userEvent.setup();
+  open();
+  await user.click(await screen.findByRole('button', { name: 'Restock' }));
+  const quantity = within(screen.getByRole('dialog')).getByLabelText('Quantity (required)');
+  expect(quantity).toBeRequired();
+  expect(quantity).toHaveAttribute('aria-required', 'true');
 });
 
 it('does not default restock to a removed supplier', async () => {
@@ -118,7 +148,7 @@ it('does not default restock to a removed supplier', async () => {
   open();
   await user.click(await screen.findByRole('button', { name: 'Restock' }));
   const dialog = screen.getByRole('dialog');
-  await user.type(within(dialog).getByLabelText('Quantity'), '3');
+  await user.type(within(dialog).getByLabelText(/^Quantity/), '3');
   await user.click(within(dialog).getByRole('button', { name: 'Restock' }));
   await waitFor(() => expect(calls.some(c => c.url === '/api/items/7/restock')).toBe(true));
   expect(calls.find(c => c.url === '/api/items/7/restock').body.supplier_id).toBeNull();

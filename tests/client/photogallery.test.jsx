@@ -10,6 +10,13 @@ const photos = [
   { id: 2, filename: '2-bbbbbbbb.jpg', caption: null, is_cover: 0 },
 ];
 
+it('gives each caption box its own label', () => {
+  global.fetch = vi.fn();
+  render(<ToastProvider><ConfirmProvider><PhotoGallery ownerType="item" ownerId={5} photos={photos} onChange={vi.fn()} /></ConfirmProvider></ToastProvider>);
+  expect(screen.getByLabelText('Caption for photo 1')).toHaveValue('Shelf');
+  expect(screen.getByLabelText('Caption for photo 2')).toHaveValue('');
+});
+
 it('marks the cover and makes another photo the cover', async () => {
   const calls = [];
   global.fetch = vi.fn(async (url, opts = {}) => { calls.push([opts.method, url, opts.body]); return new Response('{}', { status: 200 }); });

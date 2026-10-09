@@ -240,6 +240,7 @@ textarea.input { resize: vertical; }
   color: var(--ink-soft); border: 2px dashed var(--rule); border-radius: var(--radius);
 }
 .gallery-drop.is-over, .gallery-drop:focus-within { border-color: var(--ink-green); color: var(--ink-green); }
+.gallery-drop:focus-within { outline: 3px solid var(--focus-color); outline-offset: 2px; }
 
 .cover-tag, .badge {
   display: inline-block; padding: 1px 8px; font-variant: small-caps; letter-spacing: .08em; font-size: .95rem; font-weight: 600;
@@ -249,6 +250,7 @@ textarea.input { resize: vertical; }
 .badge-oxblood { color: var(--oxblood); background: var(--oxblood-wash); border: 1px solid var(--oxblood); }
 
 .shelf { margin: 0 0 26px; }
+.empty-shelves { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .shelf > h2 { font-size: 1.3rem; font-variant: small-caps; letter-spacing: .12em; color: var(--ink-green); padding-bottom: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 8px; }
 
 .item-row {
