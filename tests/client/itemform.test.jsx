@@ -22,6 +22,7 @@ beforeEach(() => {
     if (url === '/api/sections') return json([{ id: 1, name: 'Herbs', kind: 'herb' }, { id: 2, name: 'Containers', kind: 'supply' }]);
     if (url === '/api/suppliers' && method === 'GET') return json([{ id: 2, name: 'Mountain Rose' }]);
     if (url === '/api/storage-spots') return json(['Pantry shelf']);
+    if (url === '/api/herbs') return json([{ id: 3, common_name: 'Lavender', latin_name: 'Lavandula angustifolia' }, { id: 4, common_name: 'Nettle', latin_name: 'Urtica dioica' }]);
     if (url.startsWith('/api/expiry-suggestion')) return json(url.includes('form=fresh') ? null : { expires_on: '2027-10-08' });
     if (url === '/api/items' && method === 'POST') {
       if (postFails) return json({ error: 'Please fix the highlighted fields.', details: { name: 'Required' } }, 400);
@@ -182,4 +183,37 @@ it('keeps a typed use by date when the new form has no suggestion', async () => 
   await user.click(screen.getByLabelText(/^Name/));
   expect(count()).toBe(before);
   expect(screen.getByLabelText('Use by')).toHaveValue('2028-01-01');
+});
+
+it('links a jar to a grimoire herb, filling empty names, and sends herb_id', async () => {
+  const user = userEvent.setup();
+  open();
+  await user.selectOptions(await screen.findByLabelText(/^Section/), 'Herbs');
+  const herb = await screen.findByLabelText('Grimoire herb');
+  expect(screen.getByRole('option', { name: 'Not linked' })).toBeInTheDocument();
+  await user.selectOptions(herb, 'Lavender');
+  expect(screen.getByLabelText(/^Name/)).toHaveValue('Lavender');
+  expect(screen.getByLabelText('Latin name')).toHaveValue('Lavandula angustifolia');
+  await user.clear(screen.getByLabelText(/^Name/));
+  await user.type(screen.getByLabelText(/^Name/), 'My lavender');
+  await user.selectOptions(herb, 'Nettle');
+  expect(screen.getByLabelText(/^Name/)).toHaveValue('My lavender');
+  expect(screen.getByLabelText('Latin name')).toHaveValue('Lavandula angustifolia');
+  await user.type(screen.getByLabelText(/^Amount/), '5');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/items')).toBe(true));
+  expect(calls.find(c => c.method === 'POST' && c.url === '/api/items').body).toMatchObject({ herb_id: 4, name: 'My lavender' });
+});
+
+it('hides the grimoire herb select outside herb sections', async () => {
+  open('/cabinet/new?section=2');
+  await screen.findByLabelText(/^Section/);
+  expect(screen.queryByLabelText('Grimoire herb')).not.toBeInTheDocument();
+});
+
+it('preselects the herb from the link', async () => {
+  open('/cabinet/new?section=1&herb=4');
+  expect(await screen.findByLabelText('Grimoire herb')).toHaveValue('4');
+  await waitFor(() => expect(screen.getByLabelText(/^Name/)).toHaveValue('Nettle'));
+  expect(screen.getByLabelText('Latin name')).toHaveValue('Urtica dioica');
 });

@@ -153,3 +153,18 @@ it('does not default restock to a removed supplier', async () => {
   await waitFor(() => expect(calls.some(c => c.url === '/api/items/7/restock')).toBe(true));
   expect(calls.find(c => c.url === '/api/items/7/restock').body.supplier_id).toBeNull();
 });
+
+it('links to the grimoire herb when the jar is linked', async () => {
+  item = { ...baseItem, herb_id: 3, herb_slug: 'nettle', herb_name: 'Nettle' };
+  open();
+  const link = await screen.findByRole('link', { name: 'Nettle' });
+  expect(link).toHaveAttribute('href', '/grimoire/3');
+  expect(link.closest('dd, p')).toHaveTextContent('In the grimoire: Nettle');
+});
+
+it('shows no grimoire line when the jar is not linked', async () => {
+  item = { ...baseItem, herb_id: null, herb_name: null };
+  open();
+  await screen.findByRole('heading', { name: 'Nettle' });
+  expect(screen.queryByText(/In the grimoire/)).not.toBeInTheDocument();
+});

@@ -3,10 +3,11 @@ import { repos } from '../db/repos.js';
 import { saveSettings } from '../services/settings.js';
 import { createItem } from '../services/cabinet.js';
 import { addDays, addMonths } from '../lib/dates.js';
+import { seedGrimoire, linkItemsToHerbs } from '../services/grimoire.js';
 import { trashPhotoFile } from '../services/photos.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
-const SEED_VERSION = '2';
+const SEED_VERSION = '3';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
@@ -62,6 +63,14 @@ function stockCabinet(db, today) {
   add('Containers', { name: 'Tins', size_label: '2 oz', amount: 12, unit: 'count', low_threshold: 4, storage_spot: 'Bottom shelf' }, bought(tinGlass, 50, 15));
   add('Labels and packaging', { name: 'Kraft jar labels', amount: 60, unit: 'count', low_threshold: 20, storage_spot: 'Bottom shelf' }, bought(tinGlass, 20, 6));
   add('Tools and equipment', { name: 'Digital scale', amount: 1, unit: 'count', storage_spot: 'Workbench' }, bought(tinGlass, 200, 16));
+  linkDemoHerbs(db);
+}
+
+// The server's once-per-version link step may have run already (a reset, or an older demo folder),
+// so link the freshly stocked herbs here. The grimoire must exist first on a brand new demo folder.
+function linkDemoHerbs(db) {
+  seedGrimoire(db);
+  linkItemsToHerbs(db);
 }
 
 // Seeds the demo folder once (or again with reset). Later stages add sample batches here.
@@ -70,12 +79,13 @@ export function seedDemo(ctx, { reset = false } = {}) {
   const seeded = db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get();
   if (seeded && !reset) {
     const stocked = db.prepare('SELECT 1 FROM items WHERE deleted_at IS NULL').get();
-    if (seeded.value === SEED_VERSION || stocked) return false;
+    if (seeded.value === SEED_VERSION) return false;
     transaction(db, () => {
-      stockCabinet(db, localToday());
+      if (stocked) linkDemoHerbs(db);
+      else stockCabinet(db, localToday());
       db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
     });
-    return true;
+    return !stocked;
   }
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
