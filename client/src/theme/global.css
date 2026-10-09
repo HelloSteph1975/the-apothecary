@@ -219,3 +219,61 @@ textarea.input { resize: vertical; }
 .backup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .backup-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dotted var(--ink-soft); }
 .backup-list li span { overflow-wrap: anywhere; }
+.today-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+
+/* Herb cabinet */
+.tabs { display: flex; gap: 22px; margin: 0 0 18px; border-bottom: 1px solid var(--rule); }
+.tab { padding: 6px 2px; color: var(--ink-soft); font: 600 1.1rem var(--font-head); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tab:hover { color: var(--ink-on-parchment); }
+.tab[aria-current='page'] { color: var(--ink-green); border-bottom-color: var(--ink-green); }
+
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); gap: 14px; }
+.gallery-item { margin: 0; display: grid; gap: 6px; align-content: start; }
+.gallery-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--rule); border-radius: var(--radius); }
+.gallery-item figcaption { display: flex; align-items: center; gap: 6px; }
+.caption-input {
+  flex: 1; min-width: 0; font: inherit; font-size: .95rem; color: var(--ink-on-parchment); background: #f7efdc;
+  border: 1px solid var(--parchment-edge); border-radius: var(--radius); padding: 4px 8px;
+}
+.gallery-drop {
+  display: grid; place-content: center; justify-items: center; gap: 6px; min-height: 160px; padding: 12px; text-align: center; cursor: pointer;
+  color: var(--ink-soft); border: 2px dashed var(--rule); border-radius: var(--radius);
+}
+.gallery-drop.is-over, .gallery-drop:focus-within { border-color: var(--ink-green); color: var(--ink-green); }
+.gallery-drop:focus-within { outline: 3px solid var(--focus-color); outline-offset: 2px; }
+
+.cover-tag, .badge {
+  display: inline-block; padding: 1px 8px; font-variant: small-caps; letter-spacing: .08em; font-size: .95rem; font-weight: 600;
+  border-radius: var(--radius); white-space: nowrap;
+}
+.cover-tag, .badge-brass { color: var(--brass-dark); background: #f3e7c9; border: 1px solid var(--brass-dark); }
+.badge-oxblood { color: var(--oxblood); background: var(--oxblood-wash); border: 1px solid var(--oxblood); }
+
+.shelf { margin: 0 0 26px; }
+.empty-shelves { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.shelf > h2 { font-size: 1.3rem; font-variant: small-caps; letter-spacing: .12em; color: var(--ink-green); padding-bottom: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 8px; }
+
+.item-row {
+  display: grid; grid-template-columns: 48px minmax(0, 2fr) auto minmax(0, 1.5fr); gap: 6px 14px; align-items: center;
+  padding: 8px 0; border-bottom: 1px dotted var(--ink-soft);
+}
+.item-row img, .item-row .item-thumb { width: 48px; height: 48px; object-fit: cover; border: 1px solid var(--rule); border-radius: var(--radius); }
+.item-row .badges { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 2 / -1; }
+@media (max-width: 640px) {
+  .item-row { grid-template-columns: 48px minmax(0, 1fr); }
+  .item-row > :nth-child(n+3) { grid-column: 2; }
+}
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; margin: 0 0 16px; }
+.toolbar > * { flex: 0 1 auto; }
+
+.dl-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0 0 1em; }
+.dl-grid dt { color: var(--ink-soft); font-weight: 600; }
+.dl-grid dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .dl-grid { grid-template-columns: 1fr; gap: 0; } .dl-grid dd { margin-bottom: 8px; } }
+
+.table-wrap { overflow-x: auto; }
+.purchase-table { width: 100%; border-collapse: collapse; }
+.purchase-table th, .purchase-table td { text-align: left; padding: 6px 10px; border: 1px solid var(--rule); }
+.purchase-table th { font-variant: small-caps; letter-spacing: .08em; color: var(--ink-green); }
+.stars { color: var(--ink-green); letter-spacing: .12em; }

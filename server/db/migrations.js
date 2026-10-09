@@ -10,6 +10,34 @@ export const migrations = [
     filename TEXT NOT NULL, caption TEXT, is_cover INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
   CREATE INDEX idx_photos_owner ON photos(owner_type, owner_id);
   `,
+  // 2: the herb cabinet. One item row per physical container; purchases log each buy.
+  `
+  CREATE TABLE cabinet_sections (id INTEGER PRIMARY KEY, name TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'supply' CHECK (kind IN ('herb','supply')), sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE TABLE suppliers (id INTEGER PRIMARY KEY, name TEXT NOT NULL, website TEXT, contact TEXT, good_for TEXT,
+    rating INTEGER CHECK (rating BETWEEN 1 AND 5), notes TEXT, ${TS});
+  CREATE TABLE items (id INTEGER PRIMARY KEY, section_id INTEGER NOT NULL REFERENCES cabinet_sections(id),
+    name TEXT NOT NULL, latin_name TEXT, herb_id INTEGER,
+    form TEXT CHECK (form IN ('dried leaf','dried flower','root','bark','seed','resin','powder','fresh','tincture','oil','other')),
+    plant_part TEXT CHECK (plant_part IN ('leaf','flower','root','bark','seed','berry','resin','whole herb')),
+    size_label TEXT, amount REAL NOT NULL DEFAULT 0,
+    unit TEXT NOT NULL DEFAULT 'g' CHECK (unit IN ('g','kg','oz','lb','ml','l','fl oz','count')),
+    low_threshold REAL, acquired_on TEXT, expires_on TEXT, storage_spot TEXT,
+    source_kind TEXT CHECK (source_kind IN ('bought','grown','foraged','made','gifted')),
+    source_place TEXT, source_from TEXT, notes TEXT, used_up_at TEXT, ${TS});
+  CREATE TABLE purchases (id INTEGER PRIMARY KEY, item_id INTEGER NOT NULL REFERENCES items(id),
+    supplier_id INTEGER REFERENCES suppliers(id), purchased_on TEXT NOT NULL, quantity REAL NOT NULL,
+    unit TEXT NOT NULL, price REAL, order_note TEXT, ${TS});
+  CREATE INDEX idx_items_section ON items(section_id);
+  CREATE INDEX idx_purchases_item ON purchases(item_id);
+  CREATE INDEX idx_purchases_supplier ON purchases(supplier_id);
+  INSERT INTO cabinet_sections (name, kind, sort_order) VALUES
+    ('Herbs','herb',0), ('Oils and butters','supply',1), ('Waxes','supply',2), ('Alcohol and vinegars','supply',3),
+    ('Honey and sweeteners','supply',4), ('Essential oils','supply',5), ('Salts and minerals','supply',6),
+    ('Resins and incense','supply',7), ('Candles','supply',8), ('Crystals and stones','supply',9),
+    ('Containers','supply',10), ('Labels and packaging','supply',11), ('Cloth and bags','supply',12),
+    ('Tools and equipment','supply',13), ('Other','supply',14);
+  `,
 ];
 
 export function migrate(db) {

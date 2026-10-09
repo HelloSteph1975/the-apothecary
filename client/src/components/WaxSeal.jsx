@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 function Sprig() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="#f0d3c4" strokeWidth="1.4" strokeLinecap="round">
@@ -14,5 +16,14 @@ export function WaxSeal({ children, ...props }) {
       <Sprig />
       {children}
     </button>
+  );
+}
+
+export function WaxSealLink({ children, to, ...props }) {
+  return (
+    <Link to={to} className="wax-seal" {...props}>
+      <Sprig />
+      {children}
+    </Link>
   );
 }

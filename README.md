@@ -2,16 +2,20 @@
 
 A home apothecary keeper for your herbs, remedies and notes. It runs on your own computer and sends nothing anywhere.
 
-![The Today page](docs/screenshots/today.png)
+![The Today page](docs/screenshots/today.jpg)
 
 ## What works so far
 
-This is stage 1 of 8.
+This is Stage 2A of 8: the herb cabinet.
 
 - Today shows a greeting and the date; moon and sky timing arrive in a later stage.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
 - Backups run every night, and Settings has Back up now and Restore.
-- The cabinet has eleven drawers. The ones not built yet say so.
+- The herb cabinet holds your herbs and supplies, jar by jar. Each item records whether you bought, grew, foraged, made or were given it, keeps a purchase history, and takes photos. Suppliers get their own pages and ratings.
+- Today lists jars that are running low, close to their use-by date, or past it.
+- The other drawers say so when they are not built yet.
+
+![The herb cabinet](docs/screenshots/shelves.jpg)
 
 ## Install on Windows
 
