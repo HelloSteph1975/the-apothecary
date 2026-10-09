@@ -10,7 +10,7 @@ export const supplierSchema = {
   rating: { type: 'int', min: 1, max: 5 }, notes: 'string',
 };
 export const itemSchema = {
-  section_id: 'int!', name: 'string!', latin_name: 'string', form: FORMS, plant_part: PLANT_PARTS, size_label: 'string',
+  section_id: 'int!', name: 'string!', latin_name: 'string', herb_id: 'int', form: FORMS, plant_part: PLANT_PARTS, size_label: 'string',
   amount: { type: 'number', min: 0, nullable: false }, unit: { type: UNITS, nullable: false },
   low_threshold: { type: 'number', min: 0 }, acquired_on: 'date', expires_on: 'date', storage_spot: 'string',
   source_kind: SOURCE_KINDS, source_place: 'string', source_from: 'string', notes: 'string',

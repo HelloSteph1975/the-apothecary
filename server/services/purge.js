@@ -11,7 +11,8 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     const old = table => `SELECT id FROM ${table} WHERE deleted_at IS NOT NULL AND deleted_at < '${cutoff}'`;
     const photoMatch = `(deleted_at IS NOT NULL AND deleted_at < ?)
       OR (owner_type = 'item' AND owner_id IN (${old('items')}))
-      OR (owner_type = 'supplier' AND owner_id IN (${old('suppliers')}))`;
+      OR (owner_type = 'supplier' AND owner_id IN (${old('suppliers')}))
+      OR (owner_type = 'herb' AND owner_id IN (${old('herbs')}))`;
     files = db.prepare(`SELECT filename FROM photos WHERE ${photoMatch}`).all(cutoff).map(r => r.filename);
     const counts = {};
     counts.photos = db.prepare(`DELETE FROM photos WHERE ${photoMatch}`).run(cutoff).changes;
@@ -21,6 +22,9 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     counts.suppliers = db.prepare(`DELETE FROM suppliers WHERE id IN (${old('suppliers')})`).run().changes;
     counts.cabinet_sections = db.prepare(`DELETE FROM cabinet_sections WHERE id IN (${old('cabinet_sections')})
       AND id NOT IN (SELECT section_id FROM items)`).run().changes;
+    db.prepare(`DELETE FROM herb_sources WHERE id IN (${old('herb_sources')}) OR herb_id IN (${old('herbs')})`).run();
+    db.prepare(`UPDATE items SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
+    counts.herbs = db.prepare(`DELETE FROM herbs WHERE id IN (${old('herbs')})`).run().changes;
     return counts;
   });
   const live = path.join(dataDir, 'photos');

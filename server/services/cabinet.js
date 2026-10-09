@@ -32,11 +32,13 @@ const LIST_SQL = `
     (SELECT filename FROM photos p WHERE p.owner_type = 'item' AND p.owner_id = i.id AND p.deleted_at IS NULL
       ORDER BY p.is_cover DESC, p.sort_order, p.id LIMIT 1) AS cover,
     lp.purchased_on AS last_purchased_on, lp.price AS last_price, lp.quantity AS last_quantity,
-    lp.supplier_id AS last_supplier_id, sup.name AS last_supplier_name
+    lp.supplier_id AS last_supplier_id, sup.name AS last_supplier_name,
+    h.slug AS herb_slug, h.common_name AS herb_name
   FROM items i
   JOIN cabinet_sections s ON s.id = i.section_id
   LEFT JOIN purchases lp ON lp.id = (SELECT id FROM purchases WHERE item_id = i.id AND deleted_at IS NULL ORDER BY purchased_on DESC, id DESC LIMIT 1)
   LEFT JOIN suppliers sup ON sup.id = lp.supplier_id
+  LEFT JOIN herbs h ON h.id = i.herb_id AND h.deleted_at IS NULL
   WHERE i.deleted_at IS NULL`;
 
 export function listItems(db, f, today) {
@@ -85,6 +87,7 @@ function itemData(input, { partial }) {
 export function createItem(db, body) {
   const data = itemData(body, { partial: false });
   assertLive(db, 'cabinet_sections', data.section_id, 'section_id', 'section');
+  assertLive(db, 'herbs', data.herb_id, 'herb_id', 'herb');
   const purchase = body?.purchase && data.source_kind === 'bought' ? check(purchaseSchema, { quantity: data.amount, ...body.purchase }) : null;
   if (purchase) assertLive(db, 'suppliers', purchase.supplier_id, 'supplier_id', 'supplier');
   return transaction(db, () => {
@@ -100,6 +103,7 @@ export function updateItem(db, id, body) {
   if (!r.items.get(id)) throw notFound('That item is not in the cabinet.');
   const data = itemData(body, { partial: true });
   assertLive(db, 'cabinet_sections', data.section_id, 'section_id', 'section');
+  assertLive(db, 'herbs', data.herb_id, 'herb_id', 'herb');
   return r.items.update(id, data);
 }
 

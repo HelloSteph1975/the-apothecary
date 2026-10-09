@@ -187,3 +187,28 @@ it('ignores repeated query parameters instead of failing', async () => {
   const two = await t.http().get(`/api/items?today=${TODAY}&storage_spot=a&storage_spot=b`);
   expect(two.status).toBe(200);
 });
+
+it('links an item to a live herb and shows the herb name in the list', async () => {
+  t = makeTestContext();
+  const herb = t.ctx.db.prepare("INSERT INTO herbs (slug, common_name) VALUES ('calendula', 'Calendula')").run().lastInsertRowid;
+  const res = await t.http().post('/api/items').send({ section_id: 1, name: 'Marigold jar', herb_id: Number(herb) });
+  expect(res.status, JSON.stringify(res.body)).toBe(201);
+  const list = (await t.http().get(`/api/items?today=${TODAY}`)).body;
+  expect(list[0]).toMatchObject({ herb_slug: 'calendula', herb_name: 'Calendula' });
+  const unlinked = await t.http().patch(`/api/items/${res.body.id}`).send({ herb_id: null });
+  expect(unlinked.body.herb_id).toBeNull();
+});
+
+it('rejects a herb_id that is missing or deleted', async () => {
+  t = makeTestContext();
+  const gone = Number(t.ctx.db.prepare("INSERT INTO herbs (common_name, deleted_at) VALUES ('Gone', '2026-01-01')").run().lastInsertRowid);
+  for (const herb_id of [9999, gone]) {
+    const res = await t.http().post('/api/items').send({ section_id: 1, name: 'Jar', herb_id });
+    expect(res.status).toBe(400);
+    expect(res.body.details).toHaveProperty('herb_id');
+  }
+  const item = (await t.http().post('/api/items').send({ section_id: 1, name: 'Jar' })).body;
+  const res = await t.http().patch(`/api/items/${item.id}`).send({ herb_id: 9999 });
+  expect(res.status).toBe(400);
+  expect(res.body.details).toHaveProperty('herb_id');
+});
