@@ -27,6 +27,12 @@ function HerbFormRoute() {
   return <HerbForm key={id ?? 'new'} />;
 }
 
+// Keyed by id so moving between recipes resets the scale and page state.
+function RecipePageRoute() {
+  const { id } = useParams();
+  return <RecipePage key={id} />;
+}
+
 const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
@@ -48,7 +54,7 @@ export const routes = [
       { path: 'grimoire/:id/edit', element: <HerbFormRoute /> },
       { path: 'recipes', element: <RecipeBook /> },
       { path: 'recipes/types', element: <RecipeTypes /> },
-      { path: 'recipes/:id', element: <RecipePage /> },
+      { path: 'recipes/:id', element: <RecipePageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },

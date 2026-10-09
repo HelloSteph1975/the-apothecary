@@ -15,7 +15,7 @@ const PRESETS = [['0.5', '1/2×'], ['1', '1×'], ['2', '2×'], ['3', '3×']];
 const FIELD_LABELS = Object.fromEntries(CAUTION_FIELDS);
 const num = n => String(Math.round(n * 100) / 100);
 
-function ScalePanel({ recipe, scaleParam, yieldParam, setScale, error }) {
+function ScalePanel({ recipe, scaleParam, yieldParam, setScale, error, badLink }) {
   const isPreset = PRESETS.some(([v]) => v === scaleParam);
   const [mode, setMode] = useState(scaleParam && !isPreset ? 'other' : scaleParam || '1');
   const [other, setOther] = useState(scaleParam && !isPreset ? scaleParam : '');
@@ -62,6 +62,7 @@ function ScalePanel({ recipe, scaleParam, yieldParam, setScale, error }) {
           </Field>
         )}
       </div>
+      {badLink && !scaled && <p className="muted" role="status">The scale in that link wasn't valid, so this is the recipe as written.</p>}
       {scaled && (
         <p>
           Scaled to {num(recipe.factor)}×{recipe.scaled_yield_amount != null && `: makes ${formatAmount(recipe.scaled_yield_amount, unit)}`}{' '}
@@ -83,6 +84,8 @@ export function RecipePage() {
   const [loadError, setLoadError] = useState(null);
   const [fieldError, setFieldError] = useState(null);
   const [tick, setTick] = useState(0);
+  const [badLink, setBadLink] = useState(false);
+  const hadRecipe = useRef(false);
 
   useEffect(() => {
     let live = true;
@@ -91,10 +94,13 @@ export function RecipePage() {
     else if (yieldParam) q.set('yield', yieldParam);
     const qs = q.toString();
     api.get(`/api/recipes/${id}${qs ? `?${qs}` : ''}`).then(
-      data => { if (live) { setRecipe(data); setLoadError(null); setFieldError(null); } },
+      data => { if (live) { hadRecipe.current = true; setRecipe(data); setLoadError(null); setFieldError(null); } },
       err => {
         if (!live) return;
-        if (err.status === 400 && (err.details?.scale || err.details?.yield)) setFieldError(err.details);
+        if (err.status === 400 && (err.details?.scale || err.details?.yield)) {
+          // A bad scale in the link on first open: drop it and show the recipe at 1x.
+          if (!hadRecipe.current) { setBadLink(true); setScale('', ''); } else setFieldError(err.details);
+        }
         else { setLoadError(err); setRecipe(null); }
       },
     );
@@ -159,7 +165,7 @@ export function RecipePage() {
           <p className="muted">For learning and folk tradition. Not medical advice; check with a qualified practitioner, especially if you're pregnant, nursing or take medicines.</p>
         </ParchmentCard>
 
-        <ScalePanel recipe={recipe} scaleParam={scaleParam} yieldParam={yieldParam} setScale={setScale} error={fieldError} />
+        <ScalePanel recipe={recipe} scaleParam={scaleParam} yieldParam={yieldParam} setScale={setScale} error={fieldError} badLink={badLink} />
 
         <ParchmentCard title="Ingredients">
           {recipe.ingredients.length === 0 ? <p className="muted">No ingredients yet.</p> : (

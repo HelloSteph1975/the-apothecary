@@ -158,3 +158,25 @@ it('deletes with undo that returns to the page', async () => {
   await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/recipes/7/restore')).toBe(true));
   await waitFor(() => expect(router.state.location.pathname).toBe('/recipes/7'));
 });
+
+it('drops a bad scale from the link and shows the recipe at 1x', async () => {
+  const router = open('/recipes/7?scale=500');
+  expect(await screen.findByRole('region', { name: 'Ingredients' }, { timeout: 4000 })).toBeInTheDocument();
+  expect(router.state.location.search).toBe('');
+  expect(screen.getByText(/scale in that link wasn't valid/)).toBeInTheDocument();
+  expect(screen.getByLabelText('Make')).toHaveValue('1');
+});
+
+it('shows a load failure with Try again that refetches', async () => {
+  const user = userEvent.setup();
+  const good = global.fetch;
+  let fail = true;
+  global.fetch = vi.fn(async (url, opts) => (fail && url.startsWith('/api/recipes/7')
+    ? new Response(JSON.stringify({ error: 'Something broke' }), { status: 500 })
+    : good(url, opts)));
+  open();
+  expect(await screen.findByText('Something broke')).toBeInTheDocument();
+  fail = false;
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByRole('region', { name: 'Ingredients' })).toBeInTheDocument();
+});
