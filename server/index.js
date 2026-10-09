@@ -2,6 +2,7 @@ import { loadConfig } from './config.js';
 import { createContext } from './context.js';
 import { createApp, ROOT } from './app.js';
 import { purgeSoftDeleted, purgeTrash } from './services/purge.js';
+import { seedGrimoire, linkItemsToHerbs } from './services/grimoire.js';
 import { ensureRecentBackup, rotateBackups } from './services/backup.js';
 
 export function runMaintenance(ctx) {
@@ -11,6 +12,8 @@ export function runMaintenance(ctx) {
     ['Purging old deleted rows', () => purgeSoftDeleted(db, config.dataDir)],
     ['Purging photo trash', () => purgeTrash(config.dataDir)],
     ['Rotating backups', () => rotateBackups(config.dataDir)],
+    ['Seeding the grimoire', () => seedGrimoire(db)],
+    ['Linking jars to the grimoire', () => linkItemsToHerbs(db)],
   ];
   for (const [label, fn] of steps) {
     try { fn(); } catch (err) { console.error(`${label} failed (the app will still run):`, err); }
