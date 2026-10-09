@@ -49,3 +49,9 @@ export function formatDay(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+
+// Only plain web addresses become links; anything else (like javascript:) is dropped.
+export function safeUrl(v) {
+  const t = typeof v === 'string' ? v.trim() : '';
+  return /^https?:\/\//i.test(t) ? t : null;
+}

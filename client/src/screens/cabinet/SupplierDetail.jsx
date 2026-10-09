@@ -6,7 +6,7 @@ import { PhotoGallery } from '../../components/PhotoGallery.jsx';
 import { Button } from '../../components/Button.jsx';
 import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { useApi } from '../../lib/useApi.js';
-import { formatAmount, formatMoney, formatDay } from '../../lib/cabinet.js';
+import { formatAmount, formatMoney, formatDay, safeUrl } from '../../lib/cabinet.js';
 import { Stars } from './Stars.jsx';
 
 export function SupplierDetail() {
@@ -47,7 +47,7 @@ export function SupplierDetail() {
           <dl className="dl-grid">
             <dt>Rating</dt><dd><Stars rating={sup.rating} /></dd>
             {sup.good_for && <><dt>Good for</dt><dd>{sup.good_for}</dd></>}
-            {sup.website && <><dt>Website</dt><dd><a href={sup.website} target="_blank" rel="noopener noreferrer">{sup.website}</a></dd></>}
+            {safeUrl(sup.website) && <><dt>Website</dt><dd><a href={safeUrl(sup.website)} target="_blank" rel="noopener noreferrer">{safeUrl(sup.website)}</a></dd></>}
             {sup.contact && <><dt>Contact</dt><dd>{sup.contact}</dd></>}
             {sup.notes && <><dt>Notes</dt><dd>{sup.notes}</dd></>}
           </dl>

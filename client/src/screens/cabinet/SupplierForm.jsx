@@ -58,7 +58,7 @@ export function SupplierForm() {
     }
   }
 
-  if (supplier.error) return <><PageHeader title="Add a supplier" /><p role="alert">{supplier.error.message}</p></>;
+  if (supplier.error) return <><PageHeader title={editing ? 'Edit supplier' : 'Add a supplier'} /><p role="alert">{supplier.error.message}</p></>;
   if (!form) return <PageHeader title={editing ? 'Edit supplier' : 'Add a supplier'} />;
 
   return (

@@ -39,3 +39,17 @@ it('deleting a supplier keeps item history readable and undo brings it back', as
   await h().post(del.body.restore);
   expect((await h().get('/api/suppliers')).body).toHaveLength(1);
 });
+
+it('rejects websites that are not http or https, and accepts https', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const bad = await h().post('/api/suppliers').send({ name: 'Bad', website: 'javascript:alert(1)' });
+  expect(bad.status).toBe(400);
+  expect(bad.body.details.website).toBe('Enter a web address starting with https://');
+  const ok = await h().post('/api/suppliers').send({ name: 'Good', website: 'https://example.com' });
+  expect(ok.status).toBe(201);
+  const patch = await h().patch(`/api/suppliers/${ok.body.id}`).send({ website: 'javascript:alert(1)' });
+  expect(patch.status).toBe(400);
+  expect(patch.body.details.website).toBeTruthy();
+  expect((await h().patch(`/api/suppliers/${ok.body.id}`).send({ website: 'http://example.org' })).status).toBe(200);
+});

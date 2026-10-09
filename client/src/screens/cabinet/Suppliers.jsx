@@ -5,7 +5,7 @@ import { CabinetTabs } from '../../components/CabinetTabs.jsx';
 import { WaxSealLink } from '../../components/WaxSeal.jsx';
 import { Button } from '../../components/Button.jsx';
 import { useApi } from '../../lib/useApi.js';
-import { formatMoney, formatDay } from '../../lib/cabinet.js';
+import { formatMoney, formatDay, safeUrl } from '../../lib/cabinet.js';
 import { Stars } from './Stars.jsx';
 
 const add = <WaxSealLink to="/cabinet/suppliers/new">Add a supplier</WaxSealLink>;
@@ -41,7 +41,7 @@ export function Suppliers() {
                   ? `${s.purchase_count} ${s.purchase_count === 1 ? 'purchase' : 'purchases'}, ${formatMoney(s.total_spent)} spent, last on ${formatDay(s.last_purchased_on)}`
                   : 'No purchases yet.'}
               </p>
-              {s.website && <p><a href={s.website} target="_blank" rel="noopener noreferrer">Website</a></p>}
+              {safeUrl(s.website) && <p><a href={safeUrl(s.website)} target="_blank" rel="noopener noreferrer">Website</a></p>}
             </ParchmentCard>
           ))}
         </div>

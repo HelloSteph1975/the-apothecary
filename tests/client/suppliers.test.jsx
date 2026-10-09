@@ -144,3 +144,28 @@ it('deletes with a confirmation and returns to the list', async () => {
   await waitFor(() => expect(router.state.location.pathname).toBe('/cabinet/suppliers'));
   expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/suppliers/2')).toBe(true);
 });
+
+it('never links an unsafe website', async () => {
+  const bad = { ...list[0], website: 'javascript:alert(1)' };
+  const fetchBase = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/suppliers') return new Response(JSON.stringify([bad]));
+    if (url === '/api/suppliers/2') return new Response(JSON.stringify({ ...detail, website: bad.website }));
+    return fetchBase(url, opts);
+  });
+  const first = open('/cabinet/suppliers');
+  await screen.findByRole('link', { name: 'Mountain Rose' });
+  expect(screen.queryByRole('link', { name: 'Website' })).not.toBeInTheDocument();
+  expect(document.querySelector('a[href^="javascript"]')).toBeNull();
+  first.dispose();
+});
+
+it('never links an unsafe website on the detail page', async () => {
+  const fetchBase = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => (url === '/api/suppliers/2'
+    ? new Response(JSON.stringify({ ...detail, website: 'javascript:alert(1)' })) : fetchBase(url, opts)));
+  open('/cabinet/suppliers/2');
+  await screen.findByRole('heading', { name: 'Mountain Rose' });
+  expect(document.querySelector('a[href^="javascript"]')).toBeNull();
+  expect(screen.queryByText('Website')).not.toBeInTheDocument();
+});

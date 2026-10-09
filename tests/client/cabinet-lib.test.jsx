@@ -24,3 +24,12 @@ it('describes status and source in plain words', () => {
 it('gives today in local time', () => {
   expect(todayString(new Date(2026, 9, 8, 23, 59))).toBe('2026-10-08');
 });
+
+it('safeUrl only passes http and https addresses', async () => {
+  const { safeUrl } = await import('../../client/src/lib/cabinet.js');
+  expect(safeUrl(' https://a.com ')).toBe('https://a.com');
+  expect(safeUrl('HTTP://a.com')).toBe('HTTP://a.com');
+  expect(safeUrl('javascript:alert(1)')).toBeNull();
+  expect(safeUrl('example.com')).toBeNull();
+  expect(safeUrl(null)).toBeNull();
+});
