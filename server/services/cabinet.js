@@ -1,9 +1,10 @@
-import { HttpError, notFound } from '../http.js';
+import { notFound } from '../http.js';
 import { check } from '../validate.js';
 import { transaction } from '../db/connection.js';
 import { repos } from '../db/repos.js';
 import { itemSchema, purchaseSchema, restockSchema } from '../schemas.js';
 import { addDays, addMonths, isDate } from '../lib/dates.js';
+import { assertLive, deleteGroup, reorderGroups } from './groups.js';
 
 export const EXPIRY_KEYS = {
   'dried leaf': 'expiry_dried_leaf', 'dried flower': 'expiry_dried_flower', root: 'expiry_root', bark: 'expiry_bark',
@@ -71,13 +72,6 @@ export function getItemDetail(db, id, today) {
   return { ...row, status: itemStatus(row, today), purchases, photos };
 }
 
-function assertLive(db, table, id, field, label) {
-  if (id == null) return;
-  if (!db.prepare(`SELECT 1 FROM ${table} WHERE id = ? AND deleted_at IS NULL`).get(id)) {
-    throw new HttpError(400, 'Please fix the highlighted fields.', { [field]: `That ${label} doesn't exist` });
-  }
-}
-
 function itemData(input, { partial }) {
   const { used_up, ...data } = check(itemSchema, input, { partial });
   if (used_up !== undefined) data.used_up_at = used_up ? new Date().toISOString() : null;
@@ -130,24 +124,13 @@ export function storageSpots(db) {
 // Sections ---------------------------------------------------------------
 
 export function deleteSection(db, id, moveTo, stamp) {
-  const r = repos(db);
-  const section = r.sections.get(id);
-  if (!section) throw notFound('That section is gone.');
-  const count = db.prepare('SELECT COUNT(*) n FROM items WHERE section_id = ? AND deleted_at IS NULL').get(id).n;
-  if (count && !moveTo) throw new HttpError(409, 'Move what is in this section first.', { items: count });
-  if (moveTo) {
-    if (Number(moveTo) === id) throw new HttpError(400, 'Pick a different section to move things into.');
-    assertLive(db, 'cabinet_sections', Number(moveTo), 'move_to', 'section');
-  }
-  transaction(db, () => {
-    if (moveTo) db.prepare("UPDATE items SET section_id = ?, updated_at = datetime('now') WHERE section_id = ? AND deleted_at IS NULL").run(Number(moveTo), id);
-    r.sections.remove(id, stamp);
+  deleteGroup(db, {
+    repo: repos(db).sections, childTable: 'items', childKey: 'section_id', label: 'section', id, moveTo, stamp,
+    messages: { gone: 'That section is gone.', moveFirst: 'Move what is in this section first.', countKey: 'items',
+      samePick: 'Pick a different section to move things into.' },
   });
 }
 
 export function reorderSections(db, ids) {
-  if (!Array.isArray(ids) || !ids.every(n => Number.isInteger(n))) throw new HttpError(400, 'Send the section ids in their new order.');
-  const r = repos(db);
-  transaction(db, () => ids.forEach((id, i) => r.sections.update(id, { sort_order: i })));
-  return r.sections.list();
+  return reorderGroups(db, repos(db).sections, ids, 'Send the section ids in their new order.');
 }
