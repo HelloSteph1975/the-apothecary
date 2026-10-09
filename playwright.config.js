@@ -8,6 +8,7 @@ const dataDir = process.env.AP_E2E_DATA_DIR;
 
 export default defineConfig({
   testDir: 'e2e',
+  workers: 1, // the specs share one server and one data folder
   globalTeardown: './e2e/teardown.js',
   use: { baseURL: 'http://127.0.0.1:4203', viewport: { width: 1400, height: 900 }, video: 'retain-on-failure' },
   webServer: {
