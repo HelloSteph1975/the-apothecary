@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -31,6 +31,7 @@ beforeEach(() => {
     if (method !== 'GET' && fail) return json({ error: 'Please fix the highlighted fields.', details: fail }, 400);
     if (url === '/api/herbs' && method === 'POST') return json({ id: 9 }, 201);
     if (url === '/api/herbs/4') return json(herb);
+    if (url === '/api/herbs/5') return json({ ...herb, id: 5, is_starter: 0, common_name: 'Mugwort', sources: [] });
     if (url === '/api/herbs/9') return json({ ...herb, id: 9, is_starter: 0, common_name: 'New' });
     return json({});
   });
@@ -156,4 +157,13 @@ it('shows a covers error inside that source and a list error above the sources',
   const listError = screen.getByText('Too many sources');
   const firstRow = screen.getAllByRole('group', { name: /^Source \d$/ })[0];
   expect(listError.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+it('loads the other herb when moving from one edit page to another', async () => {
+  const router = open('/grimoire/4/edit');
+  await waitFor(() => expect(screen.getByLabelText('Common name (required)')).toHaveValue('Yarrow'));
+  await act(() => router.navigate('/grimoire/5/edit'));
+  await waitFor(() => expect(screen.getByLabelText('Common name (required)')).toHaveValue('Mugwort'));
+  expect(screen.getByRole('heading', { level: 1, name: 'Edit Mugwort' })).toBeInTheDocument();
+  expect(screen.queryAllByLabelText('Title (required)')).toHaveLength(0);
 });

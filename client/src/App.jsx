@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, useParams } from 'react-router-dom';
 import { ToastProvider } from './components/ToastProvider.jsx';
 import { ConfirmProvider } from './components/ConfirmProvider.jsx';
 import { SettingsProvider } from './components/SettingsProvider.jsx';
@@ -18,6 +18,12 @@ import { HerbPage } from './screens/grimoire/HerbPage.jsx';
 import { HerbForm } from './screens/grimoire/HerbForm.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
+// A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
+function HerbFormRoute() {
+  const { id } = useParams();
+  return <HerbForm key={id ?? 'new'} />;
+}
+
 const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
@@ -34,9 +40,9 @@ export const routes = [
       { path: 'cabinet/suppliers/:id', element: <SupplierDetail /> },
       { path: 'cabinet/suppliers/:id/edit', element: <SupplierForm /> },
       { path: 'grimoire', element: <Grimoire /> },
-      { path: 'grimoire/new', element: <HerbForm /> },
+      { path: 'grimoire/new', element: <HerbFormRoute /> },
       { path: 'grimoire/:id', element: <HerbPage /> },
-      { path: 'grimoire/:id/edit', element: <HerbForm /> },
+      { path: 'grimoire/:id/edit', element: <HerbFormRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },
