@@ -6,7 +6,9 @@ import { FORMS, PLANT_PARTS } from '../../lib/cabinet.js';
 let nextKey = 1;
 export const newIngredient = (ing = {}) => ({
   key: nextKey++,
-  herb_id: ing.herb_id == null ? '' : String(ing.herb_id),
+  // A deleted herb is kept as plain text: the server rejects dead herb ids.
+  deletedHerb: Boolean(ing.herb_deleted),
+  herb_id: ing.herb_id == null || ing.herb_deleted ? '' : String(ing.herb_id),
   name: ing.name ?? '',
   amount: ing.amount == null ? '' : String(ing.amount),
   unit: ing.unit ?? '',
@@ -45,7 +47,7 @@ export function IngredientsEditor({ ingredients, onChange, herbs, errors = {} })
   const update = (i, patch) => onChange(ingredients.map((x, n) => (n === i ? { ...x, ...patch } : x)));
   const pickHerb = (i, value) => {
     const herb = herbs.find(h => String(h.id) === value);
-    const patch = { herb_id: value };
+    const patch = { herb_id: value, deletedHerb: false };
     if (herb && ingredients[i].name.trim() === '') patch.name = herb.common_name;
     update(i, patch);
   };
@@ -77,7 +79,8 @@ export function IngredientsEditor({ ingredients, onChange, herbs, errors = {} })
         return (
           <fieldset key={x.key} className="source-row">
             <legend>{`Ingredient ${n}`}</legend>
-            <Field label={`Ingredient ${n} grimoire herb`} error={err('herb_id')}>
+            <Field label={`Ingredient ${n} grimoire herb`} error={err('herb_id')}
+              hint={x.deletedHerb && !x.herb_id ? `${x.name || 'This herb'} is no longer in the grimoire, so it's kept as plain text.` : undefined}>
               <Select value={x.herb_id} onChange={e => pickHerb(i, e.target.value)} placeholder="Not an herb"
                 options={withCurrent(herbOptions, x.herb_id)} />
             </Field>

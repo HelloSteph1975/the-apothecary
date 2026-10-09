@@ -43,6 +43,9 @@ beforeEach(() => {
     if (url === '/api/herbs') return json(herbs);
     if (url === '/api/recipes/7') return json(recipe(7, 'Calendula salve'));
     if (url === '/api/recipes/8') return json(recipe(8, 'Yarrow tea', { ingredients: [] }));
+    if (url === '/api/recipes/10') return json(recipe(10, 'Old type', { type_id: 77 }));
+    if (url === '/api/recipes/11') return json(recipe(11, 'Gone herb', { ingredients: [
+      { id: 1, herb_id: 55, herb_name: null, herb_deleted: true, name: 'Old comfrey', amount: 5, unit: 'g', form: null, plant_part: null, note: null }] }));
     if (url === '/api/recipes/9') return json(recipe(9, 'New'));
     return json({});
   });
@@ -171,9 +174,57 @@ it('sends one POST when Save is pressed twice quickly', async () => {
   const user = userEvent.setup();
   open('/recipes/new');
   await user.type(await nameField(), 'Sage tea');
-  await user.dblClick(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(() => expect(calls.some(c => c.method === 'POST')).toBe(true));
+  let release;
+  const real = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/recipes' && opts.method === 'POST') {
+      calls.push({ method: 'POST', url });
+      await new Promise(r => { release = r; });
+      return new Response(JSON.stringify({ id: 9 }), { status: 201 });
+    }
+    return real(url, opts);
+  });
+  const save = screen.getByRole('button', { name: 'Save' });
+  await user.click(save);
+  await user.click(save);
   expect(calls.filter(c => c.method === 'POST')).toHaveLength(1);
+  release();
+  await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument());
+  expect(calls.filter(c => c.method === 'POST')).toHaveLength(1);
+});
+
+it('does not ask to leave after a successful save', async () => {
+  const user = userEvent.setup();
+  const router = open('/recipes/new');
+  await user.type(await nameField(), 'Tea');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/recipes/9'));
+  expect(screen.queryByText('Leave without saving?')).not.toBeInTheDocument();
+});
+
+it('clears a deleted type and says so', async () => {
+  const user = userEvent.setup();
+  open('/recipes/10/edit');
+  await waitFor(() => expect(screen.getByLabelText('Name (required)')).toHaveValue('Old type'));
+  const type = screen.getByLabelText('Type (required)');
+  expect(type).toHaveValue('');
+  expect(type).toHaveAccessibleDescription('The type this recipe used was deleted. Pick a new one.');
+  fail = { type_id: 'Type is required' };
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent()).toBeTruthy());
+  expect(sent().type_id).toBeNull();
+  expect(await screen.findByText('Type is required')).toBeInTheDocument();
+});
+
+it('keeps an ingredient whose herb was deleted as plain text', async () => {
+  const user = userEvent.setup();
+  open('/recipes/11/edit');
+  await waitFor(() => expect(screen.getByLabelText('Name (required)')).toHaveValue('Gone herb'));
+  expect(screen.getByLabelText('Ingredient 1 grimoire herb')).toHaveValue('');
+  expect(screen.getByText("Old comfrey is no longer in the grimoire, so it's kept as plain text.")).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent()).toBeTruthy());
+  expect(sent().ingredients[0]).toMatchObject({ herb_id: null, name: 'Old comfrey', amount: 5 });
 });
 
 it('asks before leaving a changed form', async () => {

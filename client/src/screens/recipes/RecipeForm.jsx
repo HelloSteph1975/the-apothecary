@@ -18,8 +18,9 @@ const numOrNull = v => (v.trim() === '' ? null : Number(v));
 const TEXT_KEYS = ['name', 'yield_amount', 'yield_unit', 'wait_days', 'shelf_life_days', 'intention', 'timing_notes', 'steps', 'notes'];
 const plain = list => list.map(({ key, ...rest }) => rest);
 
-function fromRecipe(r, { typeId, herb }) {
-  const form = { type_id: s(r.type_id ?? typeId) };
+function fromRecipe(r, { typeId, herb, liveTypes }) {
+  const own = s(r.type_id);
+  const form = { type_id: own !== '' && liveTypes.some(t => String(t.id) === own) ? own : s(typeId) };
   for (const k of TEXT_KEYS) form[k] = s(r[k]);
   const rows = Array.isArray(r.ingredients) ? r.ingredients.map(i => newIngredient(i)) : [];
   if (herb && rows.length === 0) rows.push(newIngredient({ herb_id: herb.id, name: herb.common_name }));
@@ -39,6 +40,7 @@ export function RecipeForm() {
   const [rows, setRows] = useState([]);
   const [initial, setInitial] = useState('');
   const [errors, setErrors] = useState({});
+  const [typeGone, setTypeGone] = useState(false);
 
   const ready = types.data && herbs.data && (!editing || recipe.data);
   useEffect(() => {
@@ -47,7 +49,8 @@ export function RecipeForm() {
     const typeId = !editing && types.data.some(t => String(t.id) === wantedType) ? wantedType : '';
     const wantedHerb = params.get('herb');
     const herb = !editing ? herbs.data.find(h => String(h.id) === wantedHerb) : null;
-    const start = fromRecipe(editing ? recipe.data : {}, { typeId, herb });
+    const start = fromRecipe(editing ? recipe.data : {}, { typeId, herb, liveTypes: types.data });
+    setTypeGone(editing && recipe.data.type_id != null && start.form.type_id === '');
     setForm(start.form);
     setRows(start.rows);
     setInitial(JSON.stringify([start.form, plain(start.rows)]));
@@ -134,7 +137,8 @@ export function RecipeForm() {
           <Field label="Name (required)" error={errors.name}>
             <TextInput required aria-required="true" value={form.name} onChange={e => set('name', e.target.value)} />
           </Field>
-          <Field label="Type (required)" error={errors.type_id}>
+          <Field label="Type (required)" error={errors.type_id}
+            hint={typeGone && form.type_id === '' ? 'The type this recipe used was deleted. Pick a new one.' : undefined}>
             <Select required aria-required="true" value={form.type_id} onChange={e => set('type_id', e.target.value)} placeholder="Pick a type" options={typeOptions} />
           </Field>
           <Field label="Yield amount" error={errors.yield_amount}>
