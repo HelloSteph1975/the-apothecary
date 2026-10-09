@@ -68,6 +68,7 @@ export function Grimoire() {
   if (herbs.error) {
     return (
       <>{header}
+        <Toolbar params={params} setParam={setParam} />
         <p role="alert">{herbs.error.message}</p>
         <Button onClick={herbs.reload}>Try again</Button>
       </>

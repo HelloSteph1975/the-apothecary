@@ -9,6 +9,7 @@ export const RECIPE_TYPES = ['tincture', 'glycerite', 'tea blend', 'infusion', '
   'face oil', 'lotion', 'syrup', 'oxymel', 'vinegar', 'bath salts', 'bath blend', 'ritual oil', 'loose incense',
   'smoke-free herb bundle', 'sachet', 'moon water'].map(v => opt(v));
 
+export const AHPA_CLASSES = ['1', '2a', '2b', '2c', '2d', '3', '4'];
 export const AHPA_LABELS = {
   '1': 'Class 1: generally safe with sensible use',
   '2a': 'Class 2a: for use on the skin only',

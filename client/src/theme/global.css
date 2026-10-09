@@ -112,9 +112,12 @@ a { color: inherit; text-underline-offset: 3px; }
   outline: 1px solid var(--rule); outline-offset: -6px;
   padding: 30px 24px 22px;
 }
+.panel-caution { border-color: var(--oxblood); outline-color: var(--oxblood); }
+.panel.panel-caution h2 { color: var(--oxblood); }
 .panel-ornament { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); line-height: 0; }
 .panel h2 { color: var(--ink-green); text-align: center; margin-bottom: .1em; }
 .panel .panel-subtitle { text-align: center; font-style: italic; color: var(--ink-soft); margin: 0 0 14px; }
+.muted { color: var(--ink-soft); }
 .panel .muted, .sheet .muted { color: var(--ink-soft); font-style: italic; }
 .panel .botanical { position: absolute; right: 12px; bottom: 10px; opacity: .9; pointer-events: none; }
 .panel:has(> .botanical) > .muted { margin-right: 84px; }

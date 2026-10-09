@@ -14,7 +14,7 @@ export function Toolbar({ params, setParam }) {
   const select = key => ({ value: params.get(key) || '', onChange: e => setParam(key, e.target.value) });
   return (
     <div className="toolbar" role="search">
-      <Field label="Search"><TextInput type="search" placeholder="Name, use or Latin name" value={q} onChange={e => setQ(e.target.value)} /></Field>
+      <Field label="Search"><TextInput type="search" placeholder="Name, Latin name or association" value={q} onChange={e => setQ(e.target.value)} /></Field>
       <Field label="Part used"><Select placeholder="Any part" options={HERB_PARTS} {...select('part')} /></Field>
       <Field label="Planet"><Select placeholder="Any planet" options={PLANETS} {...select('planet')} /></Field>
       <Field label="Element"><Select placeholder="Any element" options={ELEMENTS} {...select('element')} /></Field>
