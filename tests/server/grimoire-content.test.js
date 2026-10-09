@@ -22,7 +22,7 @@ function strings(value, at = '') {
 }
 
 it('finds the entry files', () => {
-  expect(Array.isArray(files)).toBe(true);
+  expect(files.length).toBeGreaterThan(0);
 });
 
 describe.each(files)('%s', (file) => {
@@ -71,7 +71,7 @@ describe.each(files)('%s', (file) => {
     expect([...GENDERS, null]).toContain(h.gender ?? null);
   });
 
-  it('cites at least two sources, one covering safety, each complete', () => {
+  it('cites at least two sources, one covering safety, each with title, author, year and URL', () => {
     const { sources } = e();
     expect(Array.isArray(sources)).toBe(true);
     expect(sources.length).toBeGreaterThanOrEqual(2);
@@ -79,10 +79,12 @@ describe.each(files)('%s', (file) => {
     for (const s of sources) {
       expect(typeof s.title).toBe('string');
       expect(s.title.trim().length).toBeGreaterThan(0);
+      expect(typeof s.author).toBe('string');
+      expect(s.author.trim().length).toBeGreaterThan(0);
       expect(Number.isInteger(s.year)).toBe(true);
       expect(Array.isArray(s.covers)).toBe(true);
       for (const c of s.covers) expect(SOURCE_COVERS).toContain(c);
-      if (s.url != null) expect(s.url).toMatch(/^https?:\/\/\S+$/);
+      expect(s.url).toMatch(/^https?:\/\/\S+$/);
     }
   });
 

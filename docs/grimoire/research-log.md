@@ -7,7 +7,7 @@ How the starter entries in `server/data/grimoire/` were researched. One section 
 - **Safety sources.** Cautions come from the NCCIH "Herbs at a Glance" fact sheets where one exists and from the European Medicines Agency (EMA) Committee on Herbal Medicinal Products monographs (sections 4.2 to 4.8: duration, contraindications, warnings, interactions, pregnancy and lactation, side effects). Where the two differ, the entry gives both and keeps the more careful reading.
 - **AHPA class.** The AHPA *Botanical Safety Handbook* isn't free to read, and no free source we cite states a class number for these herbs, so `ahpa_class` is null for all of them.
 - **Planets.** Taken only from Culpeper's *Complete Herbal* (Project Gutenberg ebook 49513, an expanded later edition of his 1653 work). Where Culpeper assigns no planet, `planet` is null.
-- **Element and gender.** Culpeper doesn't give these. They follow the widely repeated modern magical-herbal correspondences, marked in the app as tradition. We didn't read a specific source for them, so no source is cited for them. A reviewer may want to null them out if that standard is too loose.
+- **Element and gender.** Neither Culpeper nor Grieve gives these, and we found no accessible, citable source that states them for these herbs. By the controller's ruling (fix round 1) they are null in every entry rather than filled in from unsourced modern tradition.
 - **Associations.** Kept short and drawn from folklore Grieve or Culpeper actually records on the pages cited.
 - **Undated web pages.** NC State Extension Plant Toolbox pages show no date; their `year` is the year we read them (2026).
 - **Dosages** are left out everywhere by design, even where a source gives them.
@@ -23,7 +23,7 @@ Sources read:
 
 Uncertain:
 - The two safety sources differ on pregnancy. NCCIH says little is known; the EMA says safety is established for the plain flower as a tea (its preparation a) but not for extracts. The entry gives both.
-- Culpeper writes about Roman chamomile (Chamaemelum) and gives no planet of his own; he reports that the Egyptians dedicated it to the Sun. `planet: Sun` rests on that remark and on wide later tradition. A reviewer may prefer null.
+- Culpeper writes about Roman chamomile (Chamaemelum) and gives no planet of his own; he only reports that the Egyptians dedicated it to the Sun. `planet` is null, and the Sun story is kept in `notes`, credited to Culpeper.
 
 Left out:
 - Culpeper's and Grieve's claims about stones, agues, jaundice and infant convulsions: outdated medical claims.
@@ -73,7 +73,7 @@ Sources read:
 
 Uncertain:
 - Planet: Culpeper's entry covers mints generally and describes spear mint. We used his Venus. Many modern magical herbals place peppermint under Mercury; we didn't cite one, so we kept Culpeper and said so in `notes`.
-- Element and gender (Fire, masculine) follow modern magical tradition, which sits oddly beside a Venus planet. Flagged for review.
+- Element and gender are null: no source we read states them for peppermint.
 - Interactions: neither safety source names one. We didn't add the commonly repeated antacid and enteric-capsule warning because no source we read states it.
 
 Left out:
@@ -167,7 +167,7 @@ Uncertain:
 - Pregnancy: NCCIH ("may be safe, ask a provider") and the EMA ("preferable to avoid as a precaution") lean different ways. Both are given.
 
 Left out:
-- Planet: Culpeper lists ginger only among his simples and doesn't assign a planet, so `planet` is null. Element and gender follow modern tradition (see the general note).
+- Planet: Culpeper lists ginger only among his simples and doesn't assign a planet, so `planet` is null. Element and gender are null for lack of a source (see the general note).
 - Associations: none found in a source we read.
 - The EMA's motion-sickness amounts: dosage.
 
