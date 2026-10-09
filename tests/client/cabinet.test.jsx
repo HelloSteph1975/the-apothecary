@@ -20,11 +20,11 @@ it('has the eleven drawers in order', () => {
 });
 
 it('shows every drawer and marks the open one', async () => {
-  at('/grimoire');
+  at('/recipes');
   const nav = await screen.findByRole('navigation', { name: 'Cabinet drawers' });
   const links = within(nav).getAllByRole('link');
   expect(links.map(l => l.textContent.trim())).toEqual(DRAWERS.map(d => d.label));
-  expect(within(nav).getByRole('link', { name: 'Grimoire' })).toHaveAttribute('aria-current', 'page');
+  expect(within(nav).getByRole('link', { name: 'Recipe book' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
 });
 

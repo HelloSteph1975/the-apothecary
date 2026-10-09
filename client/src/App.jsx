@@ -13,9 +13,12 @@ import { ItemDetail } from './screens/cabinet/ItemDetail.jsx';
 import { Suppliers } from './screens/cabinet/Suppliers.jsx';
 import { SupplierForm } from './screens/cabinet/SupplierForm.jsx';
 import { SupplierDetail } from './screens/cabinet/SupplierDetail.jsx';
+import { Grimoire } from './screens/grimoire/Grimoire.jsx';
+import { HerbPage } from './screens/grimoire/HerbPage.jsx';
+import { HerbForm } from './screens/grimoire/HerbForm.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -30,6 +33,10 @@ export const routes = [
       { path: 'cabinet/suppliers/new', element: <SupplierForm /> },
       { path: 'cabinet/suppliers/:id', element: <SupplierDetail /> },
       { path: 'cabinet/suppliers/:id/edit', element: <SupplierForm /> },
+      { path: 'grimoire', element: <Grimoire /> },
+      { path: 'grimoire/new', element: <HerbForm /> },
+      { path: 'grimoire/:id', element: <HerbPage /> },
+      { path: 'grimoire/:id/edit', element: <HerbForm /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },

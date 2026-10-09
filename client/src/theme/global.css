@@ -277,3 +277,8 @@ textarea.input { resize: vertical; }
 .purchase-table th, .purchase-table td { text-align: left; padding: 6px 10px; border: 1px solid var(--rule); }
 .purchase-table th { font-variant: small-caps; letter-spacing: .08em; color: var(--ink-green); }
 .stars { color: var(--ink-green); letter-spacing: .12em; }
+
+.herb-card-head { display: flex; gap: 12px; align-items: center; }
+.herb-card-head h2, .herb-card-head p { margin: 0; }
+.herb-card .herb-cover, .herb-card .herb-glyph { flex: none; width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--rule); border-radius: var(--radius); color: var(--brass-dark); }
+.herb-card .herb-glyph { padding: 6px; }
