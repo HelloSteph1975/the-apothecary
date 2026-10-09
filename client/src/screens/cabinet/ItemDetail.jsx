@@ -58,7 +58,7 @@ export function ItemDetail() {
             <Button as={Link} variant="secondary" to={`/cabinet/items/${item.id}/edit`}>Edit</Button>
             <Button variant="secondary" onClick={toggleUsedUp}>{usedUp ? 'Put back' : 'Mark used up'}</Button>
             <Button variant="danger" onClick={async () => {
-              if (await del({ url: `/api/items/${item.id}`, label: item.name })) navigate('/cabinet');
+              if (await del({ url: `/api/items/${item.id}`, label: item.name, onUndo: () => navigate(`/cabinet/items/${item.id}`) })) navigate('/cabinet');
             }}>Delete</Button>
           </>
         )} />
