@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -48,6 +48,7 @@ export function HerbForm() {
   const [sources, setSources] = useState([]);
   const [initial, setInitial] = useState('');
   const [errors, setErrors] = useState({});
+  const groupId = useId();
 
   useEffect(() => {
     if (form || (editing && !herb.data)) return;
@@ -62,6 +63,11 @@ export function HerbForm() {
   const dirty = Boolean(form) && JSON.stringify([form, plainSources(sources)]) !== initial;
   const markSaved = useLeaveGuard(dirty);
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
+  // Source errors are keyed by row index, so any change to the list makes them stale.
+  const changeSources = next => {
+    setSources(next);
+    setErrors(e => Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'sources' && !k.startsWith('sources.'))));
+  };
   const toggle = (k, value, on) => set(k, on ? [...form[k], value] : form[k].filter(x => x !== value));
   const order = (all, picked) => all.map(o => o.value).filter(v => picked.includes(v));
 
@@ -69,10 +75,12 @@ export function HerbForm() {
     e.preventDefault();
     const body = {
       parts_used: order(HERB_PARTS, form.parts_used), preparations: order(RECIPE_TYPES, form.preparations),
-      sources: sources.map(x => ({
-        title: x.title.trim(), author: orNull(x.author), year: x.year.trim() === '' ? null : Number(x.year.trim()),
-        url: orNull(x.url), covers: x.covers,
-      })),
+      sources: sources.map(x => {
+        const year = x.year.trim();
+        // Anything but digits goes as typed, so the server's "Must be a number" lands on this row.
+        return { title: x.title.trim(), author: orNull(x.author), year: year === '' ? null : /^\d+$/.test(year) ? Number(year) : year,
+          url: orNull(x.url), covers: x.covers };
+      }),
     };
     for (const k of COMMA_KEYS) body[k] = splitComma(form[k]);
     for (const k of TEXT_KEYS) body[k] = orNull(form[k]);
@@ -102,15 +110,18 @@ export function HerbForm() {
       <TextArea value={form[k]} onChange={e => set(k, e.target.value)} />
     </Field>
   );
-  const checks = (k, label, options) => (
-    <div role="group" aria-label={label}>
-      <span className="field-hint">{label}</span>
-      {options.map(o => (
-        <Checkbox key={o.value} label={o.label} checked={form[k].includes(o.value)} onChange={e => toggle(k, o.value, e.target.checked)} />
-      ))}
-      {errors[k] && <small className="field-error" role="alert">{errors[k]}</small>}
-    </div>
-  );
+  const checks = (k, label, options) => {
+    const errorId = `${groupId}-${k}-error`;
+    return (
+      <fieldset className="check-group" aria-describedby={errors[k] ? errorId : undefined}>
+        <legend className="field-hint">{label}</legend>
+        {options.map(o => (
+          <Checkbox key={o.value} label={o.label} checked={form[k].includes(o.value)} onChange={e => toggle(k, o.value, e.target.checked)} />
+        ))}
+        {errors[k] && <small id={errorId} className="field-error" role="alert">{errors[k]}</small>}
+      </fieldset>
+    );
+  };
   const commas = 'Separate with commas.';
 
   return (
@@ -165,7 +176,7 @@ export function HerbForm() {
           {area('notes', 'Notes')}
         </ParchmentCard>
         <ParchmentCard title="Sources">
-          <SourcesEditor sources={sources} onChange={setSources} errors={errors} />
+          <SourcesEditor sources={sources} onChange={changeSources} errors={errors} />
         </ParchmentCard>
         <p className="page-actions">
           <WaxSeal type="submit">Save</WaxSeal>

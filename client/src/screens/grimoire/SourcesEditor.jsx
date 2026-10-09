@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Field, TextInput, Checkbox } from '../../components/Field.jsx';
 import { SOURCE_COVERS } from '../../lib/grimoire.js';
 
@@ -15,6 +15,7 @@ export const newSource = (src = {}) => ({
 // Rows of {key, title, author, year, url, covers}. `errors` is the server's details object
 // (keys like "sources.0.url"). Focus is moved after add/remove so keyboard users aren't dropped.
 export function SourcesEditor({ sources, onChange, errors = {} }) {
+  const baseId = useId();
   const focusRef = useRef(null);
   const addRef = useRef(null);
   const rowRefs = useRef({});
@@ -61,10 +62,12 @@ export function SourcesEditor({ sources, onChange, errors = {} }) {
 
   return (
     <div className="sources-editor">
+      {errors.sources && <p className="field-error" role="alert">{errors.sources}</p>}
       {sources.length === 0 && <p className="muted">No sources yet.</p>}
       {sources.map((s, i) => {
         const n = i + 1;
         const err = f => errors[`sources.${i}.${f}`];
+        const coversErrorId = `${baseId}-${s.key}-covers-error`;
         return (
           <fieldset key={s.key} className="source-row">
             <legend>Source {n}</legend>
@@ -81,13 +84,14 @@ export function SourcesEditor({ sources, onChange, errors = {} }) {
             <Field label="Web address" hint="Starts with https://" error={err('url')}>
               <TextInput inputMode="url" value={s.url} onChange={e => update(i, { url: e.target.value })} />
             </Field>
-            <div role="group" aria-label={`Source ${n} covers`}>
-              <span className="field-hint">Covers</span>
+            <fieldset className="check-group" aria-label={`Source ${n} covers`} aria-describedby={err('covers') ? coversErrorId : undefined}>
+              <legend className="field-hint">Covers</legend>
               {SOURCE_COVERS.map(c => (
                 <Checkbox key={c.value} label={c.label} checked={s.covers.includes(c.value)}
                   onChange={e => toggle(i, c.value, e.target.checked)} />
               ))}
-            </div>
+              {err('covers') && <small id={coversErrorId} className="field-error" role="alert">{err('covers')}</small>}
+            </fieldset>
             <p className="page-actions">
               <button type="button" className="btn btn-secondary" ref={el => { upRefs.current[s.key] = el; }} disabled={i === 0} onClick={() => move(i, -1)}>{`Move source ${n} up`}</button>
               <button type="button" className="btn btn-secondary" ref={el => { downRefs.current[s.key] = el; }} disabled={i === sources.length - 1} onClick={() => move(i, 1)}>{`Move source ${n} down`}</button>

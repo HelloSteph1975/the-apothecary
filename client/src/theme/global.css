@@ -207,6 +207,8 @@ a { color: inherit; text-underline-offset: 3px; }
 textarea.input { resize: vertical; }
 .field-hint { color: var(--ink-soft); font-size: .95rem; }
 .field-error { color: var(--oxblood); font-size: .95rem; font-weight: 600; }
+.check-group { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+.check-group legend { padding: 0; }
 .field.has-error .input { border-color: var(--oxblood); }
 .checkbox { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .checkbox input { width: 18px; height: 18px; accent-color: var(--forest); }

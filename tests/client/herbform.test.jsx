@@ -117,3 +117,43 @@ it('asks before leaving a changed form', async () => {
   await user.click(screen.getByRole('link', { name: 'Cancel' }));
   expect(await screen.findByText('Leave without saving?')).toBeInTheDocument();
 });
+
+it('clears every source error when the sources change', async () => {
+  const user = userEvent.setup();
+  open('/grimoire/4/edit');
+  await waitFor(() => expect(screen.getByLabelText('Common name (required)')).toHaveValue('Yarrow'));
+  fail = { 'sources.0.title': 'Required', 'sources.1.url': 'Enter a web address starting with https://', sources: 'Too many sources' };
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(await screen.findByText('Enter a web address starting with https://')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Remove source 1' }));
+  expect(screen.queryByText('Enter a web address starting with https://')).not.toBeInTheDocument();
+  expect(screen.queryByText('Required')).not.toBeInTheDocument();
+  expect(screen.queryByText('Too many sources')).not.toBeInTheDocument();
+});
+
+it('sends a year that is not a number as typed, so the server can flag it', async () => {
+  const user = userEvent.setup();
+  open('/grimoire/4/edit');
+  await waitFor(() => expect(screen.getByLabelText('Common name (required)')).toHaveValue('Yarrow'));
+  const year = screen.getAllByLabelText('Year')[1];
+  await user.type(year, 'c. 1650');
+  fail = { 'sources.1.year': 'Must be a number' };
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent().sources[1].year).toBe('c. 1650'));
+  expect(sent().sources[0].year).toBe(2001);
+  const err = await screen.findByText('Must be a number');
+  expect(err.closest('fieldset')).toHaveTextContent('Source 2');
+});
+
+it('shows a covers error inside that source and a list error above the sources', async () => {
+  const user = userEvent.setup();
+  open('/grimoire/4/edit');
+  await waitFor(() => expect(screen.getByLabelText('Common name (required)')).toHaveValue('Yarrow'));
+  fail = { 'sources.0.covers': 'Pick from the list', sources: 'Too many sources' };
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  const covers = await screen.findByText('Pick from the list');
+  expect(screen.getByRole('group', { name: 'Source 1 covers' })).toContainElement(covers);
+  const listError = screen.getByText('Too many sources');
+  const firstRow = screen.getAllByRole('group', { name: /^Source \d$/ })[0];
+  expect(listError.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
