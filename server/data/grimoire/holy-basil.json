@@ -29,7 +29,7 @@
   "sources": [
     { "title": "Holy Basil (MSD Manual Professional Version)", "author": "Laura Shane-McWhorter, University of Utah College of Pharmacy, for the MSD Manual", "year": 2025, "url": "https://www.msdmanuals.com/professional/special-subjects/dietary-supplements/holy-basil", "covers": ["uses", "safety"] },
     { "title": "About Herbs: Holy Basil", "author": "Memorial Sloan Kettering Cancer Center, Integrative Medicine Service", "year": 2026, "url": "https://www.mskcc.org/cancer-care/integrative-medicine/herbs/holy-basil-01", "covers": ["uses", "safety"] },
-    { "title": "Tulsi - Ocimum sanctum: A herb for all reasons", "author": "Marc Maurice Cohen, Journal of Ayurveda and Integrative Medicine", "year": 2014, "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4296439/", "covers": ["uses", "tradition"] },
+    { "title": "Tulsi - Ocimum sanctum: A herb for all reasons (Journal of Ayurveda and Integrative Medicine)", "author": "Marc Maurice Cohen", "year": 2014, "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4296439/", "covers": ["uses", "tradition"] },
     { "title": "Ocimum tenuiflorum (Holy Basil)", "author": "North Carolina Extension Gardener Plant Toolbox, NC State University", "year": 2026, "url": "https://plants.ces.ncsu.edu/plants/ocimum-tenuiflorum/", "covers": ["garden", "uses"] }
   ]
 }
