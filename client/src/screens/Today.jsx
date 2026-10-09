@@ -116,6 +116,7 @@ export function Today() {
             {herb.latin_name && <p className="muted"><em>{herb.latin_name}</em></p>}
             {herb.uses && <p>{firstSentence(herb.uses)}</p>}
             {(herb.planet || herb.element) && <p className="muted">{[herb.planet, herb.element].filter(Boolean).join(', ')}</p>}
+            <p className="muted"><Link to={`/grimoire/${herb.id}`}>Read its cautions before you use it.</Link></p>
           </ParchmentCard>
         )}
       </div>

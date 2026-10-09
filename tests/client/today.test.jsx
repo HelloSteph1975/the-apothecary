@@ -123,6 +123,9 @@ it('shows the herb of the day, linking to its page', async () => {
   expect(screen.getByText('Calms the evening.')).toBeInTheDocument();
   expect(screen.queryByText(/Scents linens/)).not.toBeInTheDocument();
   expect(screen.getByText(/Mercury/)).toHaveTextContent('Mercury, Air');
+  const cautions = screen.getByRole('link', { name: 'Read its cautions before you use it.' });
+  expect(cautions).toHaveAttribute('href', '/grimoire/3');
+  expect(cautions.closest('p')).toHaveClass('muted');
   expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/^\/api\/herb-of-the-day\?today=\d{4}-\d{2}-\d{2}$/), expect.anything());
 });
 
