@@ -135,6 +135,7 @@ a { color: inherit; text-underline-offset: 3px; }
 
 /* ---------- Grid and forms ---------- */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 24px; }
+.card-grid > .panel-wide { grid-column: 1 / -1; }
 .field { display: grid; gap: 4px; margin-bottom: 14px; }
 .field label { font-weight: 600; }
 .field input, .field select {
@@ -273,6 +274,7 @@ textarea.input { resize: vertical; }
 .dl-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0 0 1em; }
 .dl-grid dt { color: var(--ink-soft); font-weight: 600; }
 .dl-grid dd { margin: 0; overflow-wrap: anywhere; }
+.dl-cautions { grid-template-columns: minmax(9em, 12em) minmax(0, 1fr); }
 @media (max-width: 640px) { .dl-grid { grid-template-columns: 1fr; gap: 0; } .dl-grid dd { margin-bottom: 8px; } }
 
 .table-wrap { overflow-x: auto; }

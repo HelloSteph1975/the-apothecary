@@ -24,7 +24,11 @@ test('browses the grimoire, links a jar, and adds and removes an herb', async ({
   await expect(before).toBeVisible();
   await expect(uses).toBeVisible();
   const [beforeBox, usesBox] = [await before.boundingBox(), await uses.boundingBox()];
-  expect(beforeBox.y < usesBox.y || (beforeBox.y === usesBox.y && beforeBox.x < usesBox.x)).toBe(true);
+  expect(beforeBox.y).toBeLessThan(usesBox.y);
+  const beforeCard = page.locator('.panel-caution');
+  const usesCard = page.locator('.panel').filter({ has: uses });
+  const [beforeCardBox, usesCardBox] = [await beforeCard.boundingBox(), await usesCard.boundingBox()];
+  expect(beforeCardBox.width).toBeGreaterThan(usesCardBox.width * 1.5);
   await page.screenshot({ path: 'test-results/herb.png', fullPage: true });
 
   // Add a jar from the herb page; Lavender is preselected.

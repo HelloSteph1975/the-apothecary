@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -18,7 +19,7 @@ function Rows({ rows }) {
   if (shown.length === 0) return null;
   return (
     <dl className="dl-grid">
-      {shown.map(([k, v]) => <div key={k} style={{ display: 'contents' }}><dt>{k}</dt><dd>{v}</dd></div>)}
+      {shown.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
     </dl>
   );
 }
@@ -67,13 +68,13 @@ export function HerbPage() {
           </>
         )} />
       <div className="card-grid">
-        <ParchmentCard title="Before you use it" className="panel-caution">
+        <ParchmentCard title="Before you use it" className="panel-caution panel-wide">
           {cautions.length === 0 && !herb.ahpa_class && (
             <p>No cautions recorded. That doesn't mean it's safe for everyone.</p>
           )}
           {cautions.length > 0 && (
-            <dl className="dl-grid">
-              {cautions.map(([f, label]) => <div key={f} style={{ display: 'contents' }}><dt>{label}</dt><dd>{herb[f]}</dd></div>)}
+            <dl className="dl-grid dl-cautions">
+              {cautions.map(([f, label]) => <Fragment key={f}><dt>{label}</dt><dd>{herb[f]}</dd></Fragment>)}
             </dl>
           )}
           {herb.ahpa_class && AHPA_LABELS[herb.ahpa_class] && (
