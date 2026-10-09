@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STARTER_ORDER } from '../../server/data/grimoire/index.js';
-import { PLANT_PARTS, RECIPE_TYPES, SOURCE_COVERS, AHPA_CLASSES, PLANETS, ELEMENTS, GENDERS } from '../../server/schemas.js';
+import { HERB_PARTS, RECIPE_TYPES, SOURCE_COVERS, AHPA_CLASSES, PLANETS, ELEMENTS, GENDERS } from '../../server/schemas.js';
 
 // Checks every starter grimoire entry present in server/data/grimoire (not all 30 need to exist yet).
 const DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../server/data/grimoire');
@@ -57,14 +57,14 @@ describe.each(files)('%s', (file) => {
 
   it('keeps list and choice values within the allowed lists', () => {
     const h = e();
-    for (const p of h.parts_used) expect(PLANT_PARTS, 'parts_used').toContain(p);
+    for (const p of h.parts_used) expect(HERB_PARTS, 'parts_used').toContain(p);
     for (const p of h.preparations ?? []) expect(RECIPE_TYPES, 'preparations').toContain(p);
     for (const f of ['other_names', 'zodiac', 'associations', 'garden_companions', 'preparations']) {
       if (h[f] == null) continue;
       expect(Array.isArray(h[f]), f).toBe(true);
       for (const v of h[f]) expect(typeof v, f).toBe('string');
     }
-    if (h.garden_harvest_part != null) expect(PLANT_PARTS).toContain(h.garden_harvest_part);
+    if (h.garden_harvest_part != null) expect(HERB_PARTS).toContain(h.garden_harvest_part);
     expect([...AHPA_CLASSES, null]).toContain(h.ahpa_class ?? null);
     expect([...PLANETS, null]).toContain(h.planet ?? null);
     expect([...ELEMENTS, null]).toContain(h.element ?? null);

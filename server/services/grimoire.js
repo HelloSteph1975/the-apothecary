@@ -6,7 +6,7 @@ import { repos } from '../db/repos.js';
 import { HttpError, notFound } from '../http.js';
 import { validate } from '../validate.js';
 import { itemStatus } from './cabinet.js';
-import { herbSchema, herbSourceSchema, PLANT_PARTS, RECIPE_TYPES, SOURCE_COVERS } from '../schemas.js';
+import { herbSchema, herbSourceSchema, HERB_PARTS, RECIPE_TYPES, SOURCE_COVERS } from '../schemas.js';
 import { GRIMOIRE_SEED_VERSION, STARTER_ORDER } from '../data/grimoire/index.js';
 
 export { GRIMOIRE_SEED_VERSION, STARTER_ORDER };
@@ -165,7 +165,7 @@ export function herbOfTheDay(db, today) {
 // Writing ------------------------------------------------------------------
 
 const LIST_RULES = {
-  other_names: null, parts_used: PLANT_PARTS, preparations: RECIPE_TYPES, zodiac: null, associations: null, garden_companions: null,
+  other_names: null, parts_used: HERB_PARTS, preparations: RECIPE_TYPES, zodiac: null, associations: null, garden_companions: null,
 };
 const URL_OK = /^https?:\/\/\S/i;
 

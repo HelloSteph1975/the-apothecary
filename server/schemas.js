@@ -1,6 +1,8 @@
 export const UNITS = ['g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl oz', 'count'];
 export const FORMS = ['dried leaf', 'dried flower', 'root', 'bark', 'seed', 'resin', 'powder', 'fresh', 'tincture', 'oil', 'other'];
 export const PLANT_PARTS = ['leaf', 'flower', 'root', 'bark', 'seed', 'berry', 'resin', 'whole herb'];
+// Grimoire herbs may also name a bulb (garlic); jars keep the shorter list.
+export const HERB_PARTS = [...PLANT_PARTS, 'bulb'];
 export const SOURCE_KINDS = ['bought', 'grown', 'foraged', 'made', 'gifted'];
 export const SECTION_KINDS = ['herb', 'supply'];
 

@@ -146,6 +146,16 @@ it('validates list fields', async () => {
   await bad({ planet: 'Pluto' }, 'planet');
 });
 
+it('accepts bulb as a herb part, but not as a jar plant part', async () => {
+  setup();
+  const ok = await t.http().post('/api/herbs').send({ common_name: 'Onion', parts_used: ['bulb'] });
+  expect(ok.status, JSON.stringify(ok.body)).toBe(201);
+  expect(ok.body.parts_used).toEqual(['bulb']);
+  const jar = await t.http().post('/api/items').send({ section_id: 1, name: 'Onion', plant_part: 'bulb' });
+  expect(jar.status, JSON.stringify(jar.body)).toBe(400);
+  expect(jar.body.details).toHaveProperty('plant_part');
+});
+
 it('validates sources, keyed by position', async () => {
   setup();
   await bad({ sources: 'nope' }, 'sources');

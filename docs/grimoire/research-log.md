@@ -181,7 +181,7 @@ Sources read:
 - UW-Madison Extension, Garlic (revised Oct 2023): https://hort.extension.wisc.edu/articles/garlic-allium-sativum/
 
 Uncertain:
-- `parts_used`: the allowed list has no "bulb", so the bulb is filed under "root" and `notes` says so. A later stage could add "bulb" to the plant-part list.
+- `parts_used`: "bulb". The grimoire's part list gained "bulb" in Stage 2B batch 2 for this entry; it was first filed under "root". The jar plant-part list is unchanged.
 - Family: Amaryllidaceae (APG IV); older books put garlic in Liliaceae or Alliaceae.
 - The saquinavir/ritonavir contraindication comes from the EMA monograph. NCCIH's current sheet names only anticoagulants and aspirin.
 - Grieve's Odyssey story: she calls the protective herb a yellow garlic; scholars dispute what Homer's "moly" was, so the entry says "a garlic-like herb".
