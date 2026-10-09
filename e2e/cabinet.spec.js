@@ -8,6 +8,7 @@ const TODAY = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
 test('stocks the cabinet from supplier to photo', async ({ page }) => {
+  test.setTimeout(90000); // image resizing and a cold build can be slow on a busy machine
   fs.mkdirSync('test-results', { recursive: true });
   fs.writeFileSync('test-results/pixel.png', PNG);
 
