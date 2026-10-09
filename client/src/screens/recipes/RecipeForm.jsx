@@ -85,6 +85,7 @@ export function RecipeForm() {
       notes: orNull(form.notes),
       ingredients: rows.map(x => ({
         herb_id: x.herb_id === '' ? null : Number(x.herb_id),
+        herb_gone: x.deletedHerb && x.herb_id === '',
         name: x.name.trim(),
         amount: numOrNull(x.amount),
         unit: orNull(x.unit),

@@ -76,7 +76,7 @@ export function getRecipeDetail(db, id, query = {}) {
     LEFT JOIN herbs h ON h.id = ri.herb_id AND h.deleted_at IS NULL
     WHERE ri.recipe_id = ? AND ri.deleted_at IS NULL ORDER BY ri.sort_order, ri.id`).all(id)
     .map(i => ({
-      id: i.id, herb_id: i.herb_id, herb_name: i.live_herb_name ?? null, herb_deleted: i.herb_id != null && i.live_herb_name == null,
+      id: i.id, herb_id: i.herb_id, herb_name: i.live_herb_name ?? null, herb_deleted: (i.herb_id != null && i.live_herb_name == null) || i.herb_gone === 1,
       name: i.name, amount: scaleAmount(i.amount, factor, i.unit), base_amount: i.amount, unit: i.unit, form: i.form,
       plant_part: i.plant_part, note: i.note,
     }));
@@ -116,7 +116,8 @@ function parseIngredients(db, list, errors) {
       else if (!named) row.name = herb.common_name;
     }
     if (!named && !herbGiven && !errors[`ingredients.${i}.name`]) errors[`ingredients.${i}.name`] = 'Add a name or pick a herb';
-    return { ...row, sort_order: i };
+    // A live herb link means the herb is not gone.
+    return { ...row, herb_gone: row.herb_id != null ? 0 : row.herb_gone ?? 0, sort_order: i };
   });
 }
 

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { makeTestContext } from './helpers.js';
 import { repos } from '../../server/db/repos.js';
+import { purgeSoftDeleted } from '../../server/services/purge.js';
 
 let t;
 afterEach(() => t?.cleanup());
@@ -194,4 +195,20 @@ it('undoes a recipe delete after its type was moved and deleted, keeping the old
   expect(res.status).toBe(200);
   expect(res.body).toMatchObject({ label_caution: 'For outside use only.', needs_patch_test: true });
   expect((await s.h().get('/api/recipes')).body.map(x => x.name)).toContain('Calendula salve');
+});
+
+it('keeps the gone-herb flag after the herb is purged, after a save, and clears it when a live herb is set', async () => {
+  const s = setup();
+  const d = (await post(s.h, { name: 'Mint tea', type_id: s.tea.id, ingredients: [{ herb_id: s.mint.id }] })).body;
+  const db = t.ctx.db;
+  db.prepare('UPDATE herbs SET deleted_at = ? WHERE id = ?').run(new Date(Date.now() - 40 * 86400000).toISOString(), s.mint.id);
+  purgeSoftDeleted(db, t.dataDir);
+  let res = await s.h().get(`/api/recipes/${d.id}`);
+  expect(res.body.ingredients[0]).toMatchObject({ herb_id: null, herb_deleted: true });
+  res = await s.h().patch(`/api/recipes/${d.id}`).send({ ingredients: [{ herb_id: null, herb_gone: true, name: 'Peppermint' }] });
+  expect(res.body.ingredients[0]).toMatchObject({ herb_id: null, herb_deleted: true });
+  res = await s.h().patch(`/api/recipes/${d.id}`).send({ ingredients: [{ herb_id: s.cham.id, herb_gone: true, name: 'Chamomile' }] });
+  expect(res.body.ingredients[0]).toMatchObject({ herb_id: s.cham.id, herb_deleted: false });
+  res = await s.h().patch(`/api/recipes/${d.id}`).send({ ingredients: [{ name: 'Plain mint' }] });
+  expect(res.body.ingredients[0]).toMatchObject({ herb_deleted: false });
 });

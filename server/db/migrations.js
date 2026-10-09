@@ -72,7 +72,8 @@ export const migrations = [
   CREATE INDEX idx_recipes_type ON recipes(type_id);
   CREATE TABLE recipe_ingredients (id INTEGER PRIMARY KEY, recipe_id INTEGER NOT NULL REFERENCES recipes(id),
     herb_id INTEGER REFERENCES herbs(id), name TEXT NOT NULL, amount REAL CHECK (amount IS NULL OR amount >= 0),
-    unit TEXT, form TEXT, plant_part TEXT, note TEXT, sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
+    unit TEXT, form TEXT, plant_part TEXT, note TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+    herb_gone INTEGER NOT NULL DEFAULT 0, ${TS});
   CREATE INDEX idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
   CREATE INDEX idx_recipe_ingredients_herb ON recipe_ingredients(herb_id);
   `,

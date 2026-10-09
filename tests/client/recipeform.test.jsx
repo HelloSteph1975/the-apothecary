@@ -46,6 +46,8 @@ beforeEach(() => {
     if (url === '/api/recipes/10') return json(recipe(10, 'Old type', { type_id: 77 }));
     if (url === '/api/recipes/11') return json(recipe(11, 'Gone herb', { ingredients: [
       { id: 1, herb_id: 55, herb_name: null, herb_deleted: true, name: 'Old comfrey', amount: 5, unit: 'g', form: null, plant_part: null, note: null }] }));
+    if (url === '/api/recipes/12') return json(recipe(12, 'Precise', { ingredients: [
+      { id: 1, herb_id: null, herb_deleted: false, name: 'Beeswax', amount: 12.3, base_amount: 12.345, unit: 'g', form: null, plant_part: null, note: null }] }));
     if (url === '/api/recipes/9') return json(recipe(9, 'New'));
     return json({});
   });
@@ -225,6 +227,35 @@ it('keeps an ingredient whose herb was deleted as plain text', async () => {
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(sent()).toBeTruthy());
   expect(sent().ingredients[0]).toMatchObject({ herb_id: null, name: 'Old comfrey', amount: 5 });
+});
+
+it('keeps the gone-herb flag until an herb is picked', async () => {
+  const user = userEvent.setup();
+  open('/recipes/11/edit');
+  await waitFor(() => expect(screen.getByLabelText('Name (required)')).toHaveValue('Gone herb'));
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent()).toBeTruthy());
+  expect(sent().ingredients[0]).toMatchObject({ herb_id: null, herb_gone: true });
+});
+
+it('clears the gone-herb flag when an herb is picked for the row', async () => {
+  const user = userEvent.setup();
+  open('/recipes/11/edit');
+  await waitFor(() => expect(screen.getByLabelText('Name (required)')).toHaveValue('Gone herb'));
+  await user.selectOptions(screen.getByLabelText('Ingredient 1 grimoire herb'), 'Yarrow');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent()).toBeTruthy());
+  expect(sent().ingredients[0]).toMatchObject({ herb_id: 4, herb_gone: false });
+});
+
+it('sends the stored amount, not the rounded one, when only the name changes', async () => {
+  const user = userEvent.setup();
+  open('/recipes/12/edit');
+  const name = await nameField();
+  await user.type(name, '!');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent()).toBeTruthy());
+  expect(sent().ingredients[0].amount).toBe(12.345);
 });
 
 it('asks before leaving a changed form', async () => {

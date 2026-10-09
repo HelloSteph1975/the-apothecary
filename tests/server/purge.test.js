@@ -138,6 +138,7 @@ it('purges old recipes with their ingredients and photos, unlinks purged herbs, 
   expect(db.prepare('SELECT id FROM recipes ORDER BY id').all().map(r => r.id)).toEqual([fresh, kept]);
   expect(db.prepare('SELECT name FROM recipe_ingredients ORDER BY id').all().map(r => r.name)).toEqual(['Gone herb', 'of fresh']);
   expect(db.prepare('SELECT herb_id, name FROM recipe_ingredients WHERE id = ?').get(linked)).toEqual({ herb_id: null, name: 'Gone herb' });
+  expect(db.prepare('SELECT herb_gone FROM recipe_ingredients WHERE id = ?').get(linked).herb_gone).toBe(1);
   expect(db.prepare('SELECT id FROM recipe_types ORDER BY id').all().map(r => r.id)).toEqual([usedType, liveType]);
   expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(freeType)).toBeUndefined();
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '6-ffffffff.jpg'))).toBe(false);

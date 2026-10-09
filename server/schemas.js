@@ -62,5 +62,5 @@ export const recipeSchema = {
 };
 export const recipeIngredientSchema = {
   herb_id: 'int', name: 'string', amount: { type: 'number', min: 0 }, unit: RECIPE_UNITS, form: FORMS, plant_part: PLANT_PARTS,
-  note: 'string',
+  note: 'string', herb_gone: { type: 'bool', nullable: false },
 };

@@ -25,7 +25,7 @@ export function repos(db) {
       recipes: createRepo(db, 'recipes', ['name', 'type_id', 'yield_amount', 'yield_unit', 'steps', 'wait_days', 'shelf_life_days',
         'intention', 'timing_notes', 'notes'], { orderBy: 'name COLLATE NOCASE' }),
       recipeIngredients: createRepo(db, 'recipe_ingredients', ['recipe_id', 'herb_id', 'name', 'amount', 'unit', 'form', 'plant_part',
-        'note', 'sort_order'], { orderBy: 'sort_order, id' }),
+        'note', 'sort_order', 'herb_gone'], { orderBy: 'sort_order, id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);

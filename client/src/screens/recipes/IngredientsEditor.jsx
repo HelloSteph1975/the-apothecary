@@ -10,7 +10,8 @@ export const newIngredient = (ing = {}) => ({
   deletedHerb: Boolean(ing.herb_deleted),
   herb_id: ing.herb_id == null || ing.herb_deleted ? '' : String(ing.herb_id),
   name: ing.name ?? '',
-  amount: ing.amount == null ? '' : String(ing.amount),
+  // base_amount is the stored value; `amount` is rounded for display.
+  amount: (ing.base_amount ?? ing.amount) == null ? '' : String(ing.base_amount ?? ing.amount),
   unit: ing.unit ?? '',
   form: ing.form ?? '',
   plant_part: ing.plant_part ?? '',
