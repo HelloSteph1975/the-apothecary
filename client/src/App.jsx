@@ -18,6 +18,7 @@ import { HerbPage } from './screens/grimoire/HerbPage.jsx';
 import { HerbForm } from './screens/grimoire/HerbForm.jsx';
 import { RecipeBook } from './screens/recipes/RecipeBook.jsx';
 import { RecipeTypes } from './screens/recipes/RecipeTypes.jsx';
+import { RecipeForm } from './screens/recipes/RecipeForm.jsx';
 import { RecipePage } from './screens/recipes/RecipePage.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
@@ -31,6 +32,12 @@ function HerbFormRoute() {
 function RecipePageRoute() {
   const { id } = useParams();
   return <RecipePage key={id} />;
+}
+
+// A fresh form per recipe, so moving between edit pages does not keep the last recipe's fields.
+function RecipeFormRoute() {
+  const { id } = useParams();
+  return <RecipeForm key={id ?? 'new'} />;
 }
 
 const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
@@ -54,6 +61,8 @@ export const routes = [
       { path: 'grimoire/:id/edit', element: <HerbFormRoute /> },
       { path: 'recipes', element: <RecipeBook /> },
       { path: 'recipes/types', element: <RecipeTypes /> },
+      { path: 'recipes/new', element: <RecipeFormRoute /> },
+      { path: 'recipes/:id/edit', element: <RecipeFormRoute /> },
       { path: 'recipes/:id', element: <RecipePageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
