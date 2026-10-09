@@ -54,6 +54,7 @@ export function HerbPage() {
   const hasGarden = herb.garden_harvest_part || herb.garden_harvest_timing || herb.garden_sun || herb.garden_water || companions.length > 0;
   const jars = list(herb.jars);
   const sources = list(herb.sources);
+  const recipes = list(herb.recipes);
   const otherNames = list(herb.other_names);
   const subtitle = [herb.latin_name, herb.family].filter(Boolean).join(', ');
   const addJar = herbSection ? `/cabinet/new?section=${herbSection.id}&herb=${herb.id}` : `/cabinet/new?herb=${herb.id}`;
@@ -128,6 +129,20 @@ export function HerbPage() {
             </ul>
           ) : <p className="muted">No jar of this herb yet.</p>}
           <p><WaxSealLink to={addJar}>Add a jar of this herb</WaxSealLink></p>
+        </ParchmentCard>
+
+        <ParchmentCard title={recipes.length > 0 ? 'Recipes with this herb' : 'Recipes'}>
+          {recipes.length > 0 && (
+            <ul>
+              {recipes.map(r => (
+                <li key={r.id}>
+                  <Link to={`/recipes/${r.id}`}>{r.name}</Link>
+                  {r.type_name && <span className="muted">, {r.type_name}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p><WaxSealLink to={`/recipes/new?herb=${herb.id}`}>Write a recipe with this herb</WaxSealLink></p>
         </ParchmentCard>
 
         {sources.length > 0 && (

@@ -136,3 +136,21 @@ it('shows the uses panel when only parts used is set', async () => {
   expect(await screen.findByRole('heading', { name: 'Uses in tradition' })).toBeInTheDocument();
   expect(screen.getByText('Root')).toBeInTheDocument();
 });
+
+it('lists recipes with this herb and always offers a link to write one', async () => {
+  herb = { ...base, recipes: [{ id: 3, name: 'Calming tea', type_name: 'tea blend' }, { id: 4, name: 'Sleep salve', type_name: 'salve' }] };
+  open();
+  const panel = await screen.findByRole('region', { name: 'Recipes with this herb' });
+  expect(within(panel).getByRole('link', { name: 'Calming tea' })).toHaveAttribute('href', '/recipes/3');
+  expect(within(panel).getByText(/tea blend/)).toBeInTheDocument();
+  expect(within(panel).getByRole('link', { name: 'Sleep salve' })).toHaveAttribute('href', '/recipes/4');
+  expect(within(panel).getByRole('link', { name: 'Write a recipe with this herb' })).toHaveAttribute('href', '/recipes/new?herb=5');
+});
+
+it('hides the recipes panel when there are none but keeps the write link', async () => {
+  herb = { ...base, recipes: [] };
+  open();
+  await screen.findByRole('region', { name: 'In your cabinet' });
+  expect(screen.queryByRole('region', { name: 'Recipes with this herb' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Write a recipe with this herb' })).toHaveAttribute('href', '/recipes/new?herb=5');
+});
