@@ -54,6 +54,16 @@ const weekday = day => {
 };
 export const skyLine = sky => `${cap(sky.phase.name)} in ${sky.moon.sign}, ${weekday(sky.day)} under ${sky.ruler}`;
 
+// The sky on a stored day, from a batch or a suggested start date: "waxing crescent in Scorpio, Friday under Venus".
+export const dayLine = (day, sky) => `${sky.phase} in ${sky.sign}, ${weekday(day)} under ${sky.ruler}`;
+
+// "Fri, Oct 16: waxing gibbous in Taurus"
+export function suggestionLabel(s) {
+  const [y, m, d] = s.day.split('-').map(Number);
+  const date = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return `${date}: ${s.sky.phase} in ${s.sky.sign}`;
+}
+
 // Local clock time like "3:12 PM", with plain spaces.
 export function clockTime(iso) {
   const d = new Date(iso);

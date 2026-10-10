@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '../../components/Button.jsx';
 import { api } from '../../lib/api.js';
+import { dayLine } from '../../lib/sky.js';
 import { formatAmount, formatDay } from '../../lib/cabinet.js';
 
 // Blank ruled lines so she can write the answer by hand.
@@ -59,9 +60,10 @@ export function RecordSheet() {
   }
   if (!batch) return <p>Opening the record sheet…</p>;
 
+  const sky = batch.sky ? ` (${dayLine(batch.start_date, batch.sky)})` : '';
   const dates = batch.finished_on
-    ? `Started ${formatDay(batch.start_date)}, finished ${formatDay(batch.finished_on)}`
-    : `Started ${formatDay(batch.start_date)}`;
+    ? `Started ${formatDay(batch.start_date)}${sky}, finished ${formatDay(batch.finished_on)}`
+    : `Started ${formatDay(batch.start_date)}${sky}`;
   const lines = batch.lines ?? [];
   const labelNotes = [batch.label_notes, batch.expires_on ? `Use by ${formatDay(batch.expires_on)}` : null]
     .filter(v => v && String(v).trim()).join('\n');

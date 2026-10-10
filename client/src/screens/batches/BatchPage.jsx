@@ -10,6 +10,7 @@ import { useToast } from '../../components/ToastProvider.jsx';
 import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { api } from '../../lib/api.js';
 import { formatAmount, formatDay } from '../../lib/cabinet.js';
+import { dayLine } from '../../lib/sky.js';
 import { useLeaveGuard } from '../../lib/useLeaveGuard.js';
 import { StepsEditor } from './StepsEditor.jsx';
 import { FinishDialog } from './FinishDialog.jsx';
@@ -138,7 +139,7 @@ export function BatchPage() {
 
   const finished = Boolean(batch.finished_on);
   const recipeText = batch.recipe ? `${batch.recipe.name}${batch.type ? ` (${batch.type.name})` : ''}` : batch.type?.name ?? '';
-  const startedText = `${recipeText ? `${recipeText}, started` : 'Started'} ${formatDay(batch.start_date)}`;
+  const startedText = `${recipeText ? `${recipeText}, started` : 'Started'} ${formatDay(batch.start_date)}${batch.sky ? `, ${dayLine(batch.start_date, batch.sky)}` : ''}`;
 
   const startEdit = () => { setForm(fromBatch(batch)); setErrors({}); setEditing(true); };
   async function saveJournal(e) {
