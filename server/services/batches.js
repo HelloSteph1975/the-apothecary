@@ -8,7 +8,7 @@ import { convert } from '../lib/units.js';
 import { getRecipeDetail } from './recipes.js';
 import { createItem, drawFromItem } from './cabinet.js';
 import { getSettings } from './settings.js';
-import { skyForDay } from '../lib/sky.js';
+import { skyFacts } from '../lib/sky.js';
 import { cascadeDeletePhotos, cascadeRestorePhotos } from './photos.js';
 
 const GONE = 'That batch is not in the journal.';
@@ -143,7 +143,7 @@ export function listBatches(db, f = {}) {
 
 // The sky on the day it was started: a plain fact, shown whether or not suggestions are on.
 function batchSky(db, day) {
-  const s = skyForDay(day, { hemisphere: getSettings(db).hemisphere });
+  const s = skyFacts(day, { hemisphere: getSettings(db).hemisphere });
   return { phase: s.phase.name, sign: s.moon.sign, ruler: s.ruler };
 }
 

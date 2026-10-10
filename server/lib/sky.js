@@ -159,3 +159,25 @@ export function skyForDay(day, { hemisphere = 'north' } = {}) {
     next_festival: nextFestival(day, hemisphere),
   };
 }
+
+const festivalCache = new Map();
+function festivalsCached(year, hemisphere) {
+  const key = `${year}-${hemisphere}`;
+  if (!festivalCache.has(key)) festivalCache.set(key, festivals(year, hemisphere));
+  return festivalCache.get(key);
+}
+
+// The facts scoring and batch pages need, without the sign changes, next phases or next festival.
+export function skyFacts(day, { hemisphere = 'north' } = {}) {
+  const phase = phaseOn(day);
+  const moon = moonSignAt(localNoon(day));
+  const [year] = parseDay(day);
+  const today = festivalsCached(year, hemisphere).find(f => f.day === day);
+  return {
+    day,
+    phase: { name: phase.name, group: phase.group },
+    moon: { sign: moon.sign, element: moon.element },
+    ruler: dayRuler(day),
+    festival: today ? today.name : null,
+  };
+}

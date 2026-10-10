@@ -7,7 +7,7 @@ import { HttpError, notFound } from '../http.js';
 import { validate } from '../validate.js';
 import { timingRuleSchema, PLANETS, ELEMENTS } from '../schemas.js';
 import { addDays } from '../lib/dates.js';
-import { skyForDay, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../lib/sky.js';
+import { skyForDay, skyFacts, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../lib/sky.js';
 
 // Bump when timing-rules.json gains entries that existing installs should receive.
 export const TIMING_RULES_SEED_VERSION = 1;
@@ -207,7 +207,7 @@ export function startDates(db, recipeId, { from, days = 28 } = {}, settings) {
   const scored = [];
   for (let i = 0; i < days; i++) {
     const day = addDays(start, i);
-    const sky = skyForDay(day, { hemisphere: settings.hemisphere });
+    const sky = skyFacts(day, { hemisphere: settings.hemisphere });
     const hits = rules.filter(rule => matches(rule, sky));
     const score = hits.reduce((n, rule) => n + rule.weight, 0);
     if (score > 0) {

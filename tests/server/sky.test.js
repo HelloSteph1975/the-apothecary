@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import * as Astronomy from 'astronomy-engine';
 import {
   localNoon, localDayBounds, phaseOn, moonSignAt, signChanges, principalPhases,
-  dayRuler, festivals, nextFestival, skyForDay,
+  dayRuler, festivals, nextFestival, skyForDay, skyFacts,
   SIGNS, SIGN_ELEMENTS, PHASE_NAMES, PHASE_GROUPS, RULERS, FESTIVALS,
 } from '../../server/lib/sky.js';
 
@@ -151,5 +151,20 @@ describe('skyForDay', () => {
     expect(PHASE_GROUPS).toEqual(['waxing', 'full', 'waning', 'new']);
     expect(RULERS).toHaveLength(7);
     expect(FESTIVALS).toHaveLength(8);
+  });
+});
+
+describe('skyFacts', () => {
+  it('agrees with skyForDay on the shared fields', () => {
+    for (const day of ['2024-01-11', '2024-03-20', '2024-10-31', '2026-12-21', '2026-10-10']) {
+      for (const hemisphere of ['north', 'south']) {
+        const full = skyForDay(day, { hemisphere });
+        const lean = skyFacts(day, { hemisphere });
+        expect(lean).toEqual({
+          day, phase: { name: full.phase.name, group: full.phase.group },
+          moon: { sign: full.moon.sign, element: full.moon.element }, ruler: full.ruler, festival: full.festival,
+        });
+      }
+    }
   });
 });
