@@ -177,3 +177,16 @@ it('purges old batches with lines, steps and photos, unlinks purged items and re
   expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(freeType)).toBeUndefined();
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '7-abababab.jpg'))).toBe(false);
 });
+
+it('unlinks batch lines from a purged herb and keeps their names', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
+  const herb = run("INSERT INTO herbs (common_name, deleted_at) VALUES ('Gone herb', ?)", old);
+  const batch = run("INSERT INTO batches (name, start_date) VALUES ('Live batch', '2026-02-01')");
+  const line = run("INSERT INTO batch_ingredients (batch_id, herb_id, name) VALUES (?, ?, 'Gone herb')", batch, herb);
+  expect(purgeSoftDeleted(db, t.dataDir).herbs).toBe(1);
+  expect(db.prepare('SELECT id FROM herbs WHERE id = ?').get(herb)).toBeUndefined();
+  expect(db.prepare('SELECT herb_id, name FROM batch_ingredients WHERE id = ?').get(line)).toEqual({ herb_id: null, name: 'Gone herb' });
+});

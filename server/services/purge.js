@@ -38,6 +38,7 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     db.prepare(`DELETE FROM herb_sources WHERE id IN (${old('herb_sources')}) OR herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE items SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE recipe_ingredients SET herb_id = NULL, herb_gone = 1 WHERE herb_id IN (${old('herbs')})`).run();
+    db.prepare(`UPDATE batch_ingredients SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     counts.herbs = db.prepare(`DELETE FROM herbs WHERE id IN (${old('herbs')})`).run().changes;
     return counts;
   });
