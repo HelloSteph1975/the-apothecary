@@ -7,6 +7,8 @@ import { addDays, isDate } from '../lib/dates.js';
 import { convert } from '../lib/units.js';
 import { getRecipeDetail } from './recipes.js';
 import { createItem, drawFromItem } from './cabinet.js';
+import { getSettings } from './settings.js';
+import { skyForDay } from '../lib/sky.js';
 import { cascadeDeletePhotos, cascadeRestorePhotos } from './photos.js';
 
 const GONE = 'That batch is not in the journal.';
@@ -139,6 +141,12 @@ export function listBatches(db, f = {}) {
   return [...active, ...done];
 }
 
+// The sky on the day it was started: a plain fact, shown whether or not suggestions are on.
+function batchSky(db, day) {
+  const s = skyForDay(day, { hemisphere: getSettings(db).hemisphere });
+  return { phase: s.phase.name, sign: s.moon.sign, ruler: s.ruler };
+}
+
 export function getBatchDetail(db, id) {
   const r = repos(db);
   const batch = r.batches.get(id);
@@ -161,6 +169,7 @@ export function getBatchDetail(db, id) {
     lines, steps,
     photos: r.photos.list({ owner_type: 'batch', owner_id: id }),
     made_item: made ? { id: made.id, name: made.name } : null,
+    sky: batchSky(db, batch.start_date),
     status: batch.finished_on ? 'finished' : open ? 'steeping' : 'ready',
   };
 }
@@ -392,7 +401,7 @@ export function restoreBatch(ctx, id) {
 
 // Today -------------------------------------------------------------------
 
-export function dueSteps(db, today, { days = 3 } = {}) {
+export function dueSteps(db, today, { days = 7 } = {}) {
   return db.prepare(`SELECT s.id AS step_id, s.title, s.due_on, b.id AS batch_id, b.name AS batch_name
     FROM batch_steps s JOIN batches b ON b.id = s.batch_id AND b.deleted_at IS NULL AND b.finished_on IS NULL
     WHERE s.deleted_at IS NULL AND s.done_on IS NULL AND s.due_on IS NOT NULL AND s.due_on <= ?

@@ -1,0 +1,299 @@
+[
+  {
+    "slug": "waxing-build",
+    "kind": "phase_group",
+    "value": "waxing",
+    "text": "A growing moon: in folk practice, a time to start tinctures, infusions and anything meant to build.",
+    "recipe_types": [
+      "tincture",
+      "glycerite",
+      "infused-oil",
+      "oxymel",
+      "vinegar",
+      "syrup"
+    ],
+    "planets": [],
+    "elements": [],
+    "weight": 2
+  },
+  {
+    "slug": "full-moon-water",
+    "kind": "phase",
+    "value": "full",
+    "text": "Full moon: traditionally a night for moon water, charging oils and gathering leaves and flowers.",
+    "recipe_types": [
+      "moon-water",
+      "ritual-oil",
+      "infused-oil"
+    ],
+    "planets": [
+      "Moon"
+    ],
+    "elements": [],
+    "weight": 3
+  },
+  {
+    "slug": "waning-clear",
+    "kind": "phase_group",
+    "value": "waning",
+    "text": "A shrinking moon: in folk practice, a time for clearing and cleansing blends, and for digging roots.",
+    "recipe_types": [
+      "bath-salts",
+      "bath-blend",
+      "loose-incense",
+      "smoke-free-herb-bundle",
+      "decoction"
+    ],
+    "planets": [
+      "Saturn"
+    ],
+    "elements": [],
+    "weight": 2
+  },
+  {
+    "slug": "new-moon-begin",
+    "kind": "phase",
+    "value": "new",
+    "text": "New moon: traditionally a quiet time to set an intention and plan what you'll make.",
+    "recipe_types": [
+      "ritual-oil",
+      "sachet"
+    ],
+    "planets": [],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "earth-roots",
+    "kind": "moon_element",
+    "value": "Earth",
+    "text": "Moon in an earth sign: said to suit root work, salves and balms.",
+    "recipe_types": [
+      "salve",
+      "balm",
+      "decoction"
+    ],
+    "planets": [
+      "Saturn",
+      "Venus"
+    ],
+    "elements": [
+      "Earth"
+    ],
+    "weight": 2
+  },
+  {
+    "slug": "water-steeping",
+    "kind": "moon_element",
+    "value": "Water",
+    "text": "Moon in a water sign: said to suit infusions, tinctures and baths.",
+    "recipe_types": [
+      "infusion",
+      "tincture",
+      "glycerite",
+      "bath-blend",
+      "bath-salts"
+    ],
+    "planets": [
+      "Moon"
+    ],
+    "elements": [
+      "Water"
+    ],
+    "weight": 2
+  },
+  {
+    "slug": "fire-warming",
+    "kind": "moon_element",
+    "value": "Fire",
+    "text": "Moon in a fire sign: said to suit warming and drying preparations.",
+    "recipe_types": [
+      "oxymel",
+      "syrup",
+      "vinegar"
+    ],
+    "planets": [
+      "Sun",
+      "Mars"
+    ],
+    "elements": [
+      "Fire"
+    ],
+    "weight": 2
+  },
+  {
+    "slug": "air-aromatics",
+    "kind": "moon_element",
+    "value": "Air",
+    "text": "Moon in an air sign: said to suit incense, flowers and fragrant blends.",
+    "recipe_types": [
+      "loose-incense",
+      "sachet",
+      "tea-blend"
+    ],
+    "planets": [
+      "Mercury",
+      "Jupiter"
+    ],
+    "elements": [
+      "Air"
+    ],
+    "weight": 2
+  },
+  {
+    "slug": "sunday-sun",
+    "kind": "day_ruler",
+    "value": "Sun",
+    "text": "Sunday, under the Sun: traditionally a day for vitality and solar herbs like calendula.",
+    "recipe_types": [],
+    "planets": [
+      "Sun"
+    ],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "monday-moon",
+    "kind": "day_ruler",
+    "value": "Moon",
+    "text": "Monday, under the Moon: traditionally a day for sleep and dream blends.",
+    "recipe_types": [
+      "tea-blend",
+      "sachet",
+      "moon-water"
+    ],
+    "planets": [
+      "Moon"
+    ],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "tuesday-mars",
+    "kind": "day_ruler",
+    "value": "Mars",
+    "text": "Tuesday, under Mars: traditionally a day for protective and warming work.",
+    "recipe_types": [],
+    "planets": [
+      "Mars"
+    ],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "wednesday-mercury",
+    "kind": "day_ruler",
+    "value": "Mercury",
+    "text": "Wednesday, under Mercury: traditionally a day for blends of the mind and the breath.",
+    "recipe_types": [
+      "tea-blend"
+    ],
+    "planets": [
+      "Mercury"
+    ],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "thursday-jupiter",
+    "kind": "day_ruler",
+    "value": "Jupiter",
+    "text": "Thursday, under Jupiter: traditionally a day for abundance and generous batches.",
+    "recipe_types": [],
+    "planets": [
+      "Jupiter"
+    ],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "friday-venus",
+    "kind": "day_ruler",
+    "value": "Venus",
+    "text": "Friday, under Venus: traditionally a day for beauty, love and skin preparations, and rose work.",
+    "recipe_types": [
+      "face-oil",
+      "serum",
+      "lotion",
+      "balm",
+      "salve"
+    ],
+    "planets": [
+      "Venus"
+    ],
+    "elements": [],
+    "weight": 2
+  },
+  {
+    "slug": "saturday-saturn",
+    "kind": "day_ruler",
+    "value": "Saturn",
+    "text": "Saturday, under Saturn: traditionally a day for boundaries, banishing and long, slow steeps.",
+    "recipe_types": [
+      "tincture",
+      "loose-incense"
+    ],
+    "planets": [
+      "Saturn"
+    ],
+    "elements": [],
+    "weight": 1
+  },
+  {
+    "slug": "samhain",
+    "kind": "festival",
+    "value": "Samhain",
+    "text": "Samhain: traditionally a time to honour ancestors and make protective blends.",
+    "recipe_types": [
+      "loose-incense",
+      "ritual-oil"
+    ],
+    "planets": [],
+    "elements": [],
+    "weight": 2
+  },
+  {
+    "slug": "yule",
+    "kind": "festival",
+    "value": "Yule",
+    "text": "Yule: the return of the light, traditionally kept with evergreens and warming syrups.",
+    "recipe_types": [
+      "syrup",
+      "loose-incense"
+    ],
+    "planets": [
+      "Sun"
+    ],
+    "elements": [],
+    "weight": 2
+  },
+  {
+    "slug": "beltane",
+    "kind": "festival",
+    "value": "Beltane",
+    "text": "Beltane: traditionally a time for flowers, fertility and love blends.",
+    "recipe_types": [
+      "ritual-oil",
+      "bath-blend"
+    ],
+    "planets": [
+      "Venus"
+    ],
+    "elements": [],
+    "weight": 2
+  },
+  {
+    "slug": "litha",
+    "kind": "festival",
+    "value": "Litha",
+    "text": "Litha: midsummer, traditionally the strongest day for gathering herbs.",
+    "recipe_types": [
+      "infused-oil"
+    ],
+    "planets": [
+      "Sun"
+    ],
+    "elements": [],
+    "weight": 2
+  }
+]

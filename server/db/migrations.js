@@ -97,6 +97,15 @@ export const migrations = [
   CREATE INDEX idx_batch_steps_batch ON batch_steps(batch_id);
   CREATE INDEX idx_batch_steps_due ON batch_steps(due_on) WHERE done_on IS NULL;
   `,
+  // 6: timing rules for the sky suggestions. Starter rules are seeded at startup; list columns hold JSON arrays.
+  `
+  CREATE TABLE timing_rules (id INTEGER PRIMARY KEY, slug TEXT, kind TEXT NOT NULL
+    CHECK (kind IN ('phase_group','phase','moon_element','moon_sign','day_ruler','festival')),
+    value TEXT NOT NULL, text TEXT NOT NULL, recipe_types TEXT NOT NULL DEFAULT '[]', planets TEXT NOT NULL DEFAULT '[]',
+    elements TEXT NOT NULL DEFAULT '[]', weight INTEGER NOT NULL DEFAULT 1 CHECK (weight BETWEEN 1 AND 3),
+    sort_order INTEGER NOT NULL DEFAULT 0, is_starter INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE UNIQUE INDEX idx_timing_rules_slug ON timing_rules(slug) WHERE slug IS NOT NULL;
+  `,
 ];
 
 export function migrate(db) {

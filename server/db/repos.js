@@ -32,6 +32,8 @@ export function repos(db) {
       batchIngredients: createRepo(db, 'batch_ingredients', ['batch_id', 'herb_id', 'name', 'amount', 'unit', 'item_id', 'drawn_amount',
         'drawn_unit', 'sort_order'], { orderBy: 'sort_order, id' }),
       batchSteps: createRepo(db, 'batch_steps', ['batch_id', 'title', 'due_on', 'done_on', 'sort_order'], { orderBy: 'sort_order, id' }),
+      timingRules: createRepo(db, 'timing_rules', ['slug', 'kind', 'value', 'text', 'recipe_types', 'planets', 'elements', 'weight',
+        'sort_order', 'is_starter'], { orderBy: 'sort_order, id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);

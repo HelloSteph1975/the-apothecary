@@ -429,10 +429,10 @@ it('keeps a step deleted on its own deleted when the batch comes back', async ()
 
 // today --------------------------------------------------------------------
 
-it('lists steps due within three days, overdue first, skipping finished and deleted batches', async () => {
+it('lists steps due within seven days, overdue first, skipping finished and deleted batches', async () => {
   const s = setup();
   const a = await makeBatch(s, { name: 'A', steps: [{ title: 'Overdue', due_on: '2026-10-05' }, { title: 'Far', due_on: '2026-10-20' }, { title: 'Undated' }] });
-  await makeBatch(s, { name: 'B', steps: [{ title: 'Edge', due_on: '2026-10-11' }, { title: 'Past edge', due_on: '2026-10-12' }] });
+  await makeBatch(s, { name: 'B', steps: [{ title: 'Edge', due_on: '2026-10-15' }, { title: 'Past edge', due_on: '2026-10-16' }] });
   const c = await makeBatch(s, { name: 'C', steps: [{ title: 'Finished batch', due_on: '2026-10-09' }] });
   await s.h().post(`/api/batches/${c.id}/finish`).send({ finished_on: '2026-10-09' });
   const d = await makeBatch(s, { name: 'D', steps: [{ title: 'Deleted batch', due_on: '2026-10-09' }] });

@@ -190,3 +190,17 @@ it('unlinks batch lines from a purged herb and keeps their names', () => {
   expect(db.prepare('SELECT id FROM herbs WHERE id = ?').get(herb)).toBeUndefined();
   expect(db.prepare('SELECT herb_id, name FROM batch_ingredients WHERE id = ?').get(line)).toEqual({ herb_id: null, name: 'Gone herb' });
 });
+
+it('purges old deleted timing rules and keeps live and recent ones', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const recent = new Date().toISOString();
+  const add = (text, deletedAt) => Number(db.prepare("INSERT INTO timing_rules (kind, value, text, deleted_at) VALUES ('festival', 'Yule', ?, ?)").run(text, deletedAt).lastInsertRowid);
+  const gone = add('old', old);
+  const fresh = add('recent', recent);
+  const live = add('live', null);
+  expect(purgeSoftDeleted(db, t.dataDir).timing_rules).toBe(1);
+  expect(db.prepare('SELECT id FROM timing_rules ORDER BY id').all().map(r => r.id)).toEqual([fresh, live]);
+  expect(db.prepare('SELECT id FROM timing_rules WHERE id = ?').get(gone)).toBeUndefined();
+});

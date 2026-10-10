@@ -1,0 +1,51 @@
+import { Router } from 'express';
+import { idParam, HttpError } from '../http.js';
+import { check } from '../validate.js';
+import { transaction } from '../db/connection.js';
+import { addDays } from '../lib/dates.js';
+import { skyForDay } from '../lib/sky.js';
+import { getSettings } from '../services/settings.js';
+import {
+  listTimingRules, getTimingRule, localToday, createTimingRule, updateTimingRule, deleteTimingRule, restoreTimingRule,
+} from '../services/timing.js';
+
+const MAX_RANGE_DAYS = 62;
+const str = v => (typeof v === 'string' && v !== '' ? v : undefined);
+
+export function skyRouter(ctx) {
+  const r = Router();
+  r.get('/range', (req, res) => {
+    const { from, to } = check({ from: 'date!', to: 'date!' }, { from: str(req.query.from), to: str(req.query.to) });
+    if (to < from) throw new HttpError(400, 'Please fix the highlighted fields.', { to: 'The end date must not be before the start date.' });
+    if (addDays(from, MAX_RANGE_DAYS) <= to) {
+      throw new HttpError(400, 'Please fix the highlighted fields.', { to: `Ask for at most ${MAX_RANGE_DAYS} days at a time.` });
+    }
+    const { hemisphere } = getSettings(ctx.db);
+    const out = [];
+    for (let day = from; day <= to; day = addDays(day, 1)) out.push(skyForDay(day, { hemisphere }));
+    res.json(out);
+  });
+  r.get('/', (req, res) => {
+    const { date } = check({ date: 'date' }, { date: str(req.query.date) });
+    res.json(skyForDay(date ?? localToday(), { hemisphere: getSettings(ctx.db).hemisphere }));
+  });
+  return r;
+}
+
+export function timingRulesRouter(ctx) {
+  const r = Router();
+  r.get('/', (req, res) => res.json(listTimingRules(ctx.db)));
+  r.post('/', (req, res) => res.status(201).json(createTimingRule(ctx.db, req.body)));
+  r.patch('/:id', (req, res) => res.json(updateTimingRule(ctx.db, idParam(req), req.body)));
+  r.delete('/:id', (req, res) => {
+    const id = idParam(req);
+    deleteTimingRule(ctx.db, id);
+    res.json({ ok: true, restore: `${req.baseUrl}/${id}/restore` });
+  });
+  r.post('/:id/restore', (req, res) => {
+    const id = idParam(req);
+    transaction(ctx.db, () => restoreTimingRule(ctx.db, id));
+    res.json(getTimingRule(ctx.db, id));
+  });
+  return r;
+}
