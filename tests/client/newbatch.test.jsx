@@ -497,3 +497,21 @@ it('ties each good day to its reasons for screen readers', async () => {
   const second = screen.getByRole('button', { name: 'Tue, Oct 20: full in Aries' });
   expect(second).toHaveAccessibleDescription('Full moons are for strong brews.');
 });
+
+it('reads ?start= as the initial start date, and ignores a bad one', async () => {
+  open('/batches/new?recipe=7&start=2026-11-02');
+  await ready();
+  expect(screen.getByLabelText('Start date')).toHaveValue('2026-11-02');
+  expect(plans()[0].body).toMatchObject({ recipe_id: 7, start_date: '2026-11-02' });
+});
+
+it('starts today when ?start= is not a real day', async () => {
+  open('/batches/new?recipe=7&start=2026-02-30');
+  await ready();
+  expect(screen.getByLabelText('Start date')).toHaveValue(todayString());
+});
+
+it('uses ?start= for a free-form batch too', async () => {
+  open('/batches/new?start=2026-11-02');
+  expect(await screen.findByLabelText('Start date')).toHaveValue('2026-11-02');
+});

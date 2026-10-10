@@ -10,6 +10,7 @@ let items;
 let failToday;
 let herbOfDay;
 let failHerb;
+let posts;
 const item = (id, name, extra = {}) => ({ id, name, size_label: null, amount: 40, unit: 'g', low_threshold: 50, expires_on: null, section_name: 'Shelf A', cover: null, ...extra });
 beforeEach(() => {
   settings = { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
@@ -18,7 +19,9 @@ beforeEach(() => {
   failToday = false;
   herbOfDay = null;
   failHerb = false;
-  global.fetch = vi.fn(async url => {
+  posts = [];
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (opts.method === 'POST') posts.push(url);
     const json = body => new Response(JSON.stringify(body), { status: 200 });
     if (url === '/api/health') return json({ ok: true, demo: false });
     if (url.startsWith('/api/herb-of-the-day')) return failHerb ? new Response(JSON.stringify({ error: 'nope' }), { status: 500 }) : json(herbOfDay);
@@ -265,4 +268,31 @@ it('waits for settings before saying anything about suggestions', async () => {
   expect(await within(card).findByText('Suggestions are off. Turn them on in Settings.')).toBeInTheDocument();
   expect(within(card).getByText('the moon and the day')).toBeInTheDocument();
   expect(within(card).queryByText("folk timing, for what you're making")).toBeNull();
+});
+
+const task = (id, title, extra = {}) => ({ id, title, due_on: '2026-10-08', done_on: null, kind: 'manual', ...extra });
+
+it('puts the Tasks card first and lists tasks with a done checkbox', async () => {
+  summary = { ...summary, sky: { day: '2026-10-08', phase: { name: 'full', group: 'full', illumination: 99 }, moon: { sign: 'Aries', element: 'Fire', changes: [] }, ruler: 'Mars', festival: null, next_new: '2026-11-09T00:00:00.000Z', next_full: '2026-11-24T00:00:00.000Z', next_festival: null }, suggestions: [], tasks: [task(3, 'Water the sage'), task(4, 'Label jars')], counts: { ...summary.counts, tasks: 2 } };
+  today();
+  const card = await screen.findByRole('region', { name: 'Tasks' });
+  expect(within(card).getByText('due today and overdue')).toBeInTheDocument();
+  expect(within(card).getByRole('link', { name: 'Water the sage' })).toHaveAttribute('href', '/todo/3');
+  expect(within(card).getByRole('checkbox', { name: 'Done: Label jars' })).not.toBeChecked();
+  expect(within(card).getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/todo');
+  const names = (await screen.findAllByRole('heading', { level: 2 })).map(h => h.textContent);
+  expect(names.slice(0, 3)).toEqual(['Tasks', 'The sky today', 'Batches due']);
+});
+
+it('says nothing is due when there are no tasks today', async () => {
+  today();
+  const card = await screen.findByRole('region', { name: 'Tasks' });
+  expect(within(card).getByText('Nothing due today.')).toBeInTheDocument();
+});
+
+it('completes a task from the Today card and reloads', async () => {
+  summary = { ...summary, tasks: [task(3, 'Water the sage')], counts: { ...summary.counts, tasks: 1 } };
+  today();
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Done: Water the sage' }));
+  await vi.waitFor(() => expect(posts).toContain('/api/tasks/3/complete'));
 });

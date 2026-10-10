@@ -113,3 +113,49 @@ it('leaves expiry auto tasks out of the task events', async () => {
   expect(keys).toContain(`expiry:${jar.id}:2026-10-25`);
   expect(res.body.events.filter(e => e.title.includes('Rose'))).toMatchObject([{ kind: 'expiry', day: '2026-10-25' }]);
 });
+
+const day = d => t.http().get(`/api/calendar/day/${d}`);
+
+it('returns one day with the sky, folk suggestions and its events', async () => {
+  t = makeTestContext();
+  await t.http().post('/api/timing-rules').send({ kind: 'festival', value: 'Samhain', text: 'Honour the ancestors.', weight: 3 });
+  await t.http().post('/api/tasks').send({ title: 'Light a candle', due_on: '2026-10-31', today: TODAY });
+  await t.http().post('/api/tasks').send({ title: 'Other day', due_on: '2026-10-30', today: TODAY });
+  const res = await day('2026-10-31');
+  expect(res.status).toBe(200);
+  expect(res.body.sky).toMatchObject({ day: '2026-10-31', festival: 'Samhain' });
+  expect(res.body.sky.phase).toBeTruthy();
+  expect(res.body.suggestions).toEqual([{ id: expect.any(Number), text: 'Honour the ancestors.' }]);
+  expect(res.body.events.map(e => e.title)).toEqual(['Light a candle']);
+  expect(res.body.events[0]).toMatchObject({ kind: 'task', day: '2026-10-31', done: false, overdue: false });
+});
+
+it('returns no suggestions when sky suggestions are off, and the sky still shows', async () => {
+  t = makeTestContext();
+  await t.http().post('/api/timing-rules').send({ kind: 'festival', value: 'Samhain', text: 'Honour the ancestors.' });
+  await t.http().put('/api/settings').send({ sky_suggestions: 'off' });
+  const res = await day('2026-10-31');
+  expect(res.body.suggestions).toEqual([]);
+  expect(res.body.sky.festival).toBe('Samhain');
+});
+
+it('runs the auto task sync and flags overdue for a past day', async () => {
+  t = makeTestContext();
+  const batch = await addBatch([{ title: 'Strain', due_on: '2026-10-05' }]);
+  const res = await day('2026-10-05');
+  expect(res.body.events).toMatchObject([{ kind: 'step', title: 'Strain: Oil', overdue: true, id: batch.steps[0].id }]);
+});
+
+it('passes now to the sky only for today', async () => {
+  t = makeTestContext();
+  const a = (await day(TODAY)).body.sky;
+  expect(a.day).toBe(TODAY);
+  expect(new Date(a.next_new) > new Date(2026, 9, 10, 12, 0, 0)).toBe(true);
+});
+
+it('validates the day', async () => {
+  t = makeTestContext();
+  expect((await day('nope')).status).toBe(400);
+  expect((await day('1899-12-31')).status).toBe(400);
+  expect((await day('2026-02-30')).status).toBe(400);
+});

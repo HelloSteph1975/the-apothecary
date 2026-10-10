@@ -28,6 +28,7 @@ import { RecordSheet } from './screens/batches/RecordSheet.jsx';
 import { Todo } from './screens/todo/Todo.jsx';
 import { TaskPage } from './screens/todo/TaskPage.jsx';
 import { Calendar } from './screens/calendar/Calendar.jsx';
+import { DayPage } from './screens/calendar/DayPage.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -64,6 +65,12 @@ function BatchPageRoute() {
 function TaskPageRoute() {
   const { id } = useParams();
   return <TaskPage key={id} />;
+}
+
+// Keyed by day so moving between days starts fresh.
+function DayPageRoute() {
+  const { day } = useParams();
+  return <DayPage key={day} />;
 }
 
 // Keyed by id so moving between batches reloads the sheet.
@@ -103,6 +110,7 @@ export const routes = [
       { path: 'todo', element: <Todo /> },
       { path: 'todo/:id', element: <TaskPageRoute /> },
       { path: 'calendar', element: <Calendar /> },
+      { path: 'calendar/:day', element: <DayPageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },

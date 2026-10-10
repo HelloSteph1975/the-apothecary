@@ -1,7 +1,7 @@
 import { addDays } from '../lib/dates.js';
 import { skyFacts } from '../lib/sky.js';
 import { getSettings } from './settings.js';
-import { localToday } from './timing.js';
+import { localToday, daySuggestions } from './timing.js';
 import { syncAutoTasks } from './tasks.js';
 
 const MARKERS = ['new', 'full', 'first quarter', 'last quarter'];
@@ -47,4 +47,12 @@ export function calendar(db, from, to) {
   const today = localToday();
   syncAutoTasks(db, today);
   return { days: calendarDays(db, from, to), events: calendarEvents(db, from, to, today) };
+}
+
+// One day: the sky (with the live next-phase times when it is today), folk suggestions, and what is due.
+export function calendarDay(db, day) {
+  const today = localToday();
+  syncAutoTasks(db, today);
+  const { sky, suggestions } = daySuggestions(db, day, getSettings(db), day === today ? new Date() : undefined);
+  return { sky, suggestions, events: calendarEvents(db, day, day, today) };
 }

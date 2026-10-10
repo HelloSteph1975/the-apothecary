@@ -12,6 +12,7 @@ import { useApi } from '../../lib/useApi.js';
 import { useLeaveGuard } from '../../lib/useLeaveGuard.js';
 import { formatAmount } from '../../lib/cabinet.js';
 import { todayString } from '../../lib/today.js';
+import { isDay } from '../../lib/calendar.js';
 import { ScaleControl } from '../recipes/ScaleControl.jsx';
 import { StartDates } from './StartDates.jsx';
 import { DrawLines, linesFromPlan, linesBody } from './DrawLines.jsx';
@@ -34,7 +35,7 @@ export function NewBatch() {
   const [recipeId, setRecipeId] = useState(params.get('recipe') || '');
   const [scale, setScale] = useState(params.get('scale') || '');
   const [yieldValue, setYield] = useState(params.get('yield') || '');
-  const [startDate, setStartDate] = useState(todayString());
+  const [startDate, setStartDate] = useState(() => (isDay(params.get('start')) ? params.get('start') : todayString()));
   const [dateInput, setDateInput] = useState(startDate);
   const [plan, setPlan] = useState(null);
   const [planKey, setPlanKey] = useState(null); // the inputs the shown plan was made for
