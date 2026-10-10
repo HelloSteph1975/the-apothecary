@@ -296,3 +296,14 @@ it('searches for a backslash literally', async () => {
   const res = await s.h().get(`/api/journal?q=${encodeURIComponent(slash)}`);
   expect(res.body.entries.map(e => e.id)).toEqual([a.id]);
 });
+
+it('keeps the first-line indent and trailing blank lines of the writing', async () => {
+  const s = setup();
+  const body = '    indented first line\n  second\n\n\n';
+  const e = await s.make(s.ritual, 'Indented', '2026-10-10', { body });
+  const got = await s.h().get(`/api/journal/${e.id}`);
+  expect(got.body.body).toBe(body);
+  const upd = await s.h().patch(`/api/journal/${e.id}`).send({ body: '  \n ' });
+  expect(upd.status).toBe(200);
+  expect((await s.h().get(`/api/journal/${e.id}`)).body.body).toBeNull();
+});

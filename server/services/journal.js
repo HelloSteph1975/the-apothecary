@@ -179,6 +179,8 @@ function parseTags(list, errors) {
 function parseEntryInput(db, body, { partial }) {
   const src = body && typeof body === 'object' ? body : {};
   const { data = {}, errors = {} } = validate(journalEntrySchema, src, { partial });
+  // The writing keeps its indentation and trailing lines; the shared string rule would trim them.
+  if (typeof src.body === 'string' && !errors.body) data.body = src.body.trim() ? src.body : null;
   if (data.type_id != null && !isLive(db, 'journal_types', data.type_id)) errors.type_id = "That type doesn't exist";
   if (data.entry_time != null && !TIME.test(data.entry_time)) errors.entry_time = 'Use a time like 14:30';
   if (data.entry_date != null) {
