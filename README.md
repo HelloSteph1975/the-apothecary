@@ -6,7 +6,7 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-This is Stage 5 of 8. It adds a calendar and a to-do list to the herb cabinet, the grimoire, the recipe book, the batch journal and the sky.
+This is Stage 6 of 8. It adds a journal and a photo gallery to the herb cabinet, the grimoire, the recipe book, the batch journal, the sky, the calendar and the to-do list.
 
 - Today shows a greeting and the date, plus the sky: the moon's phase and sign, the day's ruling planet, the next new or full moon and the next festival.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
@@ -19,6 +19,8 @@ This is Stage 5 of 8. It adds a calendar and a to-do list to the herb cabinet, t
 - Sky and tradition. Today shows up to two folk timing suggestions, taken from rules you can edit or turn off in Settings. Batches show the sky on their start date, and starting one suggests good days in the next four weeks. Every suggestion is labelled folk tradition, and none of them ever changes a caution.
 - To-do keeps tasks with due dates, repeats (every day, week or month, every new moon, full moon or festival), a priority, a linked jar, recipe, batch or herb, and photos. The app also makes tasks of its own for batch steps, restocks and jars nearing their use-by date, which you can snooze or dismiss. Views are today, upcoming, by area and done, and Today lists what is due.
 - Calendar shows month, week and agenda views with each day's moon and sign, festivals and new and full moons marked, plus batch steps, tasks and use-by dates. Filters let you hide any of them, and each day has a page where you can add a task or start a batch on that day. Everything stays inside the app, with no syncing and no notifications outside it.
+- Journal keeps your own writing. Entry types are yours to manage, with 8 starters. An entry has a title, date and time, a mood, tags, links to herbs, recipes and batches, and photos. Each entry is stamped with the moon's phase and sign, the day's planet and any festival. View entries by type, tag or moon phase, search them, and see them on the calendar.
+- Photos is a gallery of every photo in the app. Filter it by kind and date, and each photo links back to its record.
 - The other drawers say so when they are not built yet.
 
 ![The herb cabinet](docs/screenshots/shelves.jpg)
@@ -32,6 +34,8 @@ The grimoire is for learning and record keeping, not medical advice. Ask a docto
 ![The batch journal](docs/screenshots/batches.jpg)
 
 ![The calendar](docs/screenshots/calendar.jpg)
+
+![The journal](docs/screenshots/journal.jpg)
 
 ## Install on Windows
 
