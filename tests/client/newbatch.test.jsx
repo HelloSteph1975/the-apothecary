@@ -126,6 +126,8 @@ it('forgets the scale and yield when another recipe is picked', async () => {
   await user.selectOptions(screen.getByLabelText('Recipe'), '8');
   await waitFor(() => expect(plans().length).toBe(n + 1));
   expect(plans().at(-1).body).toEqual({ recipe_id: 8, start_date: expect.any(String) });
+  expect(screen.getByLabelText('Make')).toHaveValue('1');
+  expect(screen.getByRole('option', { name: 'As written' }).selected).toBe(true);
 });
 
 it('shows a scale error with Reset instead of waiting for jars', async () => {
@@ -134,6 +136,9 @@ it('shows a scale error with Reset instead of waiting for jars', async () => {
   expect(await screen.findByText('That is too large.')).toBeInTheDocument();
   expect(screen.queryByText('Working out the jars…')).toBeNull();
   expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Ingredients and jars' })).toBeNull();
+  expect(screen.queryByRole('region', { name: 'Journal' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeDisabled();
 });
 
 it('shows a draw row per ingredient with the flag notes', async () => {

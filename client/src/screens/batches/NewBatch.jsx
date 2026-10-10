@@ -194,11 +194,12 @@ export function NewBatch() {
           </Field>
         </ParchmentCard>
         {!free && (
-          <ScaleControl recipe={recipeInfo} scaleParam={scale} yieldParam={yieldValue} error={scaleError}
+          <ScaleControl key={recipeId} recipe={recipeInfo} scaleParam={scale} yieldParam={yieldValue} error={scaleError}
             setScale={(sc, y) => { setScale(sc); setYield(y); }} />
         )}
         {waiting ? <p role="status">Working out the jars…</p> : (
           <>
+            {!blocked && (<>
             <ParchmentCard title="Ingredients and jars" subtitle={free ? undefined : 'Each jar is drawn down when you start.'}>
               <DrawLines lines={free ? freeLines : lines} onChange={changeLines} free={free} items={items.data ?? []} errors={errors} />
             </ParchmentCard>
@@ -244,8 +245,9 @@ export function NewBatch() {
                 <TextArea value={form.notes} onChange={e => setField('notes', e.target.value)} />
               </Field>
             </ParchmentCard>
+            </>)}
             <p className="page-actions">
-              <WaxSeal type="submit" disabled={saving}>Start batch</WaxSeal>
+              <WaxSeal type="submit" disabled={saving || blocked}>Start batch</WaxSeal>
               <Link to="/batches">Cancel</Link>
             </p>
           </>
