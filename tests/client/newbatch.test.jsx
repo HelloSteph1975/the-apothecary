@@ -515,3 +515,9 @@ it('uses ?start= for a free-form batch too', async () => {
   open('/batches/new?start=2026-11-02');
   expect(await screen.findByLabelText('Start date')).toHaveValue('2026-11-02');
 });
+
+it('ignores a ?start= outside 1900 to 2100', async () => {
+  open('/batches/new?recipe=7&start=2300-01-01');
+  await ready();
+  expect(screen.getByLabelText('Start date')).toHaveValue(todayString());
+});

@@ -148,9 +148,13 @@ it('runs the auto task sync and flags overdue for a past day', async () => {
 
 it('passes now to the sky only for today', async () => {
   t = makeTestContext();
+  const now = new Date(2026, 9, 10, 12, 0, 0);
   const a = (await day(TODAY)).body.sky;
-  expect(a.day).toBe(TODAY);
-  expect(new Date(a.next_new) > new Date(2026, 9, 10, 12, 0, 0)).toBe(true);
+  const past = (await day('2026-10-05')).body.sky;
+  // Today counts from the current moment; another day counts from its own noon.
+  expect(new Date(a.next_new) > now).toBe(true);
+  expect(past.next_new).not.toBe(a.next_new);
+  expect(new Date(past.next_new) > new Date(2026, 9, 5, 12, 0, 0)).toBe(true);
 });
 
 it('validates the day', async () => {

@@ -14,6 +14,7 @@ import { todayString } from '../../lib/today.js';
 import { formatDay } from '../../lib/cabinet.js';
 import { AREAS, RELATED_OPTIONS, addDaysTo, dueLabel, relatedLink, repeatText, shortDay } from '../../lib/tasks.js';
 import { TaskForm } from './TaskForm.jsx';
+import { TaskCheck } from './TaskCheck.jsx';
 
 export const VIEWS = [
   { value: 'today', label: 'Today' },
@@ -113,21 +114,12 @@ export function RelatedLink({ related }) {
 }
 
 function TaskRow({ task, actions, today }) {
-  const [busy, setBusy] = useState(false);
   const due = dueLabel(task, today);
   const repeat = repeatText(task);
   const asleep = !task.done_on && task.snoozed_until && task.snoozed_until > today;
-  // The row stays busy until the refreshed list hands it a new task, so a second click cannot repeat the change.
-  useEffect(() => { setBusy(false); }, [task]);
-  const toggle = async () => {
-    if (busy) return;
-    setBusy(true);
-    const res = await (task.done_on ? actions.uncomplete(task) : actions.complete(task));
-    if (!res) setBusy(false);
-  };
   return (
     <li className="task-row">
-      <input type="checkbox" className="task-check" aria-label={`Done: ${task.title}`} checked={Boolean(task.done_on)} aria-disabled={busy || undefined} onChange={toggle} />
+      <TaskCheck task={task} actions={actions} />
       <div className="task-main">
         <Link to={`/todo/${task.id}`} className="task-title">{task.title}</Link>
         <div className="task-meta">

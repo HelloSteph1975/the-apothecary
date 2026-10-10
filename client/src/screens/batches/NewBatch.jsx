@@ -27,6 +27,8 @@ const inputKey = (...parts) => JSON.stringify(parts);
 let stepKey = 1;
 const newStep = (st = {}) => ({ key: stepKey++, title: s(st.title), due_on: s(st.due_on) });
 
+const validStart = v => isDay(v) && v >= '1900-01-01' && v <= '2100-12-31';
+
 export function NewBatch() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -35,7 +37,7 @@ export function NewBatch() {
   const [recipeId, setRecipeId] = useState(params.get('recipe') || '');
   const [scale, setScale] = useState(params.get('scale') || '');
   const [yieldValue, setYield] = useState(params.get('yield') || '');
-  const [startDate, setStartDate] = useState(() => (isDay(params.get('start')) ? params.get('start') : todayString()));
+  const [startDate, setStartDate] = useState(() => (validStart(params.get('start')) ? params.get('start') : todayString()));
   const [dateInput, setDateInput] = useState(startDate);
   const [plan, setPlan] = useState(null);
   const [planKey, setPlanKey] = useState(null); // the inputs the shown plan was made for

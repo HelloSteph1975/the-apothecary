@@ -43,11 +43,11 @@ export function DayPage() {
   const back = <p><Link to={`/calendar?date=${day}`}>Back to the calendar</Link></p>;
 
   if (error) return <>{header}<p role="alert">{error.message}</p><Button onClick={reload}>Try again</Button>{back}</>;
-  if (!data) return <>{header}<p role="status">Opening the day…</p>{back}</>;
+  if (!data || !settings) return <>{header}<p role="status">Opening the day…</p>{back}</>;
 
   const { sky, suggestions, events } = data;
   const festival = festivalLine(sky);
-  const showFolk = settings?.sky_suggestions !== 'off';
+  const showFolk = settings.sky_suggestions !== 'off';
   return (
     <>
       {header}

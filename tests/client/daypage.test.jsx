@@ -25,10 +25,12 @@ let calls;
 let payload;
 let settings;
 let failOnce;
+let hold;
 let location;
 beforeEach(() => {
   calls = [];
   failOnce = false;
+  hold = null;
   settings = { keeper_name: '', sky_suggestions: 'on' };
   payload = {
     sky: sky(),
@@ -47,6 +49,7 @@ beforeEach(() => {
     const m = /^\/api\/calendar\/day\/([\d-]+)$/.exec(url);
     if (m) {
       if (failOnce) { failOnce = false; return json({ error: 'The day would not open.' }, 500); }
+      if (hold) await hold;
       return json({ ...payload, sky: sky(m[1]) });
     }
     if (url.startsWith('/api/tasks?')) return json([]);
@@ -162,4 +165,18 @@ it('treats a bad day as not found', async () => {
   await open('/calendar/2026-02-30');
   expect(await screen.findByText(/That page isn't in the cabinet/)).toBeInTheDocument();
   expect(calls.some(c => c.url.startsWith('/api/calendar/day/'))).toBe(false);
+});
+
+it('posts complete once on a second click while the day is reloading', async () => {
+  const user = userEvent.setup();
+  await open('/calendar/2026-10-31');
+  const box = await screen.findByRole('checkbox', { name: 'Done: Light a candle' });
+  let release;
+  hold = new Promise(r => { release = r; });
+  await user.click(box);
+  await waitFor(() => expect(calls.filter(c => c.url === '/api/calendar/day/2026-10-31').length).toBeGreaterThan(1));
+  await user.click(box);
+  release();
+  await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Done: Light a candle' })).toBeInTheDocument());
+  expect(calls.filter(c => c.method === 'POST' && c.url === '/api/tasks/7/complete')).toHaveLength(1);
 });

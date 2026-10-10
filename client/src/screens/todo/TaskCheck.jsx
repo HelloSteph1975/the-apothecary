@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 // so a second click cannot repeat the change. `actions` comes from useTaskActions.
 export function TaskCheck({ task, actions }) {
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setBusy(false); }, [task]);
+  useEffect(() => { setBusy(false); }, [task.id, task.done_on]);
   const toggle = async () => {
     if (busy) return;
     setBusy(true);

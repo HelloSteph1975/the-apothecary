@@ -296,3 +296,11 @@ it('completes a task from the Today card and reloads', async () => {
   await userEvent.click(await screen.findByRole('checkbox', { name: 'Done: Water the sage' }));
   await vi.waitFor(() => expect(posts).toContain('/api/tasks/3/complete'));
 });
+
+it('posts complete once on a double click in the Today card', async () => {
+  summary = { ...summary, tasks: [task(3, 'Water the sage')], counts: { ...summary.counts, tasks: 1 } };
+  today();
+  await userEvent.dblClick(await screen.findByRole('checkbox', { name: 'Done: Water the sage' }));
+  await vi.waitFor(() => expect(posts).toContain('/api/tasks/3/complete'));
+  expect(posts.filter(u => u === '/api/tasks/3/complete')).toHaveLength(1);
+});
