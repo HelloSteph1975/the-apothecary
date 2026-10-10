@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -42,11 +42,13 @@ let calls;
 let shortOnce;
 let planFail;
 let scaleBad;
+let holdPlan;
 beforeEach(() => {
   calls = [];
   shortOnce = false;
   planFail = false;
   scaleBad = false;
+  holdPlan = null;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
@@ -57,6 +59,7 @@ beforeEach(() => {
     if (url === '/api/batches/plan') {
       if (planFail) return json({ error: 'That recipe is not in the book.' }, 404);
       if (scaleBad && body.scale === 99) return json({ error: 'Fix the scale.', details: { scale: 'That is too large.' } }, 400);
+      if (holdPlan && body.scale === holdPlan.scale) await holdPlan.promise;
       return json(planFor(body.scale ?? 1));
     }
     if (url === '/api/batches' && method === 'POST') {
@@ -313,4 +316,68 @@ it('shows a load error with Try again', async () => {
   planFail = false;
   await user.click(screen.getByRole('button', { name: 'Try again' }));
   await ready();
+});
+
+// Greptile round 1 -------------------------------------------------------------
+
+it('cannot start a batch from an old plan while a new plan is on its way', async () => {
+  const user = userEvent.setup();
+  let release;
+  holdPlan = { scale: 3, promise: new Promise(r => { release = r; }) };
+  open('/batches/new?recipe=7');
+  await ready();
+  await user.selectOptions(screen.getByLabelText('Make'), '3');
+  await waitFor(() => expect(plans().at(-1).body.scale).toBe(3));
+  const start = screen.getByRole('button', { name: 'Start batch' });
+  expect(start).toBeDisabled();
+  fireEvent.submit(start.closest('form'));
+  await new Promise(r => setTimeout(r, 50));
+  expect(posts()).toHaveLength(0);
+  release();
+  await screen.findByRole('group', { name: '90 g Calendula' });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Start batch' })).toBeEnabled());
+  await user.click(screen.getByRole('button', { name: 'Start batch' }));
+  await waitFor(() => expect(posts()).toHaveLength(1));
+  expect(posts()[0].body.factor).toBe(3);
+});
+
+it('cannot start a batch from an old plan after the new scale fails', async () => {
+  const user = userEvent.setup();
+  scaleBad = true;
+  open('/batches/new?recipe=7');
+  await ready();
+  await user.selectOptions(screen.getByLabelText('Make'), 'other');
+  await user.type(await screen.findByLabelText('Factor'), '99');
+  expect(await screen.findByText('That is too large.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeDisabled();
+  fireEvent.submit(screen.getByRole('button', { name: 'Start batch' }).closest('form'));
+  await new Promise(r => setTimeout(r, 50));
+  expect(posts()).toHaveLength(0);
+});
+
+it('asks for a start date when it is cleared, and does not save the old one', async () => {
+  const user = userEvent.setup();
+  open('/batches/new?recipe=7');
+  await ready();
+  const n = plans().length;
+  await user.clear(screen.getByLabelText('Start date'));
+  expect(await screen.findByText('Pick a start date')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeDisabled();
+  fireEvent.submit(screen.getByRole('button', { name: 'Start batch' }).closest('form'));
+  await new Promise(r => setTimeout(r, 400));
+  expect(posts()).toHaveLength(0);
+  expect(plans()).toHaveLength(n);
+  await user.type(screen.getByLabelText('Start date'), '2026-11-01');
+  await waitFor(() => expect(plans().at(-1).body.start_date).toBe('2026-11-01'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Start batch' })).toBeEnabled());
+  expect(screen.queryByText('Pick a start date')).toBeNull();
+});
+
+it('asks for a start date on a free-form batch too', async () => {
+  const user = userEvent.setup();
+  open('/batches/new');
+  await screen.findByLabelText('Recipe');
+  await user.clear(screen.getByLabelText('Start date'));
+  expect(await screen.findByText('Pick a start date')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeDisabled();
 });

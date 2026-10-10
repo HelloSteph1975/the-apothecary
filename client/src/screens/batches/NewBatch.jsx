@@ -20,6 +20,8 @@ const orNull = v => (v.trim() === '' ? null : v.trim());
 const FIELDS = ['name', 'intention', 'method', 'base', 'label_notes'];
 const EMPTY = { name: '', intention: '', method: '', base: '', label_notes: '', notes: '' };
 
+const inputKey = (...parts) => JSON.stringify(parts);
+
 let stepKey = 1;
 const newStep = (st = {}) => ({ key: stepKey++, title: s(st.title), due_on: s(st.due_on) });
 
@@ -34,6 +36,7 @@ export function NewBatch() {
   const [startDate, setStartDate] = useState(todayString());
   const [dateInput, setDateInput] = useState(startDate);
   const [plan, setPlan] = useState(null);
+  const [planKey, setPlanKey] = useState(null); // the inputs the shown plan was made for
   const [planError, setPlanError] = useState(null);
   const [scaleError, setScaleError] = useState(null);
   const [tick, setTick] = useState(0);
@@ -66,6 +69,7 @@ export function NewBatch() {
   useEffect(() => {
     if (!recipeId) { setPlan(null); setPlanError(null); setScaleError(null); return undefined; }
     let live = true;
+    const key = inputKey(recipeId, scale, yieldValue, startDate);
     const body = { recipe_id: Number(recipeId), start_date: startDate };
     if (scale) body.scale = Number(scale);
     else if (yieldValue) body.yield = Number(yieldValue);
@@ -73,6 +77,7 @@ export function NewBatch() {
       p => {
         if (!live) return;
         setPlan(p);
+        setPlanKey(key);
         setPlanError(null);
         setScaleError(null);
         setLines(linesFromPlan(p));
@@ -102,6 +107,7 @@ export function NewBatch() {
     setYield('');
     setScaleError(null);
     setPlan(null);
+    setPlanKey(null);
     setLines([]);
     setSteps([]);
   };
@@ -125,13 +131,13 @@ export function NewBatch() {
 
   async function save(e, confirmShort = false) {
     e?.preventDefault();
-    if (savingRef.current) return;
+    if (savingRef.current || !canStart) return;
     savingRef.current = true;
     setSaving(true);
     const body = {
       name: form.name.trim(),
       recipe_id: free ? null : Number(recipeId),
-      start_date: startDate,
+      start_date: dateInput,
       intention: orNull(form.intention),
       method: orNull(form.method),
       base: orNull(form.base),
@@ -157,6 +163,11 @@ export function NewBatch() {
       setSaving(false);
     }
   }
+
+  // A recipe batch may only be saved from the plan made for exactly what is on screen now.
+  const planCurrent = free || (plan != null && planKey === inputKey(recipeId, scale, yieldValue, dateInput) && !scaleError);
+  const dateMissing = dateInput === '';
+  const canStart = planCurrent && !dateMissing;
 
   const header = <PageHeader title="Start a batch" subtitle="Pick a recipe, check the jars, and begin" />;
   const loadError = recipes.error || items.error || planError;
@@ -189,7 +200,7 @@ export function NewBatch() {
             <Select value={recipeId} onChange={e => chooseRecipe(e.target.value)} placeholder="No recipe (free-form)"
               options={recipes.data.map(r => ({ value: String(r.id), label: r.name }))} />
           </Field>
-          <Field label="Start date" error={errors.start_date}>
+          <Field label="Start date" error={dateMissing ? 'Pick a start date' : errors.start_date}>
             <DateInput value={dateInput} onChange={e => setDateInput(e.target.value)} />
           </Field>
         </ParchmentCard>
@@ -247,7 +258,8 @@ export function NewBatch() {
             </ParchmentCard>
             </>)}
             <p className="page-actions">
-              <WaxSeal type="submit" disabled={saving || blocked}>Start batch</WaxSeal>
+              <WaxSeal type="submit" disabled={saving || blocked || !canStart}>Start batch</WaxSeal>
+              {!free && !canStart && !blocked && !dateMissing && !scaleError && <span role="status" className="muted">Updating the jars…</span>}
               <Link to="/batches">Cancel</Link>
             </p>
           </>
