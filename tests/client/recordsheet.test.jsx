@@ -76,3 +76,17 @@ it('offers Try again when the batch will not load', async () => {
   await waitFor(() => expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument());
   expect(within(document.body).getByRole('alert')).toBeInTheDocument();
 });
+
+it('shows what was drawn from the jar when it differs from the recipe amount', async () => {
+  batch.lines = [
+    { id: 1, herb_id: 3, name: 'Calendula', amount: 30, unit: 'g', drawn_amount: 0.03, drawn_unit: 'kg', item: { id: 9, name: 'Calendula jar', live: true } },
+    { id: 2, herb_id: null, name: 'Olive oil', amount: 500, unit: 'ml', drawn_amount: 500, drawn_unit: 'ml', item: { id: 10, name: 'Oil', live: true } },
+    { id: 3, herb_id: null, name: 'Rose', amount: null, unit: null, drawn_amount: 5, drawn_unit: 'g', item: null },
+  ];
+  open();
+  const sheet = await screen.findByTestId('record-sheet');
+  const items = [...sheet.querySelectorAll('.sheet-herbs li')].map(li => li.textContent);
+  expect(items[0]).toBe('30 g Calendula (0.03 kg drawn from Calendula jar)');
+  expect(items[1]).toBe('500 ml Olive oil');
+  expect(items[2]).toBe('5 g Rose');
+});

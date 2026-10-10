@@ -48,8 +48,10 @@ export function FinishDialog({ batch, open, onClose, onFinished }) {
   }, [open, planned]);
 
   const sectionId = jar.section_id || (firstSupply ? String(firstSupply.id) : '');
-  const jarAmount = jar.amount ?? form.yield_amount;
   const jarUnit = jar.unit ?? (isCabinetUnit(form.yield_unit) ? form.yield_unit : '');
+  // The yield number only carries over when the jar is counted in the same unit; the app does not convert here.
+  const unitsDiffer = jarUnit !== '' && form.yield_unit !== '' && jarUnit !== form.yield_unit;
+  const jarAmount = jar.amount ?? (unitsDiffer ? '' : form.yield_amount);
   const setF = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
   const setJ = (k, v) => { setJar(j => ({ ...j, [k]: v })); setErrors(e => ({ ...e, [`add_to_cabinet.${k}`]: undefined })); };
 
@@ -82,6 +84,12 @@ export function FinishDialog({ batch, open, onClose, onFinished }) {
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" form="finish-batch-form" disabled={saving}>Finish</Button></>}>
       <form id="finish-batch-form" onSubmit={save} noValidate>
         {formError && <p role="alert" className="field-error">{formError}</p>}
+        {[['recipe', recipe, 'the recipe'], ['sections', sections, 'the sections']].map(([key, q, what]) => q.error && (
+          <div key={key}>
+            <p role="alert" className="field-error">{q.error.message || `Could not load ${what}.`}</p>
+            <Button variant="secondary" onClick={q.reload}>Try again</Button>
+          </div>
+        ))}
         <Field label="Finished on" error={errors.finished_on}>
           <DateInput data-autofocus value={form.finished_on} onChange={e => setF('finished_on', e.target.value)} />
         </Field>
@@ -101,7 +109,7 @@ export function FinishDialog({ batch, open, onClose, onFinished }) {
                 options={list.map(x => ({ value: String(x.id), label: x.name }))} />
             </Field>
             <Field label="Name" error={err('name')}><TextInput value={jar.name} onChange={e => setJ('name', e.target.value)} /></Field>
-            <Field label="Amount" error={err('amount')}><NumberInput min="0" value={jarAmount} onChange={e => setJ('amount', e.target.value)} /></Field>
+            <Field label="Amount" error={err('amount')} hint={unitsDiffer && jar.amount == null ? `Enter the amount in ${jarUnit}.` : undefined}><NumberInput min="0" value={jarAmount} onChange={e => setJ('amount', e.target.value)} /></Field>
             <Field label="Unit" error={err('unit')} hint={jarUnit === '' ? 'Pick a cabinet unit for the jar' : undefined}>
               <Select value={jarUnit} onChange={e => setJ('unit', e.target.value)} placeholder="Choose a unit" options={UNITS} />
             </Field>

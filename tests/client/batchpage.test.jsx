@@ -34,11 +34,13 @@ let batch;
 let calls;
 let failFinish;
 let recipeYield;
+let failLoads;
 beforeEach(() => {
   calls = [];
   batch = JSON.parse(JSON.stringify(base));
   failFinish = null;
   recipeYield = { scaled_yield_amount: 200, yield_unit: 'ml' };
+  failLoads = new Set();
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
@@ -75,8 +77,8 @@ beforeEach(() => {
       batch = { ...batch, finished_on: null, yield_amount: null, yield_unit: null, expires_on: null, item_id: null, made_item: null, status: 'ready' };
       return json(batch);
     }
-    if (url === '/api/sections') return json(sections);
-    if (url.startsWith('/api/recipes/7')) return json({ id: 7, ...recipeYield });
+    if (url === '/api/sections') return failLoads.has('sections') ? json({ error: 'The sections would not load.' }, 500) : json(sections);
+    if (url.startsWith('/api/recipes/7')) return failLoads.has('recipe') ? json({ error: 'The recipe would not load.' }, 500) : json({ id: 7, ...recipeYield });
     return json({});
   });
 });
@@ -282,6 +284,32 @@ it('leaves the jar unit blank with a note when the yield unit is not a cabinet u
   expect(within(dialog).getByText('Pick a cabinet unit for the jar')).toBeInTheDocument();
   await userEvent.selectOptions(within(dialog).getByLabelText('Unit'), 'ml');
   expect(within(dialog).queryByText('Pick a cabinet unit for the jar')).toBeNull();
+});
+
+it('clears the jar amount and asks for it when the jar unit differs from the yield unit', async () => {
+  recipeYield = { scaled_yield_amount: 6, yield_unit: 'tsp' };
+  const dialog = await openFinish();
+  await waitFor(() => expect(within(dialog).getByLabelText('Yield unit')).toHaveValue('tsp'));
+  await userEvent.selectOptions(within(dialog).getByLabelText('Unit'), 'ml');
+  expect(within(dialog).getByLabelText('Amount')).toHaveValue(null);
+  expect(within(dialog).getByText('Enter the amount in ml.')).toBeInTheDocument();
+  await userEvent.type(within(dialog).getByLabelText('Amount'), '30');
+  expect(within(dialog).getByLabelText('Amount')).toHaveValue(30);
+});
+
+it('shows a load failure inside the dialog with Try again, for the recipe and the sections', async () => {
+  failLoads = new Set(['recipe', 'sections']);
+  const dialog = await openFinish();
+  expect(await within(dialog).findByText('The recipe would not load.')).toBeInTheDocument();
+  expect(await within(dialog).findByText('The sections would not load.')).toBeInTheDocument();
+  expect(within(dialog).getAllByRole('alert')).toHaveLength(2);
+  failLoads = new Set();
+  const before = calls.filter(c => c.url === '/api/sections').length;
+  await userEvent.click(within(dialog).getAllByRole('button', { name: 'Try again' })[1]);
+  await waitFor(() => expect(calls.filter(c => c.url === '/api/sections').length).toBe(before + 1));
+  await waitFor(() => expect(within(dialog).queryByText('The sections would not load.')).toBeNull());
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(within(dialog).getByLabelText('Yield amount')).toHaveValue(200));
 });
 
 it('shows server errors inside the dialog, on the field and as an alert', async () => {

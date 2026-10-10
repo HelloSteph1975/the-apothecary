@@ -22,6 +22,16 @@ function Field({ label, children, lines = 2 }) {
   );
 }
 
+// The recipe amount, plus what came out of the jar when that is a different amount or unit.
+function herbText(l) {
+  const drawn = l.drawn_amount == null ? null : formatAmount(l.drawn_amount, l.drawn_unit);
+  const asked = l.amount == null ? null : formatAmount(l.amount, l.unit);
+  const shown = asked ?? drawn;
+  const differs = asked != null && drawn != null && (l.drawn_amount !== l.amount || l.drawn_unit !== l.unit);
+  const from = differs ? ` (${drawn} drawn from ${l.item?.name ?? 'a jar'})` : '';
+  return `${shown ? `${shown} ` : ''}${l.name}${from}`;
+}
+
 const text = v => (v && String(v).trim() ? <p className="pre-line">{v}</p> : null);
 
 export function RecordSheet() {
@@ -72,9 +82,7 @@ export function RecordSheet() {
           <Field label="Herbs used" lines={3}>
             {lines.length > 0 ? (
               <ul className="sheet-herbs">
-                {lines.map(l => (
-                  <li key={l.id}>{l.amount == null ? '' : `${formatAmount(l.amount, l.unit)} `}{l.name}</li>
-                ))}
+                {lines.map(l => <li key={l.id}>{herbText(l)}</li>)}
               </ul>
             ) : null}
           </Field>
