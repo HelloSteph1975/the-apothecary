@@ -26,6 +26,12 @@ export function repos(db) {
         'intention', 'timing_notes', 'notes'], { orderBy: 'name COLLATE NOCASE' }),
       recipeIngredients: createRepo(db, 'recipe_ingredients', ['recipe_id', 'herb_id', 'name', 'amount', 'unit', 'form', 'plant_part',
         'note', 'sort_order', 'herb_gone'], { orderBy: 'sort_order, id' }),
+      batches: createRepo(db, 'batches', ['recipe_id', 'type_id', 'name', 'start_date', 'factor', 'base', 'intention', 'method', 'noticed',
+        'would_change', 'label_notes', 'notes', 'finished_on', 'yield_amount', 'yield_unit', 'expires_on', 'item_id'],
+        { orderBy: 'start_date DESC, id DESC' }),
+      batchIngredients: createRepo(db, 'batch_ingredients', ['batch_id', 'herb_id', 'name', 'amount', 'unit', 'item_id', 'drawn_amount',
+        'drawn_unit', 'sort_order'], { orderBy: 'sort_order, id' }),
+      batchSteps: createRepo(db, 'batch_steps', ['batch_id', 'title', 'due_on', 'done_on', 'sort_order'], { orderBy: 'sort_order, id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);

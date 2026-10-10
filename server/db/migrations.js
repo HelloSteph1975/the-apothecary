@@ -77,6 +77,26 @@ export const migrations = [
   CREATE INDEX idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
   CREATE INDEX idx_recipe_ingredients_herb ON recipe_ingredients(herb_id);
   `,
+  // 5: the batch journal. A batch keeps its own name, lines and steps so it survives its recipe or jars being purged.
+  `
+  CREATE TABLE batches (id INTEGER PRIMARY KEY, recipe_id INTEGER REFERENCES recipes(id), type_id INTEGER REFERENCES recipe_types(id),
+    name TEXT NOT NULL, start_date TEXT NOT NULL, factor REAL CHECK (factor IS NULL OR factor > 0),
+    base TEXT, intention TEXT, method TEXT, noticed TEXT, would_change TEXT, label_notes TEXT, notes TEXT,
+    finished_on TEXT, yield_amount REAL CHECK (yield_amount IS NULL OR yield_amount > 0), yield_unit TEXT,
+    expires_on TEXT, item_id INTEGER REFERENCES items(id), ${TS});
+  CREATE INDEX idx_batches_recipe ON batches(recipe_id);
+  CREATE INDEX idx_batches_start ON batches(start_date);
+  CREATE TABLE batch_ingredients (id INTEGER PRIMARY KEY, batch_id INTEGER NOT NULL REFERENCES batches(id),
+    herb_id INTEGER REFERENCES herbs(id), name TEXT NOT NULL, amount REAL CHECK (amount IS NULL OR amount >= 0), unit TEXT,
+    item_id INTEGER REFERENCES items(id), drawn_amount REAL CHECK (drawn_amount IS NULL OR drawn_amount >= 0), drawn_unit TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE INDEX idx_batch_ingredients_batch ON batch_ingredients(batch_id);
+  CREATE INDEX idx_batch_ingredients_item ON batch_ingredients(item_id);
+  CREATE TABLE batch_steps (id INTEGER PRIMARY KEY, batch_id INTEGER NOT NULL REFERENCES batches(id), title TEXT NOT NULL,
+    due_on TEXT, done_on TEXT, sort_order INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE INDEX idx_batch_steps_batch ON batch_steps(batch_id);
+  CREATE INDEX idx_batch_steps_due ON batch_steps(due_on) WHERE done_on IS NULL;
+  `,
 ];
 
 export function migrate(db) {

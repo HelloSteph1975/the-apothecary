@@ -143,3 +143,37 @@ it('purges old recipes with their ingredients and photos, unlinks purged herbs, 
   expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(freeType)).toBeUndefined();
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '6-ffffffff.jpg'))).toBe(false);
 });
+
+it('purges old batches with lines, steps and photos, unlinks purged items and recipes, and keeps a type a batch uses', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
+  const batchType = run("INSERT INTO recipe_types (name, deleted_at) VALUES ('Batch only', ?)", old);
+  const freeType = run("INSERT INTO recipe_types (name, deleted_at) VALUES ('Free', ?)", old);
+  const liveType = run("INSERT INTO recipe_types (name) VALUES ('Live')");
+  const goneRecipe = run('INSERT INTO recipes (name, type_id, deleted_at) VALUES (?, ?, ?)', 'Old salve', liveType, old);
+  const goneItem = run("INSERT INTO items (section_id, name, amount, unit, deleted_at) VALUES (1, 'Gone jar', 1, 'g', ?)", old);
+  const goneBatch = run("INSERT INTO batches (name, start_date, deleted_at) VALUES ('Old batch', '2026-01-01', ?)", old);
+  run("INSERT INTO batch_ingredients (batch_id, name) VALUES (?, 'of gone')", goneBatch);
+  run("INSERT INTO batch_steps (batch_id, title) VALUES (?, 'of gone')", goneBatch);
+  run("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('batch', ?, '7-abababab.jpg')", goneBatch);
+  fs.writeFileSync(path.join(t.dataDir, 'photos', '7-abababab.jpg'), 'x');
+  const live = run('INSERT INTO batches (name, start_date, recipe_id, type_id, item_id) VALUES (?, ?, ?, ?, ?)',
+    'Live batch', '2026-02-01', goneRecipe, batchType, goneItem);
+  const line = run("INSERT INTO batch_ingredients (batch_id, name, item_id, drawn_amount, drawn_unit) VALUES (?, 'Rose', ?, 5, 'g')", live, goneItem);
+  run("INSERT INTO batch_ingredients (batch_id, name, deleted_at) VALUES (?, 'replaced', ?)", live, old);
+  run("INSERT INTO batch_steps (batch_id, title, deleted_at) VALUES (?, 'replaced', ?)", live, old);
+  run("INSERT INTO batch_steps (batch_id, title) VALUES (?, 'keep')", live);
+
+  const counts = purgeSoftDeleted(db, t.dataDir);
+  expect(counts).toMatchObject({ photos: 1, batches: 1, items: 1, recipes: 1, recipe_types: 1 });
+  expect(db.prepare('SELECT id FROM batches').all().map(r => r.id)).toEqual([live]);
+  expect(db.prepare('SELECT name FROM batch_ingredients').all().map(r => r.name)).toEqual(['Rose']);
+  expect(db.prepare('SELECT title FROM batch_steps').all().map(r => r.title)).toEqual(['keep']);
+  expect(db.prepare('SELECT item_id, drawn_amount FROM batch_ingredients WHERE id = ?').get(line)).toEqual({ item_id: null, drawn_amount: 5 });
+  expect(db.prepare('SELECT recipe_id, item_id, name FROM batches WHERE id = ?').get(live)).toEqual({ recipe_id: null, item_id: null, name: 'Live batch' });
+  expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(batchType)).toBeDefined();
+  expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(freeType)).toBeUndefined();
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '7-abababab.jpg'))).toBe(false);
+});
