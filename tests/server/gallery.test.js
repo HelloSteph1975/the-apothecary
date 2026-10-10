@@ -103,3 +103,13 @@ it('lists the kinds that have photos, with counts', async () => {
   const res = await h().get('/api/gallery/kinds');
   expect(res.body).toEqual([{ kind: 'herb', count: 2 }, { kind: 'journal', count: 1 }]);
 });
+
+it('rejects huge page numbers and returns an empty list past the end', async () => {
+  const { h, add } = setup();
+  add('herb', '2026-10-01 10:00:00');
+  expect((await h().get('/api/gallery?page=1e21')).status).toBe(400);
+  expect((await h().get('/api/gallery?page=100001')).body.details.page).toBeTruthy();
+  const res = await h().get('/api/gallery?page=100000');
+  expect(res.status).toBe(200);
+  expect(res.body).toMatchObject({ photos: [], total: 1, page: 100000 });
+});

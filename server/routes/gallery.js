@@ -10,7 +10,7 @@ export function galleryRouter(ctx) {
   r.get('/', (req, res) => {
     const q = req.query;
     const text = k => (typeof q[k] === 'string' && q[k] !== '' ? q[k] : undefined);
-    check({ page: { type: 'int', min: 1 } }, { page: text('page') });
+    check({ page: { type: 'int', min: 1, max: 100000 } }, { page: text('page') });
     if (q.kind !== undefined && q.kind !== '' && (typeof q.kind !== 'string' || !GALLERY_KINDS.includes(q.kind))) {
       throw new HttpError(400, 'Please fix the highlighted fields.', { kind: `Must be one of: ${GALLERY_KINDS.join(', ')}` });
     }

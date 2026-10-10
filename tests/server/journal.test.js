@@ -238,3 +238,61 @@ it('shows a deleted link target as not live', async () => {
   const res = await s.h().get(`/api/journal/${e.id}`);
   expect(res.body.links).toEqual([{ type: 'herb', id: s.herb.id, name: 'Mugwort', live: false }]);
 });
+
+it('stamps exact signs for a known date and time', async () => {
+  const s = setup();
+  const noon = await s.make(s.ritual, 'Noon', '2026-10-25');
+  const night = await s.make(s.ritual, 'Night', '2026-10-25', { entry_time: '21:30' });
+  expect(noon.sky.sign).toBe('Aries');
+  expect(night.sky.sign).toBe('Taurus');
+  expect(night.sky.phase).toBe('full');
+});
+
+it('re-stamps only when the date or time changes', async () => {
+  const s = setup();
+  const e = await s.make(s.ritual, 'A', '2026-10-25');
+  t.ctx.db.prepare("UPDATE journal_entries SET sky_sign = 'Test' WHERE id = ?").run(e.id);
+  let res = await s.h().patch(`/api/journal/${e.id}`).send({ title: 'B', body: 'x', tags: ['t'] });
+  expect(res.body.sky.sign).toBe('Test');
+  res = await s.h().patch(`/api/journal/${e.id}`).send({ entry_date: '2026-10-25' });
+  expect(res.body.sky.sign).toBe('Test');
+  res = await s.h().patch(`/api/journal/${e.id}`).send({ entry_time: '21:30' });
+  expect(res.body.sky.sign).toBe('Taurus');
+});
+
+it('rejects huge page numbers and returns an empty list past the end', async () => {
+  const s = setup();
+  await s.make(s.ritual, 'A', '2026-10-10');
+  expect((await s.h().get('/api/journal?page=1e21')).status).toBe(400);
+  expect((await s.h().get('/api/journal?page=100001')).body.details.page).toBeTruthy();
+  const res = await s.h().get('/api/journal?page=100000');
+  expect(res.status).toBe(200);
+  expect(res.body).toMatchObject({ entries: [], total: 1, page: 100000 });
+});
+
+it('leaves existing links alone when the tags are refused', async () => {
+  const s = setup();
+  const e = await s.make(s.ritual, 'A', '2026-10-10', { links: [{ type: 'herb', id: s.herb.id }], tags: ['keep'] });
+  const res = await s.h().patch(`/api/journal/${e.id}`).send({ links: [], tags: [5] });
+  expect(res.status).toBe(400);
+  const after = (await s.h().get(`/api/journal/${e.id}`)).body;
+  expect(after.links).toHaveLength(1);
+  expect(after.tags).toEqual(['keep']);
+});
+
+it('lists a deleted type in the type view while live entries still use it', async () => {
+  const s = setup();
+  await s.make(s.ritual, 'A', '2026-10-10');
+  s.r.journalTypes.remove(s.ritual.id);
+  const res = await s.h().get('/api/journal?view=type');
+  expect(res.body.types.map(x => [x.name, x.count])).toEqual([['Ritual', 1]].concat([['Dream', 0]]));
+});
+
+it('searches for a backslash literally', async () => {
+  const s = setup();
+  const slash = String.fromCharCode(92);
+  const a = await s.make(s.ritual, 'Path', '2026-10-01', { body: `a${slash}b` });
+  await s.make(s.ritual, 'Other', '2026-10-02', { body: 'ab' });
+  const res = await s.h().get(`/api/journal?q=${encodeURIComponent(slash)}`);
+  expect(res.body.entries.map(e => e.id)).toEqual([a.id]);
+});

@@ -48,7 +48,7 @@ export function journalRouter(ctx) {
   r.get('/', (req, res) => {
     const q = req.query;
     const text = k => (typeof q[k] === 'string' ? q[k] : undefined);
-    check({ type_id: 'int', page: { type: 'int', min: 1 } }, { type_id: text('type_id'), page: text('page') });
+    check({ type_id: 'int', page: { type: 'int', min: 1, max: 100000 } }, { type_id: text('type_id'), page: text('page') });
     const { from, to } = queryDates(q, ['from', 'to']);
     res.json(listEntries(ctx.db, {
       view: oneOf(q.view, VIEWS, 'view'), q: text('q'), type_id: text('type_id'), tag: text('tag'),
