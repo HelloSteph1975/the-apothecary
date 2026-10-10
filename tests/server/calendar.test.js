@@ -163,3 +163,15 @@ it('validates the day', async () => {
   expect((await day('1899-12-31')).status).toBe(400);
   expect((await day('2026-02-30')).status).toBe(400);
 });
+
+it('lists journal entries as events and skips deleted ones', async () => {
+  t = makeTestContext();
+  const type = (await t.http().post('/api/journal-types').send({ name: 'Ritual' })).body;
+  const make = title => t.http().post('/api/journal').send({ type_id: type.id, title, entry_date: '2026-10-12' }).then(r => r.body);
+  const a = await make('Full moon rite');
+  const b = await make('Gone');
+  await t.http().delete(`/api/journal/${b.id}`);
+  const res = await get('from=2026-10-01&to=2026-10-31');
+  const ev = res.body.events.filter(e => e.kind === 'journal');
+  expect(ev).toEqual([{ kind: 'journal', day: '2026-10-12', title: 'Full moon rite', link: `/journal/${a.id}`, done: false, overdue: false, id: a.id }]);
+});
