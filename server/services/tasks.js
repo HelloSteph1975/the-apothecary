@@ -3,6 +3,7 @@ import { repos } from '../db/repos.js';
 import { HttpError, notFound } from '../http.js';
 import { check } from '../validate.js';
 import { taskSchema } from '../schemas.js';
+import { addDays } from '../lib/dates.js';
 import { nextDue, RELATED_TYPES } from '../lib/repeat.js';
 import { listItems } from './cabinet.js';
 import { dueSteps } from './batches.js';
@@ -37,7 +38,11 @@ function wantedAutoTasks(db, today) {
 }
 
 // Makes the automatic tasks that should exist and removes open ones whose cause is gone. Done tasks and her own tasks stay.
-export function syncAutoTasks(db, today) {
+// The day is trusted only within a day of the server clock, so a stray date cannot wipe or flood the list.
+const clampDay = day => { const now = localToday(); return day < addDays(now, -1) ? addDays(now, -1) : day > addDays(now, 1) ? addDays(now, 1) : day; };
+
+export function syncAutoTasks(db, given) {
+  const today = clampDay(given);
   transaction(db, () => {
     const wanted = wantedAutoTasks(db, today);
     const known = new Set(db.prepare('SELECT auto_key FROM tasks WHERE auto_key IS NOT NULL').all().map(r => r.auto_key));
@@ -48,9 +53,11 @@ export function syncAutoTasks(db, today) {
     }
     const stale = db.prepare(`SELECT id, auto_key FROM tasks WHERE kind = 'auto' AND done_on IS NULL AND deleted_at IS NULL`).all()
       .filter(row => !wanted.has(row.auto_key));
+    const hasPhotos = db.prepare("SELECT 1 FROM photos WHERE owner_type = 'task' AND owner_id = ? AND deleted_at IS NULL");
     for (const { id } of stale) {
-      db.prepare(`UPDATE photos SET deleted_at = datetime('now') WHERE owner_type = 'task' AND owner_id = ? AND deleted_at IS NULL`).run(id);
-      db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+      // A task with photos is finished rather than removed, so her photos stay with it.
+      if (hasPhotos.get(id)) r.tasks.update(id, { done_on: today });
+      else db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
     }
   });
 }
@@ -222,6 +229,11 @@ export function uncompleteTask(db, id) {
     // Only an untouched copy goes away: same title, notes and the due date the repeat rule gave it.
     if (next && !next.done_on && next.title === task.title && (next.notes ?? null) === (task.notes ?? null)
       && next.due_on === nextDue(task, task.due_on ?? task.done_on, hemisphere(db))) r.tasks.remove(next.id);
+    if (task.kind === 'auto' && task.auto_key?.startsWith('step:')) {
+      const stepId = Number(task.auto_key.split(':')[1]);
+      const step = r.batchSteps.get(stepId);
+      if (step && step.done_on === task.done_on) r.batchSteps.update(stepId, { done_on: null });
+    }
     r.tasks.update(id, { done_on: null, spawned_id: null });
   });
   return getTask(db, id);
@@ -241,7 +253,7 @@ export function dismissTask(ctx, id, body) {
   const { today } = check({ today: 'date' }, isObject(body) ? body : {});
   const task = repos(db).tasks.get(id);
   if (!task) throw notFound(GONE);
-  if (task.kind !== 'auto') throw new HttpError(400, 'Only tasks made by the app can be dismissed.');
+  if (task.kind !== 'auto' || task.done_on) throw new HttpError(400, 'Only tasks made by the app can be dismissed.');
   transaction(db, () => {
     db.prepare('INSERT OR REPLACE INTO task_dismissals (auto_key, dismissed_on) VALUES (?, ?)').run(task.auto_key, today ?? localToday());
     const stamp = new Date().toISOString();

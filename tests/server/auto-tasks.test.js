@@ -1,9 +1,11 @@
-import { it, expect, afterEach } from 'vitest';
+import { it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { makeTestContext } from './helpers.js';
 import { syncAutoTasks } from '../../server/services/tasks.js';
 
 let t;
-afterEach(() => t?.cleanup());
+// Only Date is faked, so the sync sees the same day the test uses.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 10, 12, 0, 0)); });
+afterEach(() => { vi.useRealTimers(); t?.cleanup(); });
 
 const TODAY = '2026-10-10';
 const all = () => t.ctx.db.prepare('SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY id').all();
@@ -110,4 +112,44 @@ it('an automatic task allows title, notes, priority and snooze but not its date 
     .send({ title: 'Buy sage', notes: 'organic', priority: 'high', snoozed_until: '2026-10-12', due_on: row.due_on });
   expect(ok.status).toBe(200);
   expect(ok.body).toMatchObject({ title: 'Buy sage', notes: 'organic', priority: 'high', snoozed_until: '2026-10-12' });
+});
+
+it('uncompleting a step task reopens the step and the task survives a sync', async () => {
+  t = makeTestContext();
+  const batch = await addBatch([{ title: 'Strain', due_on: TODAY }]);
+  const [row] = await today();
+  await t.http().post(`/api/tasks/${row.id}/complete`).send({ today: TODAY });
+  await t.http().post(`/api/tasks/${row.id}/uncomplete`).send({});
+  expect((await t.http().get(`/api/batches/${batch.id}`)).body.steps[0].done_on).toBeNull();
+  expect((await today()).map(r => r.id)).toEqual([row.id]);
+});
+
+it('a stale auto task with photos is finished, not deleted; without photos it is removed', async () => {
+  t = makeTestContext();
+  const a = await addItem({ name: 'Sage', amount: 2, low_threshold: 5 });
+  const b = await addItem({ name: 'Rue', amount: 2, low_threshold: 5 });
+  syncAutoTasks(t.ctx.db, TODAY);
+  const withPhoto = all().find(r => r.related_id === a.id);
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('task', ?, '1-abcdef12.jpg')").run(withPhoto.id);
+  await t.http().patch(`/api/items/${a.id}`).send({ amount: 20 });
+  await t.http().patch(`/api/items/${b.id}`).send({ amount: 20 });
+  syncAutoTasks(t.ctx.db, TODAY);
+  const left = all();
+  expect(left).toHaveLength(1);
+  expect(left[0]).toMatchObject({ id: withPhoto.id, done_on: TODAY });
+});
+
+it('only open automatic tasks can be dismissed', async () => {
+  t = makeTestContext();
+  await addItem({ name: 'Sage', amount: 2, low_threshold: 5 });
+  const [row] = await today();
+  await t.http().post(`/api/tasks/${row.id}/complete`).send({ today: TODAY });
+  expect((await t.http().post(`/api/tasks/${row.id}/dismiss`).send({ today: TODAY })).status).toBe(400);
+});
+
+it('sync trusts a day only within a day of the clock', async () => {
+  t = makeTestContext();
+  await addItem({ name: 'Sage', amount: 2, low_threshold: 5 });
+  syncAutoTasks(t.ctx.db, '2030-01-01');
+  expect(all()[0].due_on).toBe('2026-10-11');
 });

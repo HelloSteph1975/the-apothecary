@@ -1,8 +1,10 @@
-import { it, expect, afterEach } from 'vitest';
+import { it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { makeTestContext } from './helpers.js';
 
 let t;
-afterEach(() => t?.cleanup());
+// Only Date is faked, so the sync sees the same day the test uses.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 8, 12, 0, 0)); });
+afterEach(() => { vi.useRealTimers(); t?.cleanup(); });
 
 it('summarises low, nearing and expired items and leaves batches empty', async () => {
   t = makeTestContext();
