@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS = {
   longitude: '-99.1332',
   hemisphere: 'north',
   units: 'metric',
+  sky_suggestions: 'on',
   expiry_dried_leaf: '12', expiry_dried_flower: '12', expiry_root: '24', expiry_bark: '24', expiry_seed: '24',
   expiry_resin: '36', expiry_powder: '6', expiry_tincture: '60', expiry_oil: '12',
 };
@@ -21,6 +22,7 @@ const RULES = {
   longitude: v => DECIMAL.test(v) && Math.abs(Number(v)) <= 180,
   hemisphere: v => ['north', 'south'].includes(v),
   units: v => ['metric', 'us'].includes(v),
+  sky_suggestions: v => ['on', 'off'].includes(v),
   expiry_dried_leaf: MONTHS, expiry_dried_flower: MONTHS, expiry_root: MONTHS, expiry_bark: MONTHS, expiry_seed: MONTHS,
   expiry_resin: MONTHS, expiry_powder: MONTHS, expiry_tincture: MONTHS, expiry_oil: MONTHS,
 };

@@ -16,6 +16,7 @@ const base = {
     { id: 2, herb_id: null, name: 'Olive oil', amount: 500, unit: 'ml' },
   ],
   steps: [], photos: [], status: 'finished',
+  sky: { phase: 'waxing crescent', sign: 'Scorpio', ruler: 'Jupiter' },
 };
 const LABELS = ['Date', 'Recipe', 'Preparation type', 'Herbs used', 'Base', 'Why I made it', 'How I prepared it',
   'What I noticed', 'What I would change', 'Label and shelf-life notes'];
@@ -89,4 +90,17 @@ it('shows what was drawn from the jar when it differs from the recipe amount', a
   expect(items[0]).toBe('30 g Calendula (0.03 kg drawn from Calendula jar)');
   expect(items[1]).toBe('500 ml Olive oil');
   expect(items[2]).toBe('5 g Rose');
+});
+
+it('puts the sky on the start date in the Date field', async () => {
+  open();
+  const sheet = await screen.findByTestId('record-sheet');
+  expect(sheet.textContent).toContain('Started Oct 1, 2026 (waxing crescent in Scorpio, Thursday under Jupiter), finished Oct 20, 2026');
+});
+
+it('leaves the sky out when the batch has none', async () => {
+  delete batch.sky;
+  open();
+  const sheet = await screen.findByTestId('record-sheet');
+  expect(sheet.textContent).toContain('Started Oct 1, 2026, finished Oct 20, 2026');
 });

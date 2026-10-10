@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
 import { ToastProvider } from '../../client/src/components/ToastProvider.jsx';
 import { ConfirmProvider } from '../../client/src/components/ConfirmProvider.jsx';
+import { todayString } from '../../client/src/lib/today.js';
 
 HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open', ''); };
 HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
@@ -43,23 +44,28 @@ let shortOnce;
 let planFail;
 let scaleBad;
 let holdPlan;
+let startDates;
+let startDatesFail;
 beforeEach(() => {
   calls = [];
   shortOnce = false;
   planFail = false;
   scaleBad = false;
   holdPlan = null;
+  startDates = [];
+  startDatesFail = false;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
     calls.push({ method, url, body });
     const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
+    if (url.startsWith('/api/recipes/') && url.includes('/start-dates')) return startDatesFail ? json({ error: 'No good days today.' }, 500) : json(startDates);
     if (url === '/api/recipes') return json(recipes);
     if (url.startsWith('/api/items')) return json(items);
     if (url === '/api/batches/plan') {
       if (planFail) return json({ error: 'That recipe is not in the book.' }, 404);
       if (scaleBad && body.scale === 99) return json({ error: 'Fix the scale.', details: { scale: 'That is too large.' } }, 400);
-      if (holdPlan && body.scale === holdPlan.scale) await holdPlan.promise;
+      if (holdPlan && (holdPlan.date ? body.start_date === holdPlan.date : body.scale === holdPlan.scale)) await holdPlan.promise;
       return json(planFor(body.scale ?? 1));
     }
     if (url === '/api/batches' && method === 'POST') {
@@ -220,7 +226,7 @@ it('saves with the right body and goes to the batch', async () => {
   await waitFor(() => expect(posts()).toHaveLength(1));
   const b = posts()[0].body;
   expect(b).toMatchObject({
-    name: 'Calendula oil, October 9', recipe_id: 7, start_date: '2026-10-09', factor: 1, intention: 'Soothe the skin',
+    name: 'Calendula oil, October 9', recipe_id: 7, start_date: todayString(), factor: 1, intention: 'Soothe the skin',
     method: 'Warm the oil.', base: 'Beeswax, Olive oil', label_notes: 'Keeps about 3 months.', notes: 'Used fresh petals',
     steps: [{ title: 'Strain and bottle', due_on: '2026-10-30' }],
   });
@@ -402,4 +408,92 @@ it('prefills long converted draws to four significant figures', async () => {
   expect(within(g1).getByLabelText(/Amount to draw/)).toHaveValue(29.57);
   const g4 = screen.getByRole('group', { name: '20 g Rose' });
   expect(within(g4).getByLabelText(/Amount to draw/)).toHaveValue(0.004);
+});
+
+const SUGGESTIONS = [
+  { day: '2026-10-16', score: 5, sky: { phase: 'waxing gibbous', sign: 'Taurus', ruler: 'Venus' }, reasons: ['Roots like to be started under an earth moon.', 'A growing moon draws things in.'] },
+  { day: '2026-10-20', score: 3, sky: { phase: 'full', sign: 'Aries', ruler: 'Mars' }, reasons: ['Full moons are for strong brews.'] },
+];
+
+it('offers good days to start, asking from today, with the folk label and reasons', async () => {
+  startDates = SUGGESTIONS;
+  open('/batches/new?recipe=7');
+  await ready();
+  const panel = await screen.findByRole('group', { name: 'Good days to start' });
+  expect(calls.some(c => c.url === `/api/recipes/7/start-dates?from=${todayString()}`)).toBe(true);
+  expect(within(panel).getByText('Folk tradition')).toBeInTheDocument();
+  expect(within(panel).getByRole('button', { name: 'Fri, Oct 16: waxing gibbous in Taurus' })).toBeInTheDocument();
+  expect(within(panel).getByRole('button', { name: 'Tue, Oct 20: full in Aries' })).toBeInTheDocument();
+  expect(within(panel).getByText('Roots like to be started under an earth moon.')).toBeInTheDocument();
+  expect(within(panel).getByText('Full moons are for strong brews.')).toBeInTheDocument();
+  expect(panel.closest('[aria-label="Ingredients and jars"], .draw-lines')).toBeNull();
+});
+
+it('choosing a good day sets the start date and plans again', async () => {
+  const user = userEvent.setup();
+  startDates = SUGGESTIONS;
+  open('/batches/new?recipe=7');
+  await ready();
+  await user.click(await screen.findByRole('button', { name: 'Fri, Oct 16: waxing gibbous in Taurus' }));
+  expect(screen.getByLabelText('Start date')).toHaveValue('2026-10-16');
+  await waitFor(() => expect(plans().at(-1).body.start_date).toBe('2026-10-16'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Start batch' })).toBeEnabled());
+  await user.click(screen.getByRole('button', { name: 'Start batch' }));
+  await waitFor(() => expect(posts()).toHaveLength(1));
+  expect(posts()[0].body.start_date).toBe('2026-10-16');
+});
+
+it('blocks Start until the plan for the chosen day arrives', async () => {
+  const user = userEvent.setup();
+  startDates = SUGGESTIONS;
+  open('/batches/new?recipe=7');
+  await ready();
+  let release;
+  holdPlan = { date: '2026-10-20', promise: new Promise(r => { release = r; }) };
+  await user.click(await screen.findByRole('button', { name: 'Tue, Oct 20: full in Aries' }));
+  await waitFor(() => expect(plans().at(-1).body.start_date).toBe('2026-10-20'));
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeDisabled();
+  release();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Start batch' })).toBeEnabled());
+});
+
+it('hides good days when there are none', async () => {
+  open('/batches/new?recipe=7');
+  await ready();
+  await waitFor(() => expect(calls.some(c => c.url.includes('/start-dates'))).toBe(true));
+  await new Promise(r => setTimeout(r, 50));
+  expect(screen.queryByText('Good days to start')).toBeNull();
+  expect(screen.queryByText('Folk tradition')).toBeNull();
+});
+
+it('says when good days could not load, offers Try again, and still lets her start the batch', async () => {
+  const user = userEvent.setup();
+  startDatesFail = true;
+  open('/batches/new?recipe=7');
+  await ready();
+  expect(await screen.findByText("Couldn't load good days.")).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeEnabled();
+  startDatesFail = false;
+  startDates = SUGGESTIONS;
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByRole('button', { name: 'Tue, Oct 20: full in Aries' })).toBeInTheDocument();
+  expect(screen.queryByText("Couldn't load good days.")).toBeNull();
+});
+
+it('shows no good days for a free-form batch and never asks for them', async () => {
+  startDates = SUGGESTIONS;
+  open('/batches/new');
+  await screen.findByLabelText('Recipe');
+  expect(screen.queryByText('Good days to start')).toBeNull();
+  expect(calls.some(c => c.url.includes('/start-dates'))).toBe(false);
+});
+
+it('ties each good day to its reasons for screen readers', async () => {
+  startDates = SUGGESTIONS;
+  open('/batches/new?recipe=7');
+  await ready();
+  const first = await screen.findByRole('button', { name: 'Fri, Oct 16: waxing gibbous in Taurus' });
+  expect(first).toHaveAccessibleDescription('Roots like to be started under an earth moon. A growing moon draws things in.');
+  const second = screen.getByRole('button', { name: 'Tue, Oct 20: full in Aries' });
+  expect(second).toHaveAccessibleDescription('Full moons are for strong brews.');
 });

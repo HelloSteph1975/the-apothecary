@@ -1,0 +1,286 @@
+import { it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, within, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { routes } from '../../client/src/App.jsx';
+import { ToastProvider } from '../../client/src/components/ToastProvider.jsx';
+import { ConfirmProvider } from '../../client/src/components/ConfirmProvider.jsx';
+
+HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open', ''); };
+HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
+
+const rule = (id, extra) => ({ id, slug: `r${id}`, kind: 'phase_group', value: 'waxing', text: 'A growing moon.', weight: 2, sort_order: id * 10, recipe_types: [], planets: [], elements: [], ...extra });
+const RULES = [
+  rule(1, { text: 'Waxing text.', recipe_types: ['tincture'] }),
+  rule(2, { kind: 'moon_element', value: 'Water', text: 'Water text.', weight: 3, elements: ['Water'], planets: ['Moon'] }),
+  rule(3, { kind: 'moon_sign', value: 'Taurus', text: 'Taurus text.', weight: 1 }),
+];
+const TYPES = [
+  { id: 1, slug: 'tincture', name: 'Tincture' },
+  { id: 2, slug: 'tea-blend', name: 'Tea blend' },
+  { id: 3, slug: null, name: 'Bath salts' },
+];
+let calls;
+beforeEach(() => {
+  calls = [];
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    const method = opts.method || 'GET';
+    calls.push({ url, method, body: opts.body ? JSON.parse(opts.body) : undefined });
+    const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
+    if (url === '/api/health') return json({ ok: true, demo: false });
+    if (url === '/api/settings') return json({ keeper_name: '' });
+    if (url === '/api/recipe-types') return json(TYPES);
+    if (method === 'DELETE') return json({ ok: true, restore: '/api/timing-rules/1/restore' });
+    if (method === 'POST' && url === '/api/timing-rules') {
+      const body = JSON.parse(opts.body);
+      return body.text === 'bad' ? json({ error: 'Please fix the highlighted fields.', details: { text: 'Use 300 characters or fewer' } }, 400) : json({ id: 9, ...body }, 201);
+    }
+    if (method === 'PUT' && url === '/api/timing-rules/order') return json(RULES);
+    if (method === 'PATCH') return json({ ok: true });
+    if (url === '/api/timing-rules') return json(RULES);
+    return json({});
+  });
+});
+const open = () => render(<ToastProvider><ConfirmProvider><RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/settings/timing-rules'] })} /></ConfirmProvider></ToastProvider>);
+
+it('lists rules in order with kind, text, weight and what they favour', async () => {
+  open();
+  const first = (await screen.findByText('Waxing text.')).closest('li');
+  expect(within(first).getByText('Waxing moon')).toBeInTheDocument();
+  expect(within(first).getByText('Medium')).toBeInTheDocument();
+  expect(within(first).getByText(/Tincture/)).toBeInTheDocument();
+  const second = screen.getByText('Water text.').closest('li');
+  expect(within(second).getByText('Moon in a water sign')).toBeInTheDocument();
+  expect(within(second).getByText('Strong')).toBeInTheDocument();
+  expect(within(second).getByText(/Planets: Moon/)).toBeInTheDocument();
+  expect(within(second).getByText(/Elements: Water/)).toBeInTheDocument();
+  const third = screen.getByText('Taurus text.').closest('li');
+  expect(within(third).getByText('Moon in Taurus')).toBeInTheDocument();
+  expect(within(third).getByText('Light')).toBeInTheDocument();
+  expect(screen.getAllByRole('listitem').map(li => li.textContent).join('|')).toMatch(/Waxing text.*Water text.*Taurus text/);
+});
+
+it('changes the value choices when the kind changes', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  const value = within(dialog).getByLabelText('Value');
+  expect(within(value).getAllByRole('option').map(o => o.textContent)).toEqual(['Waxing', 'Full', 'Waning', 'New']);
+  await user.selectOptions(within(dialog).getByLabelText('Kind'), 'moon_sign');
+  expect(within(within(dialog).getByLabelText('Value')).getAllByRole('option')).toHaveLength(12);
+  await user.selectOptions(within(dialog).getByLabelText('Kind'), 'festival');
+  expect(within(within(dialog).getByLabelText('Value')).getAllByRole('option').map(o => o.textContent)).toContain('Samhain');
+  expect(within(dialog).getByLabelText('Tincture')).toBeInTheDocument();
+  expect(within(dialog).getByLabelText('Bath salts')).toBeInTheDocument();
+});
+
+it('adds a rule with the right body and counts the text', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.selectOptions(within(dialog).getByLabelText('Kind'), 'moon_sign');
+  await user.selectOptions(within(dialog).getByLabelText('Value'), 'Cancer');
+  await user.type(within(dialog).getByLabelText('Text'), 'Good for soups');
+  expect(within(dialog).getByText('14 of 300')).toBeInTheDocument();
+  await user.selectOptions(within(dialog).getByLabelText('Weight'), '3');
+  await user.click(within(dialog).getByLabelText('Tea blend'));
+  await user.click(within(dialog).getByLabelText('Bath salts'));
+  await user.click(within(dialog).getByLabelText('Venus'));
+  await user.click(within(dialog).getByLabelText('Water'));
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/timing-rules')).toBeTruthy());
+  expect(calls.find(c => c.method === 'POST').body).toEqual({
+    kind: 'moon_sign', value: 'Cancer', text: 'Good for soups', weight: 3,
+    recipe_types: ['tea-blend', 'type-3'], planets: ['Venus'], elements: ['Water'],
+  });
+});
+
+it('edits a rule with its values filled in', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Water text.');
+  await user.click(screen.getByRole('button', { name: 'Edit Moon in a water sign' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Edit rule' });
+  expect(within(dialog).getByLabelText('Kind')).toHaveValue('moon_element');
+  expect(within(dialog).getByLabelText('Value')).toHaveValue('Water');
+  expect(within(dialog).getByLabelText('Text')).toHaveValue('Water text.');
+  expect(within(dialog).getByLabelText('Moon')).toBeChecked();
+  await user.clear(within(dialog).getByLabelText('Text'));
+  await user.type(within(dialog).getByLabelText('Text'), 'New words');
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'PATCH')).toBeTruthy());
+  const patch = calls.find(c => c.method === 'PATCH');
+  expect(patch.url).toBe('/api/timing-rules/2');
+  expect(patch.body).toMatchObject({ kind: 'moon_element', value: 'Water', text: 'New words', weight: 3, planets: ['Moon'], elements: ['Water'] });
+});
+
+it('shows a server error inside the dialog', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.type(within(dialog).getByLabelText('Text'), 'bad');
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  expect(await within(dialog).findByText('Use 300 characters or fewer')).toBeInTheDocument();
+});
+
+it('asks for the text before saving when it is empty', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  expect(await within(dialog).findByText('Write what the tradition says.')).toBeInTheDocument();
+  expect(calls.some(c => c.method === 'POST')).toBe(false);
+});
+
+it('deletes with an undo that restores the rule', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Delete Waxing moon' }));
+  await user.click(await screen.findByRole('button', { name: 'Delete' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'DELETE' && c.url === '/api/timing-rules/1')).toBe(true));
+  await user.click(await screen.findByRole('button', { name: 'Undo' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/timing-rules/1/restore')).toBe(true));
+});
+
+it('moves a rule down with one call carrying the new order', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'PUT')).toBeTruthy());
+  const put = calls.find(c => c.method === 'PUT');
+  expect(put.url).toBe('/api/timing-rules/order');
+  expect(put.body).toEqual({ ids: [2, 1, 3] });
+  expect(calls.some(c => c.method === 'PATCH')).toBe(false);
+});
+
+function keepOrder() {
+  let order = [...RULES];
+  const base = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    const method = opts.method || 'GET';
+    if (method === 'PUT' && url === '/api/timing-rules/order') {
+      const ids = JSON.parse(opts.body).ids;
+      order = ids.map(id => order.find(r => r.id === id));
+      calls.push({ url, method, body: { ids } });
+      return new Response(JSON.stringify(order), { status: 200 });
+    }
+    if (method === 'GET' && url === '/api/timing-rules') return new Response(JSON.stringify(order), { status: 200 });
+    return base(url, opts);
+  });
+}
+
+it('keeps focus on the moved row and says where it went', async () => {
+  const user = userEvent.setup();
+  keepOrder();
+  open();
+  await screen.findByText('Waxing text.');
+  const down = screen.getByRole('button', { name: 'Move Waxing moon down' });
+  await user.click(down);
+  expect(down).not.toBeDisabled();
+  await waitFor(() => expect(screen.getByText('Moved Waxing moon to position 2.')).toHaveAttribute('aria-live', 'polite'));
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).not.toHaveAttribute('aria-disabled');
+  // Moving it to the end leaves focus on its other move button.
+  await user.keyboard('{Enter}');
+  await waitFor(() => expect(screen.getByText('Moved Waxing moon to position 3.')).toHaveAttribute('aria-live', 'polite'));
+  expect(screen.getByRole('button', { name: 'Move Waxing moon up' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).toHaveAttribute('aria-disabled', 'true');
+  const puts = calls.filter(c => c.method === 'PUT');
+  expect(puts.map(p => p.body.ids)).toEqual([[2, 1, 3], [2, 3, 1]]);
+});
+
+it('does nothing when an end button is pressed', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon up' }));
+  expect(calls.some(c => c.method === 'PUT')).toBe(false);
+});
+
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+
+it('blocks a second move until the reloaded list arrives, then builds the next order from it', async () => {
+  const user = userEvent.setup();
+  keepOrder();
+  const inner = global.fetch;
+  let gate = null;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if ((opts.method || 'GET') === 'GET' && url === '/api/timing-rules' && gate) await gate.promise;
+    return inner(url, opts);
+  });
+  open();
+  await screen.findByText('Waxing text.');
+  gate = deferred();
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.filter(c => c.method === 'PUT')).toHaveLength(1));
+  // The reload is held back: a quick second move must be ignored, not sent from the old order.
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).toHaveAttribute('aria-disabled', 'true');
+  expect(calls.filter(c => c.method === 'PUT')).toHaveLength(1);
+  gate.resolve();
+  await waitFor(() => expect(screen.getByText('Moved Waxing moon to position 2.')).toBeInTheDocument());
+  gate = null;
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.filter(c => c.method === 'PUT')).toHaveLength(2));
+  expect(calls.filter(c => c.method === 'PUT').map(p => p.body.ids)).toEqual([[2, 1, 3], [2, 3, 1]]);
+});
+
+it('ignores an old save finishing after the dialog was closed and reopened', async () => {
+  const user = userEvent.setup();
+  const inner = global.fetch;
+  const hold = deferred();
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (opts.method === 'POST' && url === '/api/timing-rules') {
+      await hold.promise;
+      return new Response(JSON.stringify({ id: 9 }), { status: 201 });
+    }
+    return inner(url, opts);
+  });
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  let dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.type(within(dialog).getByLabelText('Text'), 'First try');
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.type(within(dialog).getByLabelText('Text'), 'Second try');
+  hold.resolve();
+  await waitFor(() => expect(calls.filter(c => c.url === '/api/timing-rules' && c.method === 'GET').length).toBeGreaterThan(1));
+  expect(screen.getByRole('dialog', { name: 'Add a timing rule' })).toBeInTheDocument();
+  expect(within(screen.getByRole('dialog', { name: 'Add a timing rule' })).getByLabelText('Text')).toHaveValue('Second try');
+});
+
+it('shows a retryable error in the recipe types group when the types fail to load', async () => {
+  const user = userEvent.setup();
+  const inner = global.fetch;
+  let failTypes = true;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/recipe-types' && failTypes) return new Response(JSON.stringify({ error: 'Types are away.' }), { status: 500 });
+    return inner(url, opts);
+  });
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  const alert = await within(dialog).findByText(/Couldn't load your recipe types/);
+  expect(alert.closest('[role="alert"]') ?? alert).toBeInTheDocument();
+  // The rest of the form still works.
+  await user.type(within(dialog).getByLabelText('Text'), 'Still typing');
+  failTypes = false;
+  await user.click(within(dialog).getByRole('button', { name: 'Try again' }));
+  expect(await within(dialog).findByLabelText('Bath salts')).toBeInTheDocument();
+  expect(within(dialog).queryByText(/Couldn't load your recipe types/)).not.toBeInTheDocument();
+  expect(within(dialog).getByLabelText('Text')).toHaveValue('Still typing');
+});

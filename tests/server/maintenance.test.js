@@ -64,11 +64,27 @@ it('runMaintenance keeps going when the recipe type seed throws', () => {
   expect(fs.readdirSync(path.join(t.dataDir, 'backups')).some(n => n.startsWith('apothecary-'))).toBe(true);
 });
 
-it('contentMaintenance seeds the grimoire, links jars, then seeds recipe types', () => {
+it('runMaintenance keeps going when the timing rule seed throws', () => {
+  t = makeTestContext();
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  expect(() => runMaintenance(t.ctx, { seedRules: () => { throw new Error('bad rules'); } })).not.toThrow();
+  expect(errors).toHaveBeenCalledTimes(1);
+  expect(errors).toHaveBeenCalledWith(expect.stringMatching(/Seeding the timing rules failed/), expect.any(Error));
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM recipe_types').get().n).toBeGreaterThan(0);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM timing_rules').get().n).toBe(0);
+});
+
+it('runMaintenance seeds the 19 starter timing rules', () => {
+  t = makeTestContext();
+  runMaintenance(t.ctx);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM timing_rules').get().n).toBe(19);
+});
+
+it('contentMaintenance seeds the grimoire, links jars, seeds recipe types, then seeds timing rules', () => {
   t = makeTestContext();
   const calls = [];
   contentMaintenance(t.ctx.db, {
-    seed: () => calls.push('seed'), link: () => calls.push('link'), seedTypes: () => calls.push('types'),
+    seed: () => calls.push('seed'), link: () => calls.push('link'), seedTypes: () => calls.push('types'), seedRules: () => calls.push('rules'),
   });
-  expect(calls).toEqual(['seed', 'link', 'types']);
+  expect(calls).toEqual(['seed', 'link', 'types', 'rules']);
 });

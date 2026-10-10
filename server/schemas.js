@@ -55,6 +55,12 @@ export const recipeTypeSchema = {
   shelf_life_days: { type: 'int', min: 0, max: 3650 }, label_caution: 'string', is_topical: { type: 'bool', nullable: false },
   icon: RECIPE_ICONS, sort_order: { type: 'int', nullable: false },
 };
+export const TIMING_KINDS = ['phase_group', 'phase', 'moon_element', 'moon_sign', 'day_ruler', 'festival'];
+// List fields (recipe_types, planets, elements) are arrays of strings, checked by the timing service.
+export const timingRuleSchema = {
+  kind: { type: TIMING_KINDS, required: true }, value: 'string!', text: 'string!',
+  weight: { type: 'int', min: 1, max: 3, nullable: false }, sort_order: { type: 'int', nullable: false },
+};
 export const recipeSchema = {
   name: 'string!', type_id: 'int!', yield_amount: { type: 'number', min: 0 }, yield_unit: RECIPE_UNITS, steps: 'string',
   wait_days: { type: 'int', min: 0, max: 3650 }, shelf_life_days: { type: 'int', min: 0, max: 3650 },

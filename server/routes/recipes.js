@@ -9,6 +9,9 @@ import {
   listRecipeTypes, assertUniqueTypeName, nextTypeOrder, deleteRecipeType, reorderRecipeTypes,
 } from '../services/recipeTypes.js';
 import { listRecipes, getRecipeDetail, createRecipe, updateRecipe, deleteRecipe, restoreRecipe } from '../services/recipes.js';
+import { startDates } from '../services/timing.js';
+import { queryDates } from './sky.js';
+import { getSettings } from '../services/settings.js';
 import { cascadeDeletePhotos, cascadeRestorePhotos } from '../services/photos.js';
 
 export function recipeTypesRouter(ctx) {
@@ -39,6 +42,11 @@ export function recipesRouter(ctx) {
       type_id: typeof q.type_id === 'string' ? q.type_id : undefined, herb_id: typeof q.herb_id === 'string' ? q.herb_id : undefined,
     });
     res.json(listRecipes(ctx.db, q));
+  });
+  r.get('/:id/start-dates', (req, res) => {
+    const id = idParam(req);
+    const { from } = queryDates(req.query, ['from']);
+    res.json(startDates(ctx.db, id, { from }, getSettings(ctx.db)));
   });
   r.get('/:id', (req, res) => res.json(getRecipeDetail(ctx.db, idParam(req), req.query)));
   r.post('/', (req, res) => res.status(201).json(getRecipeDetail(ctx.db, createRecipe(ctx.db, req.body))));

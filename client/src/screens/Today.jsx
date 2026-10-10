@@ -8,6 +8,7 @@ import { greeting, longDate } from '../lib/dates.js';
 import { todayString } from '../lib/today.js';
 import { formatAmount, formatShortDay } from '../lib/cabinet.js';
 import { useApi } from '../lib/useApi.js';
+import { FOLK_LABEL, phaseText, skyLine, clockTime, nextMoonText, festivalText } from '../lib/sky.js';
 
 const EMPTY = 'Nothing here yet. This fills in once the herb cabinet is stocked.';
 
@@ -54,6 +55,18 @@ function useNow() {
   return now;
 }
 
+function SkyLines({ sky }) {
+  if (!sky?.phase || !sky.moon) return null;
+  return (
+    <div className="sky-lines">
+      <p>{skyLine(sky)}</p>
+      {(sky.moon.changes ?? []).map(c => <p key={c.at}>Moon enters {c.sign} at {clockTime(c.at)}</p>)}
+      {sky.next_full && sky.next_new && <p>{nextMoonText(sky)}</p>}
+      {festivalText(sky) && <p>{festivalText(sky)}</p>}
+    </div>
+  );
+}
+
 export function Today() {
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -87,8 +100,26 @@ export function Today() {
         subtitle={longDate(now)}
         actions={<WaxSeal onClick={() => navigate('/batches/new')}>Log a batch</WaxSeal>}
       />
+      {data?.sky && <SkyLines sky={data.sky} />}
       <p className="flourish-line">gather ✦ steep ✦ strain ✦ keep</p>
       <div className="card-grid">
+        {data?.sky && (
+          <ParchmentCard title="The sky today" subtitle={settings && settings.sky_suggestions !== 'off' ? "folk timing, for what you're making" : 'the moon and the day'}>
+            <p>{phaseText(data.sky.phase)}</p>
+            {!settings ? null : settings.sky_suggestions === 'off' ? (
+              <p className="muted">Suggestions are off. Turn them on in Settings.</p>
+            ) : (data.suggestions ?? []).length === 0 ? (
+              <p className="muted">No folk timing for today. You can add your own.</p>
+            ) : (
+              <ul className="today-list">
+                {data.suggestions.map(s => (
+                  <li key={s.id}>{s.text} <span className="badge badge-brass">{FOLK_LABEL}</span></li>
+                ))}
+              </ul>
+            )}
+            <p><Link to="/settings/timing-rules">Timing rules</Link></p>
+          </ParchmentCard>
+        )}
         <ParchmentCard title="Batches due" subtitle="what's steeping, and when it's ready" botanical="calendula">
           {status(!data ? <p className="muted">Looking in the journal…</p> : due.length === 0 ? (
             <p className="muted">Nothing due in the next few days.</p>

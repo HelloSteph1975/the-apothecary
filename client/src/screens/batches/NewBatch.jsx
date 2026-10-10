@@ -13,6 +13,7 @@ import { useLeaveGuard } from '../../lib/useLeaveGuard.js';
 import { formatAmount } from '../../lib/cabinet.js';
 import { todayString } from '../../lib/today.js';
 import { ScaleControl } from '../recipes/ScaleControl.jsx';
+import { StartDates } from './StartDates.jsx';
 import { DrawLines, linesFromPlan, linesBody } from './DrawLines.jsx';
 
 const s = v => (v == null ? '' : String(v));
@@ -203,6 +204,7 @@ export function NewBatch() {
           <Field label="Start date" error={dateMissing ? 'Pick a start date' : errors.start_date}>
             <DateInput value={dateInput} onChange={e => setDateInput(e.target.value)} />
           </Field>
+          {!free && <StartDates recipeId={recipeId} current={dateInput} onPick={day => { setTouched(true); setDateInput(day); setStartDate(day); }} />}
         </ParchmentCard>
         {!free && (
           <ScaleControl key={recipeId} recipe={recipeInfo} scaleParam={scale} yieldParam={yieldValue} error={scaleError}

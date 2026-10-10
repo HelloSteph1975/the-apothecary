@@ -5,6 +5,7 @@ import { SettingsProvider } from './components/SettingsProvider.jsx';
 import { Layout } from './components/Layout.jsx';
 import { Today } from './screens/Today.jsx';
 import { Settings } from './screens/Settings.jsx';
+import { TimingRules } from './screens/settings/TimingRules.jsx';
 import { DrawerSoon } from './screens/DrawerSoon.jsx';
 import { NotFound } from './screens/NotFound.jsx';
 import { Shelves } from './screens/cabinet/Shelves.jsx';
@@ -92,6 +93,7 @@ export const routes = [
       { path: 'batches/:id/sheet', element: <RecordSheetRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
+      { path: 'settings/timing-rules', element: <TimingRules /> },
       { path: '*', element: <NotFound /> },
     ],
   },

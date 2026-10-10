@@ -121,3 +121,14 @@ it('says when backups could not load and lets her try again', async () => {
   expect(await screen.findByText('No backups yet.')).toBeInTheDocument();
   expect(calls.filter(c => c === 'GET /api/backups').length).toBe(before + 1);
 });
+
+it('saves the folk timing suggestions switch and links to the timing rules', async () => {
+  const user = userEvent.setup();
+  open();
+  const box = await screen.findByLabelText('Show folk timing suggestions');
+  expect(box).toBeChecked();
+  await user.click(box);
+  await user.click(screen.getByRole('button', { name: 'Save settings' }));
+  await waitFor(() => expect(saved.sky_suggestions).toBe('off'));
+  expect(screen.getByRole('link', { name: 'Edit timing rules' })).toHaveAttribute('href', '/settings/timing-rules');
+});

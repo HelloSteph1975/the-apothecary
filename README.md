@@ -6,16 +6,17 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-This is Stage 3B of 8. It adds the batch journal to the herb cabinet, the grimoire and the recipe book.
+This is Stage 4 of 8. It adds the sky and folk tradition to the herb cabinet, the grimoire, the recipe book and the batch journal.
 
-- Today shows a greeting and the date; moon and sky timing arrive in a later stage.
+- Today shows a greeting and the date, plus the sky: the moon's phase and sign, the day's ruling planet, the next new or full moon and the next festival.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
 - Backups run every night, and Settings has Back up now and Restore.
 - The herb cabinet holds your herbs and supplies, jar by jar. Each item records whether you bought, grew, foraged, made or were given it, keeps a purchase history, and takes photos. Suppliers get their own pages and ratings.
 - Today lists jars that are running low, close to their use-by date, or past it.
 - The grimoire holds 30 starter herbs: traditional uses, parts used, garden notes, and the planet and element where an old herbal gives one. Cautions come first on every herb page. You can add, edit and delete your own herbs and their sources. Herb jars in the cabinet link to their grimoire page, and Today shows an herb of the day.
 - The recipe book keeps what you make. Recipe types are yours to manage: 22 starters you can edit, reorder or delete. A recipe takes ingredients from the grimoire or typed in, steps, wait time, shelf life, intention, timing notes and photos. Scale it by a factor or to the amount you want to end up with. Each recipe opens with its herbs' cautions, and skin recipes add a patch-test reminder. Herb pages list the recipes that use them.
-- The batch journal records what you actually make. Start a batch from a recipe, or free-form. The app matches your jars to the ingredients and converts units where it safely can, and it asks before drawing more than a jar holds. It sets steps for later from the recipe's wait time, and Today shows steps that are due. Finishing a batch can add the result to the cabinet as a new jar. Each batch prints as a one-page record sheet. Moon timing for batches arrives in Stage 4.
+- The batch journal records what you actually make. Start a batch from a recipe, or free-form. The app matches your jars to the ingredients and converts units where it safely can, and it asks before drawing more than a jar holds. It sets steps for later from the recipe's wait time, and Today shows steps that are due. Finishing a batch can add the result to the cabinet as a new jar. Each batch prints as a one-page record sheet.
+- Sky and tradition. Today shows up to two folk timing suggestions, taken from rules you can edit or turn off in Settings. Batches show the sky on their start date, and starting one suggests good days in the next four weeks. Every suggestion is labelled folk tradition, and none of them ever changes a caution.
 - The other drawers say so when they are not built yet.
 
 ![The herb cabinet](docs/screenshots/shelves.jpg)

@@ -32,9 +32,23 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     counts.batches = db.prepare(`DELETE FROM batches WHERE id IN (${old('batches')})`).run().changes;
     db.prepare(`UPDATE batches SET recipe_id = NULL WHERE recipe_id IN (${old('recipes')})`).run();
     counts.recipes = db.prepare(`DELETE FROM recipes WHERE id IN (${old('recipes')})`).run().changes;
-    counts.recipe_types = db.prepare(`DELETE FROM recipe_types WHERE id IN (${old('recipe_types')})
+    const typeGone = `id IN (${old('recipe_types')})
       AND id NOT IN (SELECT type_id FROM recipes)
-      AND id NOT IN (SELECT type_id FROM batches WHERE type_id IS NOT NULL)`).run().changes;
+      AND id NOT IN (SELECT type_id FROM batches WHERE type_id IS NOT NULL)`;
+    // SQLite may reuse a purged type's id, so a rule's `type-<id>` key must not outlive the type.
+    const goneKeys = new Set(db.prepare(`SELECT id FROM recipe_types WHERE ${typeGone}`).all().map(r => `type-${r.id}`));
+    if (goneKeys.size) {
+      const setList = db.prepare('UPDATE timing_rules SET recipe_types = ? WHERE id = ?');
+      for (const rule of db.prepare('SELECT id, recipe_types FROM timing_rules').all()) {
+        let list;
+        try { list = JSON.parse(rule.recipe_types); } catch { continue; }
+        if (!Array.isArray(list)) continue;
+        const next = list.filter(k => !goneKeys.has(k));
+        if (next.length !== list.length) setList.run(JSON.stringify(next), rule.id);
+      }
+    }
+    counts.recipe_types = db.prepare(`DELETE FROM recipe_types WHERE ${typeGone}`).run().changes;
+    counts.timing_rules = db.prepare(`DELETE FROM timing_rules WHERE id IN (${old('timing_rules')})`).run().changes;
     db.prepare(`DELETE FROM herb_sources WHERE id IN (${old('herb_sources')}) OR herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE items SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE recipe_ingredients SET herb_id = NULL, herb_gone = 1 WHERE herb_id IN (${old('herbs')})`).run();

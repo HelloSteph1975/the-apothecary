@@ -27,6 +27,7 @@ const base = {
     { id: 22, batch_id: 5, title: 'Label it', due_on: null, done_on: '2026-10-02', sort_order: 1 },
   ],
   photos: [], made_item: null, status: 'steeping',
+  sky: { phase: 'waxing crescent', sign: 'Scorpio', ruler: 'Jupiter' },
 };
 const sections = [{ id: 1, name: 'Herbs', kind: 'herb' }, { id: 2, name: 'Made things', kind: 'supply' }, { id: 3, name: 'Tools', kind: 'supply' }];
 
@@ -480,4 +481,10 @@ it('keeps a step change whose reload started after a journal save was sent but b
   releaseGet();
   await waitFor(() => expect(within(screen.getByRole('region', { name: 'Steps' })).getByRole('checkbox', { name: 'Done: Strain and bottle' })).toBeChecked());
   expect(within(screen.getByRole('region', { name: 'Journal' })).getByText('Smells sunny')).toBeInTheDocument();
+});
+
+it('adds the sky on the start date to the subtitle', async () => {
+  open('/batches/5');
+  await screen.findByRole('heading', { name: 'Calendula oil, Oct 1' });
+  expect(document.body.textContent).toContain('started Oct 1, 2026, waxing crescent in Scorpio, Thursday under Jupiter');
 });
