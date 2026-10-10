@@ -7,6 +7,11 @@ export const KINDS = [
   { kind: 'expiry', label: 'Jars to use up' },
 ];
 export const AGENDA_DAYS = 30;
+// The server only knows these years, so the grid never asks for days outside them.
+export const MIN_DAY = '1900-01-01';
+export const MAX_DAY = '2100-12-31';
+export const inRange = iso => iso >= MIN_DAY && iso <= MAX_DAY;
+export const clampDay = iso => (iso < MIN_DAY ? MIN_DAY : iso > MAX_DAY ? MAX_DAY : iso);
 export const MAX_SHOWN = 3;
 
 const parts = iso => iso.split('-').map(Number);
@@ -27,7 +32,9 @@ export function shiftMonth(iso, n) {
 }
 
 // The first and last day the server is asked for, and the days between.
-export function rangeFor(view, date) {
+// "days" is the whole grid; "from" and "to" are what to ask the server for, clamped to the years it knows.
+export function rangeFor(view, given) {
+  const date = clampDay(given);
   let from;
   let to;
   if (view === 'week') { from = weekStart(date); to = addDaysTo(from, 6); }
@@ -40,13 +47,20 @@ export function rangeFor(view, date) {
   }
   const days = [];
   for (let d = from; d <= to; d = addDaysTo(d, 1)) days.push(d);
-  return { from, to, days };
+  return { from: clampDay(from), to: clampDay(to), days };
 }
 
 export function step(view, date, n) {
   if (view === 'week') return addDaysTo(date, 7 * n);
   if (view === 'agenda') return addDaysTo(date, AGENDA_DAYS * n);
   return shiftMonth(date, n);
+}
+
+// Previous and Next stop at the ends of the years the server knows.
+export function canStep(view, date, n) {
+  const target = step(view, clampDay(date), n);
+  if (view === 'week') return weekStart(target) <= MAX_DAY && addDaysTo(weekStart(target), 6) >= MIN_DAY;
+  return inRange(target);
 }
 
 export const markerText = marker => ({ full: 'Full moon', new: 'New moon', 'first quarter': 'First quarter', 'last quarter': 'Last quarter' }[marker] ?? '');

@@ -7,7 +7,7 @@ import { Checkbox } from '../../components/Field.jsx';
 import { useApi } from '../../lib/useApi.js';
 import { todayString } from '../../lib/today.js';
 import {
-  KINDS, VIEWS, byDay, isDay, monthDayLabel, monthLabel, monthStart, rangeFor, step, weekStart,
+  KINDS, VIEWS, byDay, canStep, clampDay, isDay, monthDayLabel, monthLabel, monthStart, rangeFor, step, weekStart,
 } from '../../lib/calendar.js';
 import { MonthView } from './MonthView.jsx';
 import { WeekView } from './WeekView.jsx';
@@ -19,10 +19,10 @@ export function Calendar() {
   const [params, setParams] = useSearchParams();
   const today = todayString();
   const view = VIEWS.includes(params.get('view')) ? params.get('view') : 'month';
-  const date = isDay(params.get('date')) ? params.get('date') : today;
+  const date = clampDay(isDay(params.get('date')) ? params.get('date') : today);
   const hidden = useMemo(() => new Set((params.get('hide') ?? '').split(',').filter(k => KINDS.some(x => x.kind === k))), [params]);
   const pendingFocus = useRef(null);
-  const { from, to } = rangeFor(view, date);
+  const { from, to, days: gridDays } = rangeFor(view, date);
   const { data, error, loading, reload } = useApi(`/api/calendar?from=${from}&to=${to}`);
 
   const update = changes => {
@@ -52,7 +52,10 @@ export function Calendar() {
   if (error) body = <><p role="alert">{error.message}</p><Button onClick={reload}>Try again</Button></>;
   else if (data && !loading) {
     const sky = data.days;
-    if (view === 'month') body = <MonthView days={sky} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} pendingFocus={pendingFocus} onLeave={day => { pendingFocus.current = day; update({ date: day }); }} />;
+    // The month grid always keeps its whole layout; days the server does not know are blank cells.
+    const known = new Map(sky.map(d => [d.day, d]));
+    const cells = gridDays.map(d => known.get(d) ?? { day: d, blank: true });
+    if (view === 'month') body = <MonthView days={cells} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} pendingFocus={pendingFocus} onLeave={day => { pendingFocus.current = day; update({ date: day }); }} />;
     else if (view === 'week') body = <WeekView days={sky} eventsByDay={eventsByDay} today={today} />;
     else body = <AgendaView days={sky} eventsByDay={eventsByDay} />;
   }
@@ -68,9 +71,9 @@ export function Calendar() {
             ))}
           </div>
           <div className="cal-nav" role="group" aria-label="Move">
-            <Button variant="secondary" size="sm" onClick={() => go({ date: step(view, date, -1) })}>Previous</Button>
+            <Button variant="secondary" size="sm" disabled={!canStep(view, date, -1)} onClick={() => go({ date: step(view, date, -1) })}>Previous</Button>
             <Button variant="secondary" size="sm" onClick={() => go({ date: null })}>Today</Button>
-            <Button variant="secondary" size="sm" onClick={() => go({ date: step(view, date, 1) })}>Next</Button>
+            <Button variant="secondary" size="sm" disabled={!canStep(view, date, 1)} onClick={() => go({ date: step(view, date, 1) })}>Next</Button>
           </div>
         </div>
         <fieldset className="cal-filters">

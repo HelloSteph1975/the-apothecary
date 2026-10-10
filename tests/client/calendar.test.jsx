@@ -249,3 +249,21 @@ it('draws a moon glyph for every phase and hides it from screen readers', () => 
     unmount();
   }
 });
+
+it('shows blank cells and disables Previous at January 1900', async () => {
+  await open('/calendar?view=month&date=1900-01-15');
+  expect(calls).toContain('/api/calendar?from=1900-01-01&to=1900-02-03');
+  expect(screen.getAllByRole('row')).toHaveLength(6);
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+  expect(screen.queryByRole('link', { name: /December 31/ })).toBeNull();
+  expect(screen.getAllByRole('link', { name: /^Monday, January 1:/ })).toHaveLength(1);
+});
+
+it('shows blank cells and disables Next at December 2100', async () => {
+  await open('/calendar?view=month&date=2100-12-15');
+  expect(calls).toContain('/api/calendar?from=2100-11-28&to=2100-12-31');
+  expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+  expect(screen.queryByRole('link', { name: /January 1, 2101|Friday, January 1/ })).toBeNull();
+});

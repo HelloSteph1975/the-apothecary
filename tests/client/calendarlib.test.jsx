@@ -44,3 +44,27 @@ it('draws a different shape for each phase', () => {
   });
   expect(new Set(shapes).size).toBe(8);
 });
+
+import { canStep } from '../../client/src/lib/calendar.js';
+
+it('never asks the server for days outside 1900 to 2100', () => {
+  const jan = rangeFor('month', '1900-01-15');
+  expect(jan.from).toBe('1900-01-01');
+  expect(jan.days).toHaveLength(35);
+  expect(jan.days[0]).toBe('1899-12-31');
+  const dec = rangeFor('month', '2100-12-15');
+  expect(dec.to).toBe('2100-12-31');
+  expect(dec.days.at(-1)).toBe('2101-01-01');
+  expect(rangeFor('week', '1900-01-02').from).toBe('1900-01-01');
+  expect(rangeFor('agenda', '2100-12-20').to).toBe('2100-12-31');
+});
+
+it('stops stepping at the ends of the range', () => {
+  expect(canStep('month', '1900-01-15', -1)).toBe(false);
+  expect(canStep('month', '1900-01-15', 1)).toBe(true);
+  expect(canStep('month', '2100-12-15', 1)).toBe(false);
+  expect(canStep('month', '2100-12-15', -1)).toBe(true);
+  expect(canStep('week', '1900-01-03', -1)).toBe(false);
+  expect(canStep('week', '2026-10-09', -1)).toBe(true);
+  expect(canStep('agenda', '2100-12-20', 1)).toBe(false);
+});

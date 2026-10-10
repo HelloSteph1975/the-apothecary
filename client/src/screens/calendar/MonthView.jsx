@@ -10,8 +10,8 @@ const MOVES = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
 export function MonthView({ days, eventsByDay, month, today, startDay, onLeave, pendingFocus }) {
   const table = useRef(null);
   const [focusDay, setFocusDay] = useState(null);
-  const inGrid = new Set(days.map(d => d.day));
-  const roving = focusDay && inGrid.has(focusDay) ? focusDay : inGrid.has(startDay) ? startDay : days[0].day;
+  const inGrid = new Set(days.filter(d => !d.blank).map(d => d.day));
+  const roving = focusDay && inGrid.has(focusDay) ? focusDay : inGrid.has(startDay) ? startDay : days.find(d => !d.blank).day;
   const weeks = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
@@ -44,6 +44,7 @@ export function MonthView({ days, eventsByDay, month, today, startDay, onLeave, 
         {weeks.map(week => (
           <tr key={week[0].day}>
             {week.map(d => {
+              if (d.blank) return <td key={d.day} className="cal-cell is-outside is-blank" aria-hidden="true" />;
               const events = eventsByDay.get(d.day) ?? [];
               const outside = d.day.slice(0, 7) !== month;
               const text = badge(d);
