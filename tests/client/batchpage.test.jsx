@@ -36,6 +36,7 @@ let failFinish;
 let recipeYield;
 let failLoads;
 let holdGet;
+let holdPatch;
 beforeEach(() => {
   calls = [];
   batch = JSON.parse(JSON.stringify(base));
@@ -43,6 +44,7 @@ beforeEach(() => {
   recipeYield = { scaled_yield_amount: 200, yield_unit: 'ml' };
   failLoads = new Set();
   holdGet = null;
+  holdPatch = null;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
@@ -58,7 +60,12 @@ beforeEach(() => {
       }
       return json(batch);
     }
-    if (url === '/api/batches/5' && method === 'PATCH') { batch = { ...batch, ...body }; return json(batch); }
+    if (url === '/api/batches/5' && method === 'PATCH') {
+      batch = { ...batch, ...body };
+      const reply = JSON.parse(JSON.stringify(batch));
+      if (holdPatch) { const wait = holdPatch; holdPatch = null; await wait; }
+      return json(reply);
+    }
     if (url === '/api/batches/5' && method === 'DELETE') return json({ ok: true, restore: '/api/batches/5/restore' });
     if (url === '/api/batches/5/restore') return json(batch);
     if (url === '/api/batches/5/steps' && method === 'POST') {
@@ -448,5 +455,28 @@ it('does not let an older reload overwrite a newer saved journal', async () => {
   expect(await within(journal).findByText('Smells sunny')).toBeInTheDocument();
   release();
   await new Promise(r => setTimeout(r, 50));
+  expect(within(screen.getByRole('region', { name: 'Journal' })).getByText('Smells sunny')).toBeInTheDocument();
+});
+
+it('keeps a step change whose reload started after a journal save was sent but before its reply', async () => {
+  const user = userEvent.setup();
+  open();
+  const steps = await stepsPanel();
+  await user.click(screen.getByRole('button', { name: 'Edit' }));
+  const journal = screen.getByRole('region', { name: 'Journal' });
+  await user.type(within(journal).getByLabelText('What I noticed'), 'Smells sunny');
+  let releasePatch;
+  let releaseGet;
+  holdPatch = new Promise(r => { releasePatch = r; });
+  await user.click(within(journal).getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(sent('PATCH', '/api/batches/5')).toHaveLength(1));
+  holdGet = { promise: new Promise(r => { releaseGet = r; }) };
+  await user.click(within(steps).getByRole('checkbox', { name: 'Done: Strain and bottle' }));
+  await waitFor(() => expect(sent('PATCH', '/api/batches/5/steps/21')).toHaveLength(1));
+  await waitFor(() => expect(holdGet).toBeNull());
+  releasePatch();
+  expect(await within(journal).findByText('Smells sunny')).toBeInTheDocument();
+  releaseGet();
+  await waitFor(() => expect(within(screen.getByRole('region', { name: 'Steps' })).getByRole('checkbox', { name: 'Done: Strain and bottle' })).toBeChecked());
   expect(within(screen.getByRole('region', { name: 'Journal' })).getByText('Smells sunny')).toBeInTheDocument();
 });
