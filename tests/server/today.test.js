@@ -22,7 +22,7 @@ it('summarises low, nearing and expired items and leaves batches empty', async (
   expect(res.body.nearingExpiry.map(i => i.name)).toEqual(['Rose', 'Elderberry']);
   expect(res.body.expired.map(i => i.name)).toEqual(['Old sage']);
   expect(res.body.batchesDue).toEqual([]);
-  expect(res.body.counts).toEqual({ runningLow: 2, nearingExpiry: 2, expired: 1 });
+  expect(res.body.counts).toEqual({ runningLow: 2, nearingExpiry: 2, expired: 1, batchesDue: 0 });
 });
 
 it('caps each list at eight but counts them all', async () => {
