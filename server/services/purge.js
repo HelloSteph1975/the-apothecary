@@ -14,10 +14,15 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
       OR (owner_type = 'supplier' AND owner_id IN (${old('suppliers')}))
       OR (owner_type = 'herb' AND owner_id IN (${old('herbs')}))
       OR (owner_type = 'recipe' AND owner_id IN (${old('recipes')}))
-      OR (owner_type = 'batch' AND owner_id IN (${old('batches')}))`;
+      OR (owner_type = 'batch' AND owner_id IN (${old('batches')}))
+      OR (owner_type = 'task' AND owner_id IN (${old('tasks')}))`;
     files = db.prepare(`SELECT filename FROM photos WHERE ${photoMatch}`).all(cutoff).map(r => r.filename);
     const counts = {};
     counts.photos = db.prepare(`DELETE FROM photos WHERE ${photoMatch}`).run(cutoff).changes;
+    for (const [type, table] of [['item', 'items'], ['recipe', 'recipes'], ['batch', 'batches'], ['herb', 'herbs']]) {
+      db.prepare(`UPDATE tasks SET related_type = NULL, related_id = NULL WHERE related_type = '${type}' AND related_id IN (${old(table)})`).run();
+    }
+    counts.tasks = db.prepare(`DELETE FROM tasks WHERE id IN (${old('tasks')})`).run().changes;
     counts.purchases = db.prepare(`DELETE FROM purchases WHERE id IN (${old('purchases')}) OR item_id IN (${old('items')})`).run().changes;
     db.prepare(`UPDATE batches SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     db.prepare(`UPDATE batch_ingredients SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
@@ -54,6 +59,15 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     db.prepare(`UPDATE recipe_ingredients SET herb_id = NULL, herb_gone = 1 WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE batch_ingredients SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     counts.herbs = db.prepare(`DELETE FROM herbs WHERE id IN (${old('herbs')})`).run().changes;
+    // A dismissal key names its cause (step:<id>:..., restock:<id>:..., expiry:<id>:...). Keep it while the cause row still exists.
+    const stepIds = new Set(db.prepare('SELECT id FROM batch_steps').all().map(r => r.id));
+    const itemIds = new Set(db.prepare('SELECT id FROM items').all().map(r => r.id));
+    const dropKey = db.prepare('DELETE FROM task_dismissals WHERE auto_key = ?');
+    for (const { auto_key } of db.prepare('SELECT auto_key FROM task_dismissals').all()) {
+      const [source, id] = auto_key.split(':');
+      const known = source === 'step' ? stepIds : source === 'restock' || source === 'expiry' ? itemIds : null;
+      if (known && !known.has(Number(id))) dropKey.run(auto_key);
+    }
     return counts;
   });
   const live = path.join(dataDir, 'photos');

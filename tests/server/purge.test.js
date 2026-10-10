@@ -220,3 +220,40 @@ it('removes the id key of a purged recipe type from every timing rule, and leave
   expect(list(live)).toEqual(['tincture', `type-${kept}`]);
   expect(list(soft)).toEqual([]);
 });
+
+it('purges old-deleted tasks with their photos, and unlinks tasks from purged records', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
+  const goneTask = run("INSERT INTO tasks (title, deleted_at) VALUES ('Gone', ?)", old);
+  const liveTask = run("INSERT INTO tasks (title) VALUES ('Live')");
+  run("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('task', ?, '4-dddddddd.jpg')", goneTask);
+  fs.writeFileSync(path.join(t.dataDir, 'photos', '4-dddddddd.jpg'), 'x');
+  const item = run("INSERT INTO items (section_id, name, amount, unit, deleted_at) VALUES (1, 'Gone', 1, 'g', ?)", old);
+  const linked = run("INSERT INTO tasks (title, related_type, related_id) VALUES ('Linked', 'item', ?)", item);
+  const keptLink = run("INSERT INTO tasks (title, related_type, related_id) VALUES ('Kept', 'batch', 999)");
+
+  const counts = purgeSoftDeleted(db, t.dataDir);
+  expect(counts).toMatchObject({ tasks: 1, photos: 1, items: 1 });
+  expect(db.prepare('SELECT id FROM tasks WHERE id = ?').get(goneTask)).toBeUndefined();
+  expect(db.prepare('SELECT id FROM tasks WHERE id = ?').get(liveTask)).toBeDefined();
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '4-dddddddd.jpg'))).toBe(false);
+  expect(db.prepare('SELECT related_type, related_id FROM tasks WHERE id = ?').get(linked)).toEqual({ related_type: null, related_id: null });
+  expect(db.prepare('SELECT related_type, related_id FROM tasks WHERE id = ?').get(keptLink)).toEqual({ related_type: 'batch', related_id: 999 });
+});
+
+it('drops dismissals whose cause is gone for good and keeps ones for live causes', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
+  const item = run("INSERT INTO items (section_id, name, amount, unit) VALUES (1, 'Live', 1, 'g')");
+  const batch = run("INSERT INTO batches (name, start_date) VALUES ('B', '2026-01-01')");
+  const step = run("INSERT INTO batch_steps (batch_id, title) VALUES (?, 'Strain')", batch);
+  const dismiss = k => run("INSERT INTO task_dismissals (auto_key, dismissed_on) VALUES (?, '2026-10-10')", k);
+  for (const k of [`restock:${item}:0`, `expiry:${item}:2026-12-01`, `step:${step}:2026-10-12`,
+    'restock:9999:0', 'expiry:9999:2026-12-01', 'step:9999:2026-10-12']) dismiss(k);
+  purgeSoftDeleted(db, t.dataDir);
+  expect(db.prepare('SELECT auto_key FROM task_dismissals ORDER BY auto_key').all().map(r => r.auto_key))
+    .toEqual([`expiry:${item}:2026-12-01`, `restock:${item}:0`, `step:${step}:2026-10-12`]);
+});
