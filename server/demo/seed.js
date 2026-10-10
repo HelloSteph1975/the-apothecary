@@ -7,15 +7,24 @@ import { seedGrimoire, linkItemsToHerbs } from '../services/grimoire.js';
 import { trashPhotoFile } from '../services/photos.js';
 import { seedRecipeTypes } from '../services/recipeTypes.js';
 import { createRecipe } from '../services/recipes.js';
+import { createBatch, finishBatch } from '../services/batches.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
-const SEED_VERSION = '4';
+const SEED_VERSION = '5';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
 function localToday(d = new Date()) {
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Clears the demo batches, children first, so recipes and jars can go after them. Trashes their photo files.
+function clearBatches(db, dataDir) {
+  for (const { filename } of db.prepare("SELECT filename FROM photos WHERE owner_type = 'batch'").all()) {
+    trashPhotoFile(dataDir, filename);
+  }
+  db.exec("DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM photos WHERE owner_type = 'batch'");
 }
 
 // Clears what the demo stocks (not the sections) so a reset doesn't double up.
@@ -74,6 +83,46 @@ function stockRecipes(db) {
   });
 }
 
+// Adds two sample batches: one still steeping and one finished with its made jar.
+// Draws go through the batch service so the jars end up with the right amounts.
+function stockBatches(db, today) {
+  const jar = name => db.prepare('SELECT id FROM items WHERE name = ? AND deleted_at IS NULL AND used_up_at IS NULL ORDER BY id').get(name)?.id ?? null;
+  const herb = slug => db.prepare('SELECT id FROM herbs WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id ?? null;
+  // Draws from a jar only when it is there (an older folder may not have the demo jars).
+  const draw = (slug, name, amount) => {
+    const item_id = jar(name);
+    return { herb_id: herb(slug), name, amount, unit: 'g', ...(item_id ? { item_id, drawn_amount: amount } : {}) };
+  };
+  const recipe = name => db.prepare('SELECT id FROM recipes WHERE name = ? AND deleted_at IS NULL').get(name)?.id ?? null;
+
+  createBatch(db, {
+    name: 'Calendula skin salve', recipe_id: recipe('Calendula skin salve'), start_date: addDays(today, -10),
+    intention: 'A gentle salve for dry, chapped skin.', base: 'Olive oil and beeswax',
+    method: 'Infused the calendula in warm olive oil, then left it to steep on the shelf.',
+    lines: [
+      draw('calendula', 'Calendula', 10),
+      { name: 'Olive oil', amount: 100, unit: 'ml' },
+    ],
+    steps: [{ title: 'Strain and bottle', due_on: addDays(today, 4) }],
+  });
+
+  const tea = createBatch(db, {
+    name: 'Sleepy chamomile tea', recipe_id: recipe('Sleepy chamomile tea'), start_date: addDays(today, -12),
+    intention: 'A soft evening cup.', method: 'Mixed the dried herbs in a jar and shook it well.',
+    noticed: 'Sweet and calming. Lavender was just right.', would_change: 'A little more lemon balm next time.',
+    lines: [
+      draw('chamomile', 'Chamomile', 18),
+      draw('lavender', 'Lavender', 6),
+      { name: 'Lemon balm', amount: 12, unit: 'g' },
+    ],
+    steps: [{ title: 'Taste and adjust', due_on: addDays(today, -8) }],
+  });
+  // The made jar joins the cabinet only when the demo jars are there; an older folder with her own stock gets none.
+  const madeJar = jar('Chamomile')
+    ? { add_to_cabinet: { section_id: ensureSection(db, 'Herbs'), name: 'Sleepy chamomile tea', amount: 36, unit: 'g', storage_spot: 'Middle shelf' } } : {};
+  finishBatch(db, tea, { finished_on: addDays(today, -7), yield_amount: 36, yield_unit: 'g', ...madeJar });
+}
+
 // Finds the live section with this name. If she renamed or deleted it, brings back a deleted one
 // or adds a new one at the end. Never renames her sections.
 function ensureSection(db, name) {
@@ -121,7 +170,7 @@ function linkDemoHerbs(db) {
   linkItemsToHerbs(db);
 }
 
-// Seeds the demo folder once (or again with reset). Later stages add sample batches here.
+// Seeds the demo folder once (or again with reset). Later stages add more samples here.
 export function seedDemo(ctx, { reset = false } = {}) {
   const db = ctx.db;
   const seeded = db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get();
@@ -132,16 +181,19 @@ export function seedDemo(ctx, { reset = false } = {}) {
       if (stocked) linkDemoHerbs(db);
       else stockCabinet(db, localToday());
       if (!db.prepare('SELECT 1 FROM recipes').get()) stockRecipes(db);
+      if (!db.prepare('SELECT 1 FROM batches').get()) stockBatches(db, localToday());
       db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
     });
     return !stocked;
   }
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
+    clearBatches(db, ctx.config.dataDir);
     clearCabinet(db, ctx.config.dataDir);
     stockCabinet(db, localToday());
     clearRecipes(db, ctx.config.dataDir);
     stockRecipes(db);
+    stockBatches(db, localToday());
     db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });
   return true;

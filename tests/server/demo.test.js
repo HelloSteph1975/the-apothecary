@@ -65,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('4');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('5');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -180,12 +180,12 @@ it('running the demo seed again changes nothing', () => {
 it('gives an existing v3 demo folder the recipes once', () => {
   t = makeTestContext();
   seedDemo(t.ctx);
-  t.ctx.db.exec('DELETE FROM recipe_ingredients; DELETE FROM recipes');
+  t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM recipe_ingredients; DELETE FROM recipes');
   t.ctx.db.prepare("UPDATE settings SET value = '3' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('4');
-  t.ctx.db.exec('DELETE FROM recipe_ingredients; DELETE FROM recipes');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('5');
+  t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM recipe_ingredients; DELETE FROM recipes');
   seedDemo(t.ctx);
   expect(recipeNames(t.ctx.db)).toEqual([]);
 });
@@ -213,9 +213,71 @@ it('reset re-adds the demo recipes, trashes their photos and leaves recipe types
 it('reset skips a demo recipe whose starter type she deleted', () => {
   t = makeTestContext();
   seedDemo(t.ctx);
+  t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches');
   t.ctx.db.exec("DELETE FROM recipe_ingredients WHERE recipe_id IN (SELECT r.id FROM recipes r JOIN recipe_types y ON y.id = r.type_id WHERE y.slug = 'serum')");
   t.ctx.db.exec("DELETE FROM recipes WHERE type_id = (SELECT id FROM recipe_types WHERE slug = 'serum')");
   t.ctx.db.prepare("UPDATE recipe_types SET deleted_at = ? WHERE slug = 'serum'").run(new Date().toISOString());
   expect(() => seedDemo(t.ctx, { reset: true })).not.toThrow();
   expect(recipeNames(t.ctx.db)).toEqual(['Calendula skin salve', 'Sleepy chamomile tea']);
+});
+
+const batchNames = db => db.prepare('SELECT name FROM batches WHERE deleted_at IS NULL ORDER BY name').all().map(r => r.name);
+const DEMO_BATCHES = ['Calendula skin salve', 'Sleepy chamomile tea'];
+const clearBatchRows = db => db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches');
+
+it('adds a steeping batch and a finished batch with its made jar', async () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
+  const salve = t.ctx.db.prepare("SELECT id FROM batches WHERE name = 'Calendula skin salve'").get();
+  const steeping = (await t.http().get(`/api/batches/${salve.id}`)).body;
+  expect(steeping.status).toBe('steeping');
+  expect(steeping.recipe.name).toBe('Calendula skin salve');
+  expect(steeping.steps.map(s => s.title)).toEqual(['Strain and bottle']);
+  const tea = t.ctx.db.prepare("SELECT id FROM batches WHERE name = 'Sleepy chamomile tea'").get();
+  const done = (await t.http().get(`/api/batches/${tea.id}`)).body;
+  expect(done.status).toBe('finished');
+  expect(done.made_item.name).toBe('Sleepy chamomile tea');
+  // The draw came out of the demo jar through the batch service.
+  expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(20);
+});
+
+it('gives an existing v4 demo folder the batches once', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  clearBatchRows(t.ctx.db);
+  t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('5');
+  clearBatchRows(t.ctx.db);
+  seedDemo(t.ctx);
+  expect(batchNames(t.ctx.db)).toEqual([]);
+});
+
+it('leaves a v4 demo folder alone when it already has a batch', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec("DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches WHERE name = 'Sleepy chamomile tea'");
+  t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
+  seedDemo(t.ctx);
+  expect(batchNames(t.ctx.db)).toEqual(['Calendula skin salve']);
+});
+
+it('reset clears and re-adds the demo batches, trashes their photos and does not double up', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const batch = t.ctx.db.prepare('SELECT id FROM batches LIMIT 1').get();
+  const filename = '1700000000002-abcdef12.jpg';
+  fs.mkdirSync(path.join(t.dataDir, 'photos', '_trash'), { recursive: true });
+  fs.writeFileSync(path.join(t.dataDir, 'photos', filename), 'x');
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('batch', ?, ?)").run(batch.id, filename);
+  seedDemo(t.ctx, { reset: true });
+  seedDemo(t.ctx, { reset: true });
+  expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM batches').get().n).toBe(2);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM recipes').get().n).toBe(3);
+  expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(20);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
+  expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'batch'").get().n).toBe(0);
 });
