@@ -27,6 +27,7 @@ import { BatchPage } from './screens/batches/BatchPage.jsx';
 import { RecordSheet } from './screens/batches/RecordSheet.jsx';
 import { Todo } from './screens/todo/Todo.jsx';
 import { TaskPage } from './screens/todo/TaskPage.jsx';
+import { Calendar } from './screens/calendar/Calendar.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -71,7 +72,7 @@ function RecordSheetRoute() {
   return <RecordSheet key={id} />;
 }
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -101,6 +102,7 @@ export const routes = [
       { path: 'batches/:id/sheet', element: <RecordSheetRoute /> },
       { path: 'todo', element: <Todo /> },
       { path: 'todo/:id', element: <TaskPageRoute /> },
+      { path: 'calendar', element: <Calendar /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },
