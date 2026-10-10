@@ -204,3 +204,19 @@ it('purges old deleted timing rules and keeps live and recent ones', () => {
   expect(db.prepare('SELECT id FROM timing_rules ORDER BY id').all().map(r => r.id)).toEqual([fresh, live]);
   expect(db.prepare('SELECT id FROM timing_rules WHERE id = ?').get(gone)).toBeUndefined();
 });
+
+it('removes the id key of a purged recipe type from every timing rule, and leaves other keys alone', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const type = Number(db.prepare("INSERT INTO recipe_types (name, sort_order, is_starter, deleted_at) VALUES ('Hair rinse', 99, 0, ?)").run(old).lastInsertRowid);
+  const kept = Number(db.prepare("INSERT INTO recipe_types (name, sort_order, is_starter) VALUES ('Scalp oil', 98, 0)").run().lastInsertRowid);
+  const add = (list, deletedAt) => Number(db.prepare("INSERT INTO timing_rules (kind, value, text, recipe_types, deleted_at) VALUES ('festival', 'Yule', 'x', ?, ?)").run(JSON.stringify(list), deletedAt).lastInsertRowid);
+  const live = add(['tincture', `type-${type}`, `type-${kept}`], null);
+  const soft = add([`type-${type}`], new Date().toISOString());
+  purgeSoftDeleted(db, t.dataDir);
+  expect(db.prepare('SELECT id FROM recipe_types WHERE id = ?').get(type)).toBeUndefined();
+  const list = id => JSON.parse(db.prepare('SELECT recipe_types FROM timing_rules WHERE id = ?').get(id).recipe_types);
+  expect(list(live)).toEqual(['tincture', `type-${kept}`]);
+  expect(list(soft)).toEqual([]);
+});
