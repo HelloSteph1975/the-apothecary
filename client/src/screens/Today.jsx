@@ -8,6 +8,8 @@ import { greeting, longDate } from '../lib/dates.js';
 import { todayString } from '../lib/today.js';
 import { formatAmount, formatShortDay } from '../lib/cabinet.js';
 import { useApi } from '../lib/useApi.js';
+import { useTaskActions } from './todo/Todo.jsx';
+import { TaskCheck } from './todo/TaskCheck.jsx';
 import { FOLK_LABEL, phaseText, skyLine, clockTime, nextMoonText, festivalText } from '../lib/sky.js';
 
 const EMPTY = 'Nothing here yet. This fills in once the herb cabinet is stocked.';
@@ -83,6 +85,8 @@ export function Today() {
   const herbApi = useApi(`/api/herb-of-the-day?today=${day}`);
   const herb = herbApi.data?.id ? herbApi.data : null;
   const due = data?.batchesDue ?? [];
+  const taskActions = useTaskActions({ onChange: () => today.reload() });
+  const tasks = data?.tasks ?? [];
   const retry = () => { today.reload(); items.reload(); };
   const nearing = data
     ? [
@@ -103,6 +107,20 @@ export function Today() {
       {data?.sky && <SkyLines sky={data.sky} />}
       <p className="flourish-line">gather ✦ steep ✦ strain ✦ keep</p>
       <div className="card-grid">
+        <ParchmentCard title="Tasks" subtitle="due today and overdue">
+          {status(!data ? <p className="muted">Looking at the list…</p> : tasks.length === 0 ? (
+            <p className="muted">Nothing due today.</p>
+          ) : (
+            <>
+              <ul className="today-list">
+                {tasks.map(t => (
+                  <li key={t.id}><TaskCheck task={t} actions={taskActions} /> <Link to={`/todo/${t.id}`}>{t.title}</Link></li>
+                ))}
+              </ul>
+              <p><Link to="/todo">See all</Link></p>
+            </>
+          ))}
+        </ParchmentCard>
         {data?.sky && (
           <ParchmentCard title="The sky today" subtitle={settings && settings.sky_suggestions !== 'off' ? "folk timing, for what you're making" : 'the moon and the day'}>
             <p>{phaseText(data.sky.phase)}</p>

@@ -173,12 +173,15 @@ export function rulesForDay(db, sky) {
 
 const byWeight = (a, b) => b.weight - a.weight || a.sort_order - b.sort_order || a.id - b.id;
 
-export function todaySuggestions(db, day, settings, now) {
+// The sky and folk suggestions for any day. `now` is for today only, so the next phases count from the current moment.
+export function daySuggestions(db, day, settings, now) {
   const sky = skyForDay(day, { hemisphere: settings.hemisphere, now });
   if (settings.sky_suggestions === 'off') return { sky, suggestions: [] };
   const suggestions = rulesForDay(db, sky).sort(byWeight).slice(0, TOP_SUGGESTIONS).map(({ id, text }) => ({ id, text }));
   return { sky, suggestions };
 }
+
+export const todaySuggestions = daySuggestions;
 
 // The local calendar day, as the server's computer sees it.
 export function localToday() {

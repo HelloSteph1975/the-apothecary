@@ -1,8 +1,10 @@
-import { it, expect, afterEach } from 'vitest';
+import { it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { makeTestContext } from './helpers.js';
 
 let t;
-afterEach(() => t?.cleanup());
+// Only Date is faked, so the sync sees the same day the test uses.
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 8, 12, 0, 0)); });
+afterEach(() => { vi.useRealTimers(); t?.cleanup(); });
 
 it('summarises low, nearing and expired items and leaves batches empty', async () => {
   t = makeTestContext();
@@ -22,7 +24,8 @@ it('summarises low, nearing and expired items and leaves batches empty', async (
   expect(res.body.nearingExpiry.map(i => i.name)).toEqual(['Rose', 'Elderberry']);
   expect(res.body.expired.map(i => i.name)).toEqual(['Old sage']);
   expect(res.body.batchesDue).toEqual([]);
-  expect(res.body.counts).toEqual({ runningLow: 2, nearingExpiry: 2, expired: 1, batchesDue: 0 });
+  expect(res.body.counts).toEqual({ runningLow: 2, nearingExpiry: 2, expired: 1, batchesDue: 0, tasks: 3 });
+  expect(res.body.tasks.map(x => x.title)).toEqual(['Use or replace Old sage', 'Restock Mullein', 'Restock Yarrow']);
 });
 
 it('caps each list at eight but counts them all', async () => {
@@ -36,4 +39,13 @@ it('caps each list at eight but counts them all', async () => {
 it('needs a date', async () => {
   t = makeTestContext();
   expect((await t.http().get('/api/today')).status).toBe(400);
+});
+
+it('lists today tasks, capped at eight, with a full count', async () => {
+  t = makeTestContext();
+  for (let i = 0; i < 10; i++) await t.http().post('/api/tasks').send({ title: `Task ${i}`, due_on: '2026-10-08', today: '2026-10-08' });
+  await t.http().post('/api/tasks').send({ title: 'Later', due_on: '2026-10-09', today: '2026-10-08' });
+  const res = await t.http().get('/api/today?today=2026-10-08');
+  expect(res.body.tasks).toHaveLength(8);
+  expect(res.body.counts.tasks).toBe(10);
 });

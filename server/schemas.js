@@ -1,3 +1,4 @@
+import { REPEAT_KINDS, PRIORITIES, RELATED_TYPES } from './lib/repeat.js';
 export const UNITS = ['g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl oz', 'count'];
 export const FORMS = ['dried leaf', 'dried flower', 'root', 'bark', 'seed', 'resin', 'powder', 'fresh', 'tincture', 'oil', 'other'];
 export const PLANT_PARTS = ['leaf', 'flower', 'root', 'bark', 'seed', 'berry', 'resin', 'whole herb'];
@@ -69,6 +70,11 @@ export const recipeSchema = {
 export const recipeIngredientSchema = {
   herb_id: 'int', name: 'string', amount: { type: 'number', min: 0 }, unit: RECIPE_UNITS, form: FORMS, plant_part: PLANT_PARTS,
   note: 'string', herb_gone: { type: 'bool', nullable: false },
+};
+
+export const taskSchema = {
+  title: 'string!', notes: 'string', due_on: 'date', repeat_kind: { type: REPEAT_KINDS, nullable: false },
+  priority: { type: PRIORITIES, nullable: false }, related_type: RELATED_TYPES, related_id: 'int', snoozed_until: 'date',
 };
 
 export const batchSchema = {

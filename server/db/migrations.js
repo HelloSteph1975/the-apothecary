@@ -106,6 +106,20 @@ export const migrations = [
     sort_order INTEGER NOT NULL DEFAULT 0, is_starter INTEGER NOT NULL DEFAULT 0, ${TS});
   CREATE UNIQUE INDEX idx_timing_rules_slug ON timing_rules(slug) WHERE slug IS NOT NULL;
   `,
+  // 7: to-do tasks. Auto tasks carry an auto_key naming their cause; dismissals remember keys she cleared.
+  `
+  CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT NOT NULL, notes TEXT, due_on TEXT,
+    repeat_kind TEXT NOT NULL DEFAULT 'none' CHECK (repeat_kind IN ('none','daily','weekly','monthly','new_moon','full_moon','festival')),
+    repeat_days TEXT NOT NULL DEFAULT '[]', repeat_anchor_day INTEGER CHECK (repeat_anchor_day IS NULL OR repeat_anchor_day BETWEEN 1 AND 31),
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high')),
+    related_type TEXT CHECK (related_type IS NULL OR related_type IN ('item','recipe','batch','herb')), related_id INTEGER,
+    kind TEXT NOT NULL DEFAULT 'manual' CHECK (kind IN ('manual','auto')), auto_key TEXT,
+    snoozed_until TEXT, done_on TEXT, spawned_id INTEGER, ${TS});
+  CREATE UNIQUE INDEX idx_tasks_auto_key ON tasks(auto_key) WHERE auto_key IS NOT NULL AND deleted_at IS NULL;
+  CREATE INDEX idx_tasks_due ON tasks(due_on) WHERE done_on IS NULL AND deleted_at IS NULL;
+  CREATE TABLE task_dismissals (auto_key TEXT PRIMARY KEY, dismissed_on TEXT NOT NULL);
+  ALTER TABLE items ADD COLUMN restock_count INTEGER NOT NULL DEFAULT 0;
+  `,
 ];
 
 export function migrate(db) {

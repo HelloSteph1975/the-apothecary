@@ -1,0 +1,88 @@
+import { useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { PageHeader } from '../../components/PageHeader.jsx';
+import { ParchmentCard } from '../../components/ParchmentCard.jsx';
+import { Button } from '../../components/Button.jsx';
+import { Checkbox } from '../../components/Field.jsx';
+import { useApi } from '../../lib/useApi.js';
+import { todayString } from '../../lib/today.js';
+import {
+  KINDS, VIEWS, byDay, canStep, clampDay, isDay, monthDayLabel, monthLabel, monthStart, rangeFor, step, weekStart,
+} from '../../lib/calendar.js';
+import { MonthView } from './MonthView.jsx';
+import { WeekView } from './WeekView.jsx';
+import { AgendaView } from './AgendaView.jsx';
+
+const LABELS = { month: 'Month', week: 'Week', agenda: 'Agenda' };
+
+export function Calendar() {
+  const [params, setParams] = useSearchParams();
+  const today = todayString();
+  const view = VIEWS.includes(params.get('view')) ? params.get('view') : 'month';
+  const date = clampDay(isDay(params.get('date')) ? params.get('date') : today);
+  const hidden = useMemo(() => new Set((params.get('hide') ?? '').split(',').filter(k => KINDS.some(x => x.kind === k))), [params]);
+  const pendingFocus = useRef(null);
+  const { from, to, days: gridDays } = rangeFor(view, date);
+  const { data, error, loading, reload } = useApi(`/api/calendar?from=${from}&to=${to}`);
+
+  const update = changes => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(changes)) {
+      if (v == null || v === '') next.delete(k);
+      else next.set(k, v);
+    }
+    setParams(next, { replace: true });
+  };
+  // Any move of her own cancels a keyboard move that was still waiting for its month to load.
+  const go = changes => { pendingFocus.current = null; update(changes); };
+  const toggle = kind => {
+    const next = new Set(hidden);
+    if (next.has(kind)) next.delete(kind); else next.add(kind);
+    update({ hide: KINDS.map(k => k.kind).filter(k => next.has(k)).join(',') });
+  };
+
+  const visible = data ? data.events.filter(e => !hidden.has(e.kind)) : [];
+  const eventsByDay = byDay(visible);
+  let title;
+  if (view === 'month') title = monthLabel(date);
+  else if (view === 'week') title = `Week of ${monthDayLabel(weekStart(date))}`;
+  else title = `Next 30 days from ${monthDayLabel(date)}`;
+
+  let body = <p role="status">Opening the calendar...</p>;
+  if (error) body = <><p role="alert">{error.message}</p><Button onClick={reload}>Try again</Button></>;
+  else if (data && !loading) {
+    const sky = data.days;
+    // The month grid always keeps its whole layout; days the server does not know are blank cells.
+    const known = new Map(sky.map(d => [d.day, d]));
+    const cells = gridDays.map(d => known.get(d) ?? { day: d, blank: true });
+    if (view === 'month') body = <MonthView days={cells} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} pendingFocus={pendingFocus} onLeave={day => { pendingFocus.current = day; update({ date: day }); }} />;
+    else if (view === 'week') body = <WeekView days={sky} eventsByDay={eventsByDay} today={today} />;
+    else body = <AgendaView days={sky} eventsByDay={eventsByDay} />;
+  }
+
+  return (
+    <>
+      <PageHeader title="Calendar" subtitle="The moon, the wheel, and what's due" />
+      <ParchmentCard>
+        <div className="cal-controls">
+          <div className="cal-switch" role="group" aria-label="View">
+            {VIEWS.map(v => (
+              <Button key={v} variant={v === view ? 'primary' : 'secondary'} size="sm" aria-pressed={v === view} onClick={() => go({ view: v })}>{LABELS[v]}</Button>
+            ))}
+          </div>
+          <div className="cal-nav" role="group" aria-label="Move">
+            <Button variant="secondary" size="sm" disabled={!canStep(view, date, -1)} onClick={() => go({ date: step(view, date, -1) })}>Previous</Button>
+            <Button variant="secondary" size="sm" onClick={() => go({ date: null })}>Today</Button>
+            <Button variant="secondary" size="sm" disabled={!canStep(view, date, 1)} onClick={() => go({ date: step(view, date, 1) })}>Next</Button>
+          </div>
+        </div>
+        <fieldset className="cal-filters">
+          <legend className="visually-hidden">Show on the calendar</legend>
+          {KINDS.map(k => <Checkbox key={k.kind} label={k.label} checked={!hidden.has(k.kind)} onChange={() => toggle(k.kind)} />)}
+        </fieldset>
+        <h2 className="cal-title" aria-live="polite">{title}</h2>
+        {body}
+      </ParchmentCard>
+    </>
+  );
+}

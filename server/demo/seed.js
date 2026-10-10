@@ -9,9 +9,11 @@ import { seedRecipeTypes } from '../services/recipeTypes.js';
 import { createRecipe } from '../services/recipes.js';
 import { createBatch, finishBatch } from '../services/batches.js';
 import { convert } from '../lib/units.js';
+import { createTask } from '../services/tasks.js';
+import { nextDue } from '../lib/repeat.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
-const SEED_VERSION = '5';
+const SEED_VERSION = '6';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
@@ -26,6 +28,26 @@ function clearBatches(db, dataDir) {
     trashPhotoFile(dataDir, filename);
   }
   db.exec("DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM photos WHERE owner_type = 'batch'");
+}
+
+// Clears the demo tasks and the dismissals, and trashes their photo files. Runs before the batches and jars they point at.
+function clearTasks(db, dataDir) {
+  for (const { filename } of db.prepare("SELECT filename FROM photos WHERE owner_type = 'task'").all()) {
+    trashPhotoFile(dataDir, filename);
+  }
+  db.exec("DELETE FROM task_dismissals; DELETE FROM tasks; DELETE FROM photos WHERE owner_type = 'task'");
+}
+
+// Adds three of her kind of tasks. The app makes the automatic ones from the demo jars and steps.
+function stockTasks(db, today) {
+  const batch = db.prepare("SELECT id FROM batches WHERE name = 'Calendula skin salve' AND deleted_at IS NULL").get()?.id;
+  const rosemary = { repeat_kind: 'weekly', repeat_days: [1, 4] };
+  createTask(db, { title: 'Water the rosemary', notes: 'A good soak, then let it dry out.', ...rosemary, due_on: nextDue(rosemary, addDays(today, -1)), today });
+  createTask(db, { title: 'Make moon water', notes: 'Set a jar of water out under the moon overnight.', repeat_kind: 'full_moon', due_on: nextDue({ repeat_kind: 'full_moon' }, addDays(today, -1)), today });
+  createTask(db, {
+    title: 'Label the new tinctures', due_on: addDays(today, 2), priority: 'high', today,
+    ...(batch ? { related_type: 'batch', related_id: batch } : {}),
+  });
 }
 
 // Clears what the demo stocks (not the sections) so a reset doesn't double up.
@@ -186,18 +208,21 @@ export function seedDemo(ctx, { reset = false } = {}) {
       else stockCabinet(db, localToday());
       if (!db.prepare('SELECT 1 FROM recipes').get()) stockRecipes(db);
       if (!db.prepare('SELECT 1 FROM batches').get()) stockBatches(db, localToday());
+      if (!db.prepare('SELECT 1 FROM tasks').get()) stockTasks(db, localToday());
       db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
     });
     return !stocked;
   }
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
+    clearTasks(db, ctx.config.dataDir);
     clearBatches(db, ctx.config.dataDir);
     clearCabinet(db, ctx.config.dataDir);
     stockCabinet(db, localToday());
     clearRecipes(db, ctx.config.dataDir);
     stockRecipes(db);
     stockBatches(db, localToday());
+    stockTasks(db, localToday());
     db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });
   return true;

@@ -34,6 +34,8 @@ export function repos(db) {
       batchSteps: createRepo(db, 'batch_steps', ['batch_id', 'title', 'due_on', 'done_on', 'sort_order'], { orderBy: 'sort_order, id' }),
       timingRules: createRepo(db, 'timing_rules', ['slug', 'kind', 'value', 'text', 'recipe_types', 'planets', 'elements', 'weight',
         'sort_order', 'is_starter'], { orderBy: 'sort_order, id' }),
+      tasks: createRepo(db, 'tasks', ['title', 'notes', 'due_on', 'repeat_kind', 'repeat_days', 'repeat_anchor_day', 'priority', 'related_type',
+        'related_id', 'kind', 'auto_key', 'snoozed_until', 'done_on', 'spawned_id'], { orderBy: 'due_on IS NULL, due_on, id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);
