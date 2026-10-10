@@ -22,6 +22,7 @@ import { RecipeTypes } from './screens/recipes/RecipeTypes.jsx';
 import { RecipeForm } from './screens/recipes/RecipeForm.jsx';
 import { RecipePage } from './screens/recipes/RecipePage.jsx';
 import { Journal } from './screens/journal/Journal.jsx';
+import { Gallery } from './screens/journal/Gallery.jsx';
 import { JournalTypes } from './screens/journal/JournalTypes.jsx';
 import { EntryPage } from './screens/journal/EntryPage.jsx';
 import { EntryForm } from './screens/journal/EntryForm.jsx';
@@ -120,6 +121,7 @@ export const routes = [
       { path: 'recipes/:id/edit', element: <RecipeFormRoute /> },
       { path: 'recipes/:id', element: <RecipePageRoute /> },
       { path: 'journal', element: <Journal /> },
+      { path: 'journal/photos', element: <Gallery /> },
       { path: 'journal/types', element: <JournalTypes /> },
       { path: 'journal/new', element: <EntryFormRoute /> },
       { path: 'journal/:id/edit', element: <EntryFormRoute /> },
