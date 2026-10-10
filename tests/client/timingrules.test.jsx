@@ -35,6 +35,7 @@ beforeEach(() => {
       const body = JSON.parse(opts.body);
       return body.text === 'bad' ? json({ error: 'Please fix the highlighted fields.', details: { text: 'Use 300 characters or fewer' } }, 400) : json({ id: 9, ...body }, 201);
     }
+    if (method === 'PUT' && url === '/api/timing-rules/order') return json(RULES);
     if (method === 'PATCH') return json({ ok: true });
     if (url === '/api/timing-rules') return json(RULES);
     return json({});
@@ -150,13 +151,14 @@ it('deletes with an undo that restores the rule', async () => {
   await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/timing-rules/1/restore')).toBe(true));
 });
 
-it('moves a rule down by swapping sort orders', async () => {
+it('moves a rule down with one call carrying the new order', async () => {
   const user = userEvent.setup();
   open();
   await screen.findByText('Waxing text.');
   await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
-  await waitFor(() => expect(calls.filter(c => c.method === 'PATCH')).toHaveLength(2));
-  const patches = calls.filter(c => c.method === 'PATCH');
-  expect(patches.find(c => c.url === '/api/timing-rules/1').body).toEqual({ sort_order: 20 });
-  expect(patches.find(c => c.url === '/api/timing-rules/2').body).toEqual({ sort_order: 10 });
+  await waitFor(() => expect(calls.find(c => c.method === 'PUT')).toBeTruthy());
+  const put = calls.find(c => c.method === 'PUT');
+  expect(put.url).toBe('/api/timing-rules/order');
+  expect(put.body).toEqual({ ids: [2, 1, 3] });
+  expect(calls.some(c => c.method === 'PATCH')).toBe(false);
 });

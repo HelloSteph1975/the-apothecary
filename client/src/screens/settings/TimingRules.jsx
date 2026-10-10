@@ -108,6 +108,7 @@ export function TimingRules() {
   const [formKey, setFormKey] = useState(0);
   const openForm = r => { setEditing(r); setFormKey(k => k + 1); setFormOpen(true); };
   const list = rules.data || [];
+  const [moving, setMoving] = useState(false);
 
   const typeName = slug => types.find(t => slugOf(t) === slug)?.name ?? slug;
   const favours = r => [
@@ -117,14 +118,15 @@ export function TimingRules() {
   ].filter(Boolean).join(' · ');
 
   const shift = async (i, by) => {
-    const a = list[i];
-    const b = list[i + by];
-    const same = a.sort_order === b.sort_order;
+    if (moving) return;
+    const ids = list.map(r => r.id);
+    [ids[i], ids[i + by]] = [ids[i + by], ids[i]];
+    setMoving(true);
     try {
-      await api.patch(`/api/timing-rules/${a.id}`, { sort_order: same ? b.sort_order + by : b.sort_order });
-      await api.patch(`/api/timing-rules/${b.id}`, { sort_order: a.sort_order });
-      rules.reload();
-    } catch (err) { toast.show({ message: err.message, duration: 6000 }); rules.reload(); }
+      await api.put('/api/timing-rules/order', { ids });
+    } catch (err) { toast.show({ message: err.message, duration: 6000 }); }
+    rules.reload();
+    setMoving(false);
   };
 
   const header = <PageHeader title="Timing rules" subtitle="Folk tradition, in your own words" actions={<Link to="/settings">Back to settings</Link>} />;
@@ -149,8 +151,8 @@ export function TimingRules() {
               </div>
               <div className="type-actions">
                 <Button variant="secondary" size="sm" icon={Pencil} aria-label={`Edit ${ruleTitle(r)}`} onClick={() => openForm(r)} />
-                <Button variant="secondary" size="sm" icon={ArrowUp} aria-label={`Move ${ruleTitle(r)} up`} disabled={i === 0} onClick={() => shift(i, -1)} />
-                <Button variant="secondary" size="sm" icon={ArrowDown} aria-label={`Move ${ruleTitle(r)} down`} disabled={i === list.length - 1} onClick={() => shift(i, 1)} />
+                <Button variant="secondary" size="sm" icon={ArrowUp} aria-label={`Move ${ruleTitle(r)} up`} disabled={moving || i === 0} onClick={() => shift(i, -1)} />
+                <Button variant="secondary" size="sm" icon={ArrowDown} aria-label={`Move ${ruleTitle(r)} down`} disabled={moving || i === list.length - 1} onClick={() => shift(i, 1)} />
                 <Button variant="secondary" size="sm" icon={Trash2} aria-label={`Delete ${ruleTitle(r)}`}
                   onClick={() => deleteWithUndo({ url: `/api/timing-rules/${r.id}`, label: ruleTitle(r), onChange: rules.reload })} />
               </div>

@@ -6,7 +6,7 @@ import { addDays } from '../lib/dates.js';
 import { skyForDay } from '../lib/sky.js';
 import { getSettings } from '../services/settings.js';
 import {
-  listTimingRules, getTimingRule, localToday, createTimingRule, updateTimingRule, deleteTimingRule, restoreTimingRule,
+  listTimingRules, getTimingRule, localToday, createTimingRule, updateTimingRule, reorderTimingRules, deleteTimingRule, restoreTimingRule,
 } from '../services/timing.js';
 
 const MAX_RANGE_DAYS = 62;
@@ -36,6 +36,7 @@ export function timingRulesRouter(ctx) {
   const r = Router();
   r.get('/', (req, res) => res.json(listTimingRules(ctx.db)));
   r.post('/', (req, res) => res.status(201).json(createTimingRule(ctx.db, req.body)));
+  r.put('/order', (req, res) => res.json(reorderTimingRules(ctx.db, req.body?.ids)));
   r.patch('/:id', (req, res) => res.json(updateTimingRule(ctx.db, idParam(req), req.body)));
   r.delete('/:id', (req, res) => {
     const id = idParam(req);

@@ -105,3 +105,16 @@ it('adds sky and suggestions to Today, and none when off', async () => {
   expect(res.body.sky.ruler).toBe('Venus');
   expect(res.body.sky.phase.name).toBe(s.phase.name);
 });
+
+it('reorders timing rules in one call by position', async () => {
+  t = makeTestContext();
+  const r = repos(t.ctx.db);
+  const ids = [0, 1, 2].map(i => r.timingRules.create({ ...lists, kind: 'moon_sign', value: 'Leo', text: `Rule ${i}`, weight: 1, sort_order: i }).id);
+  const res = await t.http().put('/api/timing-rules/order').send({ ids: [ids[2], ids[0], ids[1]] });
+  expect(res.status).toBe(200);
+  expect(res.body.map(x => x.id)).toEqual([ids[2], ids[0], ids[1]]);
+  const list = await t.http().get('/api/timing-rules');
+  expect(list.body.map(x => x.sort_order)).toEqual([0, 1, 2]);
+  const bad = await t.http().put('/api/timing-rules/order').send({ ids: 'nope' });
+  expect(bad.status).toBe(400);
+});

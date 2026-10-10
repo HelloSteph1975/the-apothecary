@@ -7,6 +7,8 @@ import { repos } from '../../server/db/repos.js';
 import { skyForDay, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../../server/lib/sky.js';
 import { PLANETS, ELEMENTS } from '../../server/schemas.js';
 import { getSettings } from '../../server/services/settings.js';
+import * as CLIENT from '../../client/src/lib/sky.js';
+import { typeKey } from '../../server/lib/slugify.js';
 import { seedRecipeTypes } from '../../server/services/recipeTypes.js';
 import {
   seedTimingRules, loadStarterRules, rulesForDay, todaySuggestions, startDates, listTimingRules,
@@ -355,5 +357,35 @@ describe('list', () => {
     r.create({ ...base, text: 'b', sort_order: 2 });
     r.create({ ...base, text: 'a', sort_order: 1 });
     expect(listTimingRules(t.ctx.db).map(x => x.text)).toEqual(['a', 'b']);
+  });
+});
+
+describe('user-made recipe types', () => {
+  it('scores a recipe whose type has no slug by its hyphenated name', () => {
+    t = makeTestContext();
+    const db = t.ctx.db;
+    const r = repos(db);
+    const type = r.recipeTypes.create({ name: 'Hair rinse', sort_order: 0, is_starter: 0 });
+    const recipe = r.recipes.create({ name: 'Rosemary rinse', type_id: type.id });
+    r.timingRules.create({ kind: 'moon_sign', value: 'Cancer', text: 'Cancer moon.', weight: 3, sort_order: 0, recipe_types: J(['hair-rinse']), planets: '[]', elements: '[]' });
+    const res = startDates(db, recipe.id, { from: '2026-10-11' }, { sky_suggestions: 'on', hemisphere: 'north' });
+    expect(res.length).toBeGreaterThan(0);
+    expect(res.every(x => x.score === 3 && x.sky.sign === 'Cancer')).toBe(true);
+  });
+});
+
+describe('client lists', () => {
+  it('match the server constants', () => {
+    expect(CLIENT.PHASE_GROUPS).toEqual(PHASE_GROUPS);
+    expect(CLIENT.PHASE_NAMES).toEqual(PHASE_NAMES);
+    expect(CLIENT.SIGNS).toEqual(SIGNS);
+    expect(CLIENT.ELEMENTS).toEqual(ELEMENTS);
+    expect(CLIENT.PLANETS).toEqual(PLANETS);
+    expect(CLIENT.FESTIVAL_NAMES).toEqual(FESTIVALS.map(f => f.name));
+    expect(CLIENT.RULE_KINDS.map(k => k.value)).toEqual(['phase_group', 'phase', 'moon_element', 'moon_sign', 'day_ruler', 'festival']);
+  });
+  it('make the same recipe type key as the server', () => {
+    for (const name of ['Hair rinse', '  Bath  salts ', 'Tea']) expect(CLIENT.slugOf({ slug: null, name })).toBe(typeKey({ slug: null, name }));
+    expect(CLIENT.slugOf({ slug: 'tincture', name: 'Tincture' })).toBe('tincture');
   });
 });

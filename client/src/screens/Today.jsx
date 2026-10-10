@@ -56,11 +56,12 @@ function useNow() {
 }
 
 function SkyLines({ sky }) {
+  if (!sky?.phase || !sky.moon) return null;
   return (
     <div className="sky-lines">
       <p>{skyLine(sky)}</p>
-      {sky.moon.changes.map(c => <p key={c.at}>Moon enters {c.sign} at {clockTime(c.at)}</p>)}
-      <p>{nextMoonText(sky)}</p>
+      {(sky.moon.changes ?? []).map(c => <p key={c.at}>Moon enters {c.sign} at {clockTime(c.at)}</p>)}
+      {sky.next_full && sky.next_new && <p>{nextMoonText(sky)}</p>}
       {festivalText(sky) && <p>{festivalText(sky)}</p>}
     </div>
   );

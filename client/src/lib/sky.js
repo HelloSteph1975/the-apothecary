@@ -42,7 +42,8 @@ export function ruleTitle({ kind, value }) {
   }
 }
 
-// Starter recipe types carry a slug; her own types don't, so build one from the name the same way.
+// Starter recipe types carry a slug; her own types don't, so build one from the name.
+// Mirrors typeKey in server/lib/slugify.js; the server matches rules by the same key.
 export const slugOf = type => type.slug || type.name.trim().toLowerCase().replace(/\s+/g, '-');
 
 export const phaseText = phase => `${cap(phase.name)}, ${phase.illumination}% lit`;

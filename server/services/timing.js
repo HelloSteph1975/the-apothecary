@@ -7,6 +7,8 @@ import { HttpError, notFound } from '../http.js';
 import { validate } from '../validate.js';
 import { timingRuleSchema, PLANETS, ELEMENTS } from '../schemas.js';
 import { addDays } from '../lib/dates.js';
+import { typeKey } from '../lib/slugify.js';
+import { reorderGroups } from './groups.js';
 import { skyForDay, skyFacts, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../lib/sky.js';
 
 // Bump when timing-rules.json gains entries that existing installs should receive.
@@ -134,6 +136,11 @@ export function updateTimingRule(db, id, body) {
   return parseRule(r.update(id, parseRuleBody(body, { partial: true, existing })));
 }
 
+export function reorderTimingRules(db, ids) {
+  reorderGroups(db, repos(db).timingRules, ids, 'Send the rule ids in their new order.');
+  return listTimingRules(db);
+}
+
 export function deleteTimingRule(db, id, stamp = new Date().toISOString()) {
   if (!repos(db).timingRules.remove(id, stamp)) throw notFound('That rule is gone.');
 }
@@ -188,7 +195,7 @@ function recipeTraits(db, recipeId) {
     JOIN herbs h ON h.id = i.herb_id AND h.deleted_at IS NULL
     WHERE i.recipe_id = ? AND i.deleted_at IS NULL`).all(recipeId);
   return {
-    slug: type?.slug ?? null,
+    slug: typeKey(type),
     planets: new Set(herbs.map(h => h.planet).filter(Boolean)),
     elements: new Set(herbs.map(h => h.element).filter(Boolean)),
   };
