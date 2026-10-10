@@ -381,3 +381,25 @@ it('asks for a start date on a free-form batch too', async () => {
   expect(await screen.findByText('Pick a start date')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Start batch' })).toBeDisabled();
 });
+
+it('prefills long converted draws to four significant figures', async () => {
+  const user = userEvent.setup();
+  const orig = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/batches/plan') {
+      const p = planFor(1);
+      p.lines[0].suggested_draw = 2.000035;
+      p.lines[0].candidates[1].draw = 29.5736;
+      p.lines[3].suggested_draw = 0.004;
+      return new Response(JSON.stringify(p), { status: 200 });
+    }
+    return orig(url, opts);
+  });
+  open('/batches/new?recipe=7');
+  const g1 = await screen.findByRole('group', { name: '30 g Calendula' });
+  expect(within(g1).getByLabelText(/Amount to draw/)).toHaveValue(2);
+  await user.selectOptions(within(g1).getByRole('combobox'), '12');
+  expect(within(g1).getByLabelText(/Amount to draw/)).toHaveValue(29.57);
+  const g4 = screen.getByRole('group', { name: '20 g Rose' });
+  expect(within(g4).getByLabelText(/Amount to draw/)).toHaveValue(0.004);
+});

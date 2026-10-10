@@ -6,6 +6,9 @@ import { formatAmount } from '../../lib/cabinet.js';
 let nextKey = 1;
 const numOrNull = v => (v === '' || v == null ? null : Number(v));
 
+// Suggested draws come from the server at stock precision; show them to 4 significant figures.
+const tidy = n => String(Number(Number(n).toPrecision(4)));
+
 export const newFreeLine = () => ({ key: nextKey++, herb_id: null, name: '', amount: '', unit: '', item_id: '', draw: '' });
 
 // One draw row per planned ingredient, ready for editing.
@@ -14,7 +17,7 @@ export function linesFromPlan(plan) {
     const pick = l.candidates.find(c => c.id === l.suggested_item_id);
     return {
       key: nextKey++, herb_id: l.herb_id ?? null, name: l.name, amount: l.amount, unit: l.unit, candidates: l.candidates,
-      item_id: pick ? String(pick.id) : '', draw: l.suggested_draw == null ? '' : String(l.suggested_draw),
+      item_id: pick ? String(pick.id) : '', draw: l.suggested_draw == null ? '' : tidy(l.suggested_draw),
     };
   });
 }
@@ -65,7 +68,7 @@ export function DrawLines({ lines, onChange, free = false, items = [], errors = 
     let draw = '';
     if (jar) {
       if (free) draw = line.amount !== '' && line.unit === jar.unit ? line.amount : '';
-      else if (jar.draw != null) draw = String(jar.draw);
+      else if (jar.draw != null) draw = tidy(jar.draw);
     }
     update(i, { item_id: value, draw });
   };
