@@ -156,3 +156,29 @@ it('sync trusts a day only within a day of the clock', async () => {
   syncAutoTasks(t.ctx.db, '2030-01-01');
   expect(all()[0].due_on).toBe('2026-10-11');
 });
+
+it('reopening a step that was finished from the to-do list brings its reminder back', async () => {
+  t = makeTestContext();
+  const batch = await addBatch([{ title: 'Strain', due_on: TODAY }]);
+  const [row] = await today();
+  await t.http().post(`/api/tasks/${row.id}/complete`).send({ today: TODAY });
+  const step = batch.steps[0];
+  await t.http().patch(`/api/batches/${batch.id}/steps/${step.id}`).send({ done_on: null });
+  syncAutoTasks(t.ctx.db, TODAY);
+  const rows = await today();
+  expect(rows).toHaveLength(1);
+  expect(rows[0].id).toBe(row.id);
+  expect(all()).toHaveLength(1);
+});
+
+it('a restock reminder is not hidden by an old dismissal after purchases are deleted', async () => {
+  t = makeTestContext();
+  const item = await addItem({ name: 'Sage', amount: 2, low_threshold: 500 });
+  await t.http().post(`/api/items/${item.id}/restock`).send({ purchased_on: TODAY, quantity: 1 });
+  const [row] = await today();
+  expect(row.auto_key).toBe(`restock:${item.id}:1`);
+  await t.http().post(`/api/tasks/${row.id}/dismiss`).send({ today: TODAY });
+  t.ctx.db.prepare('UPDATE purchases SET deleted_at = ? WHERE item_id = ?').run(new Date().toISOString(), item.id);
+  await t.http().post(`/api/items/${item.id}/restock`).send({ purchased_on: TODAY, quantity: 1 });
+  expect((await today()).map(r => r.auto_key)).toEqual([`restock:${item.id}:2`]);
+});

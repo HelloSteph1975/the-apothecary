@@ -25,7 +25,7 @@ function wantedAutoTasks(db, today) {
   for (const s of dueSteps(db, today)) {
     wanted.set(`step:${s.step_id}:${s.due_on}`, { title: `${s.title}: ${s.batch_name}`, due_on: s.due_on, related_type: 'batch', related_id: s.batch_id });
   }
-  const counts = new Map(db.prepare('SELECT item_id, COUNT(*) AS n FROM purchases WHERE deleted_at IS NULL GROUP BY item_id').all().map(r => [r.item_id, r.n]));
+  const counts = new Map(db.prepare('SELECT id, restock_count FROM items').all().map(r => [r.id, r.restock_count]));
   for (const it of listItems(db, { status: 'low' }, today)) {
     wanted.set(`restock:${it.id}:${counts.get(it.id) ?? 0}`, { title: `Restock ${it.name}`, due_on: today, related_type: 'item', related_id: it.id });
   }
@@ -50,6 +50,11 @@ export function syncAutoTasks(db, given) {
     const r = repos(db);
     for (const [auto_key, row] of wanted) {
       if (!known.has(auto_key) && !dismissed.has(auto_key)) r.tasks.create({ ...row, kind: 'auto', auto_key });
+    }
+    // A step finished from the to-do list and then reopened on the batch page gets its reminder back.
+    const doneSteps = db.prepare(`SELECT id, auto_key FROM tasks WHERE kind = 'auto' AND done_on IS NOT NULL AND deleted_at IS NULL AND auto_key LIKE 'step:%'`).all();
+    for (const { id, auto_key } of doneSteps) {
+      if (wanted.has(auto_key)) r.tasks.update(id, { done_on: null });
     }
     const stale = db.prepare(`SELECT id, auto_key FROM tasks WHERE kind = 'auto' AND done_on IS NULL AND deleted_at IS NULL`).all()
       .filter(row => !wanted.has(row.auto_key));
@@ -209,9 +214,9 @@ export function completeTask(db, id, body) {
   return transaction(db, () => {
     const due = task.repeat_kind !== 'none' ? nextDue(task, task.due_on ?? today, hemisphere(db)) : null;
     // A copy kept from an earlier completion (see uncompleteTask) is not made twice.
+    // A live copy (open or done) already stands for this completion.
     const kept = task.spawned_id != null ? r.tasks.get(task.spawned_id) : null;
-    const keptOpen = kept && !kept.done_on;
-    const spawned = keptOpen ? kept : due ? r.tasks.create({
+    const spawned = kept ? kept : due ? r.tasks.create({
       title: task.title, notes: task.notes, due_on: due, repeat_kind: task.repeat_kind, repeat_days: task.repeat_days,
       repeat_anchor_day: task.repeat_anchor_day, priority: task.priority, related_type: task.related_type, related_id: task.related_id,
       kind: 'manual',
@@ -234,11 +239,16 @@ export function uncompleteTask(db, id) {
   let keep = null;
   transaction(db, () => {
     const next = task.spawned_id != null ? r.tasks.get(task.spawned_id) : null;
-    // Only an untouched copy goes away: same title, notes and the due date the repeat rule gave it.
-    const untouched = next && !next.done_on && next.title === task.title && (next.notes ?? null) === (task.notes ?? null)
+    // Only an untouched copy goes away: every saved field is what the repeat rule gave it, and it has no photos.
+    const photos = next && db.prepare("SELECT 1 FROM photos WHERE owner_type = 'task' AND owner_id = ? AND deleted_at IS NULL").get(next.id);
+    const same = k => (next[k] ?? null) === (task[k] ?? null);
+    const untouched = next && !next.done_on && !photos
+      && ['title', 'notes', 'repeat_kind', 'repeat_days', 'priority', 'related_type', 'related_id'].every(same)
+      && next.snoozed_until == null
       && next.due_on === nextDue(task, task.due_on ?? task.done_on, hemisphere(db));
     if (untouched) r.tasks.remove(next.id);
-    keep = next && !untouched && !next.done_on && !next.deleted_at ? next.id : null;
+    // A copy that stays (open or done) is remembered, so completing again does not make another.
+    keep = next && !untouched && !next.deleted_at ? next.id : null;
     if (task.kind === 'auto' && task.auto_key?.startsWith('step:')) {
       const stepId = Number(task.auto_key.split(':')[1]);
       const step = r.batchSteps.get(stepId);

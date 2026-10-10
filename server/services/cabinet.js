@@ -109,6 +109,8 @@ export function restockItem(db, id, body) {
   assertLive(db, 'suppliers', purchase.supplier_id, 'supplier_id', 'supplier');
   return transaction(db, () => {
     r.purchases.create({ ...purchase, item_id: id, unit: item.unit });
+    // Counts every restock ever made, even if a purchase is deleted later, so a task reminder key never repeats.
+    db.prepare('UPDATE items SET restock_count = restock_count + 1 WHERE id = ?').run(id);
     const changes = { amount: item.amount + purchase.quantity, used_up_at: null };
     if (!item.source_kind) changes.source_kind = 'bought';
     if (expires_on !== undefined) changes.expires_on = expires_on;

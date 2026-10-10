@@ -206,3 +206,31 @@ it('complete and snooze trust the day only within a day of the clock', async () 
   const done = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: '2030-01-01' })).body;
   expect(done.task.done_on).toBe('2026-10-11');
 });
+
+it('uncomplete keeps a copy whose priority was changed, or that has a photo', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'Water', repeat_kind: 'daily', due_on: TODAY })).body;
+  const first = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body.next;
+  await t.http().patch(`/api/tasks/${first.id}`).send({ priority: 'high' });
+  await t.http().post(`/api/tasks/${a.id}/uncomplete`).send({});
+  expect((await t.http().get(`/api/tasks/${first.id}`)).status).toBe(200);
+
+  const b = (await make({ title: 'Mist', repeat_kind: 'daily', due_on: TODAY })).body;
+  const copy = (await t.http().post(`/api/tasks/${b.id}/complete`).send({ today: TODAY })).body.next;
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('task', ?, '1-abcdef12.jpg')").run(copy.id);
+  await t.http().post(`/api/tasks/${b.id}/uncomplete`).send({});
+  expect((await t.http().get(`/api/tasks/${copy.id}`)).status).toBe(200);
+});
+
+it('complete, finish the copy, uncomplete, complete again makes only one copy', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'Water', repeat_kind: 'daily', due_on: TODAY })).body;
+  const B = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body.next;
+  await t.http().post(`/api/tasks/${B.id}/complete`).send({ today: TODAY });
+  await t.http().post(`/api/tasks/${a.id}/uncomplete`).send({});
+  const again = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body;
+  expect(again.next.id).toBe(B.id);
+  // Besides A, only B and the copy B made exist.
+  const others = t.ctx.db.prepare("SELECT id FROM tasks WHERE title = 'Water' AND deleted_at IS NULL AND id != ?").all(a.id);
+  expect(others).toHaveLength(2);
+});

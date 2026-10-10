@@ -118,6 +118,7 @@ export const migrations = [
   CREATE UNIQUE INDEX idx_tasks_auto_key ON tasks(auto_key) WHERE auto_key IS NOT NULL AND deleted_at IS NULL;
   CREATE INDEX idx_tasks_due ON tasks(due_on) WHERE done_on IS NULL AND deleted_at IS NULL;
   CREATE TABLE task_dismissals (auto_key TEXT PRIMARY KEY, dismissed_on TEXT NOT NULL);
+  ALTER TABLE items ADD COLUMN restock_count INTEGER NOT NULL DEFAULT 0;
   `,
 ];
 
