@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MoonGlyph } from '../../lib/moonGlyph.jsx';
-import { badge, dayLabel, weekdayShort } from '../../lib/calendar.js';
+import { badge, dayLabel, phaseText, weekdayShort } from '../../lib/calendar.js';
 import { EventList } from './EventList.jsx';
 
 export function WeekView({ days, eventsByDay, today }) {
@@ -18,7 +18,7 @@ export function WeekView({ days, eventsByDay, today }) {
                 <span aria-hidden="true">{weekdayShort(d.day)} {Number(d.day.slice(8))}</span>
               </Link>
             </h3>
-            <p className="cal-sky"><MoonGlyph phase={d.phase} size={18} /> <span>{d.phase} in {d.sign}</span></p>
+            <p className="cal-sky"><MoonGlyph phase={d.phase} size={18} /> <span>{phaseText(d.phase)} in {d.sign}</span></p>
             {text && <p className="cal-badge">{text}</p>}
             {events.length ? <EventList events={events} /> : <p className="cal-none">Nothing due</p>}
           </section>

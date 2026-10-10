@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -21,6 +21,7 @@ export function Calendar() {
   const view = VIEWS.includes(params.get('view')) ? params.get('view') : 'month';
   const date = isDay(params.get('date')) ? params.get('date') : today;
   const hidden = useMemo(() => new Set((params.get('hide') ?? '').split(',').filter(k => KINDS.some(x => x.kind === k))), [params]);
+  const pendingFocus = useRef(null);
   const { from, to } = rangeFor(view, date);
   const { data, error, loading, reload } = useApi(`/api/calendar?from=${from}&to=${to}`);
 
@@ -49,7 +50,7 @@ export function Calendar() {
   if (error) body = <><p role="alert">{error.message}</p><Button onClick={reload}>Try again</Button></>;
   else if (data && !loading) {
     const sky = data.days;
-    if (view === 'month') body = <MonthView days={sky} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} />;
+    if (view === 'month') body = <MonthView days={sky} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} pendingFocus={pendingFocus} onLeave={day => { pendingFocus.current = day; update({ date: day }); }} />;
     else if (view === 'week') body = <WeekView days={sky} eventsByDay={eventsByDay} today={today} />;
     else body = <AgendaView days={sky} eventsByDay={eventsByDay} />;
   }

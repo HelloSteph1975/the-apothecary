@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MoonGlyph } from '../../lib/moonGlyph.jsx';
 import { addDaysTo, WEEKDAYS } from '../../lib/tasks.js';
@@ -7,7 +7,7 @@ import { EventList } from './EventList.jsx';
 
 const MOVES = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
 
-export function MonthView({ days, eventsByDay, month, today, startDay }) {
+export function MonthView({ days, eventsByDay, month, today, startDay, onLeave, pendingFocus }) {
   const table = useRef(null);
   const [focusDay, setFocusDay] = useState(null);
   const inGrid = new Set(days.map(d => d.day));
@@ -15,12 +15,21 @@ export function MonthView({ days, eventsByDay, month, today, startDay }) {
   const weeks = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
+  // After moving to another month, focus the day she was heading for once its grid is on screen.
+  useEffect(() => {
+    const day = pendingFocus?.current;
+    if (!day || !inGrid.has(day)) return;
+    pendingFocus.current = null;
+    setFocusDay(day);
+    table.current?.querySelector(`a[data-day="${day}"]`)?.focus();
+  }, [days]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onKeyDown = (e, day) => {
     const move = MOVES[e.key];
-    if (!move) return;
+    if (!move || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     e.preventDefault();
     const next = addDaysTo(day, move);
-    if (!inGrid.has(next)) return;
+    if (!inGrid.has(next)) { onLeave?.(next); return; }
     setFocusDay(next);
     table.current?.querySelector(`a[data-day="${next}"]`)?.focus();
   };

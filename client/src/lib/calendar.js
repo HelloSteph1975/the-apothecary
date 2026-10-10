@@ -50,6 +50,8 @@ export function step(view, date, n) {
 }
 
 export const markerText = marker => ({ full: 'Full moon', new: 'New moon', 'first quarter': 'First quarter', 'last quarter': 'Last quarter' }[marker] ?? '');
+// "full" and "new" read as moons; the other phase names already read well.
+export const phaseText = phase => (phase === 'full' || phase === 'new' ? `${phase} moon` : phase);
 export const badge = day => day.festival || markerText(day.marker);
 
 export const openCount = events => events.filter(e => !e.done).length;
@@ -58,8 +60,7 @@ export const thingsDue = n => `${n} ${n === 1 ? 'thing' : 'things'} due`;
 // "Friday, October 9: waxing crescent in Scorpio, 2 things due"
 export function cellName(day, events) {
   const n = openCount(events);
-  const extra = [day.festival, day.marker && !day.festival ? markerText(day.marker) : ''].filter(Boolean);
-  return `${dayLabel(day.day)}: ${day.phase} in ${day.sign}${extra.length ? `, ${extra.join(', ')}` : ''}${n ? `, ${thingsDue(n)}` : ''}`;
+  return `${dayLabel(day.day)}: ${phaseText(day.phase)} in ${day.sign}${day.festival ? `, ${day.festival}` : ''}${n ? `, ${thingsDue(n)}` : ''}`;
 }
 
 export function byDay(events) {

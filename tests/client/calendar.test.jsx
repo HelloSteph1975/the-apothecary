@@ -67,7 +67,7 @@ it('draws a month grid starting on Sunday with labelled cells', async () => {
   expect(nine.closest('td').querySelector('svg[aria-hidden="true"]')).toBeTruthy();
   expect(within(nine.closest('td')).getByRole('link', { name: /Water the sage/ })).toHaveAttribute('href', '/todo/1');
   expect(cell(/^Saturday, October 31: .*Samhain/).closest('td')).toHaveTextContent('Samhain');
-  expect(cell(/^Monday, October 26: full/).closest('td')).toHaveTextContent('Full moon');
+  expect(cell(/^Monday, October 26: full moon in Scorpio/).closest('td')).toHaveTextContent('Full moon');
   expect(cell(/^Sunday, September 27/).closest('td')).toHaveClass('is-outside');
 });
 
@@ -94,6 +94,46 @@ it('moves focus between days with the arrow keys', async () => {
   expect(cell(/^Friday, October 9/)).toHaveFocus();
   await user.keyboard('{Enter}');
   await waitFor(() => expect(location().pathname).toBe('/calendar/2026-10-09'));
+});
+
+it('has one tab stop and ignores arrow keys with a modifier held', async () => {
+  const user = userEvent.setup();
+  await open('/calendar?view=month&date=2026-10-09');
+  const stops = () => [...document.querySelectorAll('a[data-day]')].filter(a => a.getAttribute('tabindex') === '0');
+  expect(stops()).toHaveLength(1);
+  expect(stops()[0]).toHaveAttribute('data-day', '2026-10-09');
+  cell(/^Friday, October 9/).focus();
+  await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+  expect(cell(/^Friday, October 9/)).toHaveFocus();
+  await user.keyboard('{ArrowRight}');
+  expect(stops()).toHaveLength(1);
+  expect(stops()[0]).toHaveAttribute('data-day', '2026-10-10');
+});
+
+it('carries the arrow keys into the next month from the end of the grid', async () => {
+  const user = userEvent.setup();
+  await open('/calendar?view=month&date=2026-10-09');
+  cell(/^Saturday, October 31/).focus();
+  await user.keyboard('{ArrowRight}');
+  expect(await screen.findByRole('heading', { name: 'November 2026' })).toBeInTheDocument();
+  expect(location().search).toContain('date=2026-11-01');
+  await waitFor(() => expect(cell(/^Sunday, November 1:/)).toHaveFocus());
+  await user.keyboard('{ArrowUp}');
+  expect(await screen.findByRole('heading', { name: 'October 2026' })).toBeInTheDocument();
+  await waitFor(() => expect(cell(/^Sunday, October 25/)).toHaveFocus());
+  cell(/^Wednesday, October 28/).focus();
+  await user.keyboard('{ArrowDown}');
+  expect(await screen.findByRole('heading', { name: 'November 2026' })).toBeInTheDocument();
+  await waitFor(() => expect(cell(/^Wednesday, November 4/)).toHaveFocus());
+});
+
+it('crosses a month boundary inside the grid without leaving the page', async () => {
+  const user = userEvent.setup();
+  await open('/calendar?view=month&date=2026-08-15');
+  cell(/^Monday, August 31/).focus();
+  await user.keyboard('{ArrowRight}');
+  expect(cell(/^Tuesday, September 1/)).toHaveFocus();
+  expect(location().search).toContain('date=2026-08-15');
 });
 
 it('hides event kinds with the filters and keeps them in the URL', async () => {

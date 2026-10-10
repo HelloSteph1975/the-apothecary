@@ -20,7 +20,7 @@ export function calendarDays(db, from, to) {
   return out;
 }
 
-// Steps, tasks and jar expiries in the range. Step tasks are left out because the steps already show.
+// Steps, tasks and jar expiries in the range. Step and expiry tasks are left out because the steps and expiry events already show.
 export function calendarEvents(db, from, to, today) {
   const overdue = (day, done) => !done && day < today;
   const events = [];
@@ -31,7 +31,7 @@ export function calendarEvents(db, from, to, today) {
     events.push({ kind: 'step', day: s.due_on, title: `${s.title}: ${s.batch_name}`, link: `/batches/${s.batch_id}`, done: s.done_on != null, overdue: overdue(s.due_on, s.done_on), id: s.id });
   }
   const tasks = db.prepare(`SELECT id, title, due_on, done_on FROM tasks WHERE deleted_at IS NULL AND due_on BETWEEN ? AND ?
-    AND NOT (kind = 'auto' AND auto_key LIKE 'step:%')`).all(from, to);
+    AND NOT (kind = 'auto' AND (auto_key LIKE 'step:%' OR auto_key LIKE 'expiry:%'))`).all(from, to);
   for (const t of tasks) {
     events.push({ kind: 'task', day: t.due_on, title: t.title, link: `/todo/${t.id}`, done: t.done_on != null, overdue: overdue(t.due_on, t.done_on), id: t.id });
   }

@@ -22,10 +22,12 @@ it('returns a day per date with the sky and a marker on principal phases', async
   const d = res.body.days[0];
   const f = skyFacts('2026-10-01');
   expect(d).toEqual({ day: '2026-10-01', phase: f.phase.name, sign: f.moon.sign, ruler: f.ruler, festival: f.festival, marker: null });
-  const marked = res.body.days.filter(x => x.marker);
-  expect(marked.map(x => x.marker).sort()).toEqual(expect.arrayContaining(['full', 'new']));
-  for (const m of marked) expect(m.marker).toBe(m.phase);
-  expect(res.body.days.filter(x => x.marker === 'full')).toHaveLength(1);
+  const markerOf = day => res.body.days.find(x => x.day === day).marker;
+  expect(markerOf('2026-10-03')).toBe('last quarter');
+  expect(markerOf('2026-10-10')).toBe('new');
+  expect(markerOf('2026-10-18')).toBe('first quarter');
+  expect(markerOf('2026-10-25')).toBe('full');
+  expect(res.body.days.filter(x => x.marker)).toHaveLength(4);
   expect(res.body.days.find(x => x.day === '2026-10-31').festival).toBe('Samhain');
 });
 
@@ -94,4 +96,20 @@ it('validates the range', async () => {
   expect(res.status).toBe(400);
   res = await get('from=2026-10-01&from=2026-10-02&to=2026-10-03');
   expect(res.status).toBe(400);
+});
+
+it('uses her hemisphere for festival names', async () => {
+  t = makeTestContext();
+  expect((await get('from=2026-10-31&to=2026-10-31')).body.days[0].festival).toBe('Samhain');
+  await t.http().put('/api/settings').send({ hemisphere: 'south' });
+  expect((await get('from=2026-10-31&to=2026-10-31')).body.days[0].festival).toBe('Beltane');
+});
+
+it('leaves expiry auto tasks out of the task events', async () => {
+  t = makeTestContext();
+  const jar = await addItem({ name: 'Rose', expires_on: '2026-10-25' });
+  const res = await get('from=2026-10-01&to=2026-10-31');
+  const keys = t.ctx.db.prepare('SELECT auto_key FROM tasks').all().map(r => r.auto_key);
+  expect(keys).toContain(`expiry:${jar.id}:2026-10-25`);
+  expect(res.body.events.filter(e => e.title.includes('Rose'))).toMatchObject([{ kind: 'expiry', day: '2026-10-25' }]);
 });
