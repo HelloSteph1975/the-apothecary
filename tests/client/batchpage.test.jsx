@@ -475,6 +475,7 @@ it('keeps a step change whose reload started after a journal save was sent but b
   await waitFor(() => expect(sent('PATCH', '/api/batches/5/steps/21')).toHaveLength(1));
   await waitFor(() => expect(holdGet).toBeNull());
   releasePatch();
+  await waitFor(() => expect(within(journal).queryByLabelText('What I noticed')).toBeNull());
   expect(await within(journal).findByText('Smells sunny')).toBeInTheDocument();
   releaseGet();
   await waitFor(() => expect(within(screen.getByRole('region', { name: 'Steps' })).getByRole('checkbox', { name: 'Done: Strain and bottle' })).toBeChecked());
