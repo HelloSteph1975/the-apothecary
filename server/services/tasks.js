@@ -39,7 +39,7 @@ function wantedAutoTasks(db, today) {
 
 // Makes the automatic tasks that should exist and removes open ones whose cause is gone. Done tasks and her own tasks stay.
 // The day is trusted only within a day of the server clock, so a stray date cannot wipe or flood the list.
-const clampDay = day => { const now = localToday(); return day < addDays(now, -1) ? addDays(now, -1) : day > addDays(now, 1) ? addDays(now, 1) : day; };
+export const clampDay = day => { const now = localToday(); return day < addDays(now, -1) ? addDays(now, -1) : day > addDays(now, 1) ? addDays(now, 1) : day; };
 
 export function syncAutoTasks(db, given) {
   const today = clampDay(given);
@@ -147,9 +147,11 @@ function readFields(body, { partial }) {
   return { data, errors, today, src };
 }
 
-function checkRelated(db, merged, data, errors) {
+function checkRelated(db, merged, data, errors, row = null) {
   if (data.related_type === null) data.related_id = null;
   if (!('related_type' in data) && !('related_id' in data)) return;
+  // The form always sends these back, so an unchanged link is not checked again (its record may have been deleted since).
+  if (row && merged.related_type === row.related_type && merged.related_id === row.related_id) return;
   const { related_type: type, related_id: id } = merged;
   if (type == null && id == null) return;
   if (type == null) { errors.related_type = 'Pick what it is about'; return; }
@@ -177,7 +179,7 @@ export function updateTask(db, id, body) {
   const r = repos(db);
   const row = r.tasks.get(id);
   if (!row) throw notFound(GONE);
-  const { data, errors, today, src } = readFields(body, { partial: true });
+  const { data, errors, today } = readFields(body, { partial: true });
   if (row.kind === 'auto') {
     for (const key of Object.keys(data)) {
       if (!AUTO_EDITABLE.includes(key) && data[key] !== row[key]) errors[key] = 'This task is made by the app, so this cannot be changed';
@@ -187,9 +189,10 @@ export function updateTask(db, id, body) {
     return id;
   }
   const merged = { ...row, ...data };
-  checkRelated(db, merged, data, errors);
+  checkRelated(db, merged, data, errors, row);
   if (Object.keys(errors).length) throw new HttpError(400, FIX, errors);
-  if ('repeat_kind' in data || 'due_on' in data || 'repeat_days' in src) applyRepeat(merged, data, today);
+  // The anchor day is worked out again only when the repeat or the due date really changed, so a clamped monthly task keeps its anchor.
+  if (merged.repeat_kind !== row.repeat_kind || merged.due_on !== row.due_on) applyRepeat(merged, data, today);
   r.tasks.update(id, data);
   return id;
 }
@@ -197,14 +200,18 @@ export function updateTask(db, id, body) {
 const hemisphere = db => ({ hemisphere: getSettings(db).hemisphere });
 
 export function completeTask(db, id, body) {
-  const { today } = check({ today: 'date!' }, isObject(body) ? body : {});
+  const given = check({ today: 'date!' }, isObject(body) ? body : {}).today;
+  const today = clampDay(given);
   const r = repos(db);
   const task = r.tasks.get(id);
   if (!task) throw notFound(GONE);
   if (task.done_on) throw new HttpError(409, 'That task is already done.');
   return transaction(db, () => {
     const due = task.repeat_kind !== 'none' ? nextDue(task, task.due_on ?? today, hemisphere(db)) : null;
-    const spawned = due ? r.tasks.create({
+    // A copy kept from an earlier completion (see uncompleteTask) is not made twice.
+    const kept = task.spawned_id != null ? r.tasks.get(task.spawned_id) : null;
+    const keptOpen = kept && !kept.done_on;
+    const spawned = keptOpen ? kept : due ? r.tasks.create({
       title: task.title, notes: task.notes, due_on: due, repeat_kind: task.repeat_kind, repeat_days: task.repeat_days,
       repeat_anchor_day: task.repeat_anchor_day, priority: task.priority, related_type: task.related_type, related_id: task.related_id,
       kind: 'manual',
@@ -224,24 +231,27 @@ export function uncompleteTask(db, id) {
   const task = r.tasks.get(id);
   if (!task) throw notFound(GONE);
   if (!task.done_on) throw new HttpError(409, 'That task is not done.');
+  let keep = null;
   transaction(db, () => {
     const next = task.spawned_id != null ? r.tasks.get(task.spawned_id) : null;
     // Only an untouched copy goes away: same title, notes and the due date the repeat rule gave it.
-    if (next && !next.done_on && next.title === task.title && (next.notes ?? null) === (task.notes ?? null)
-      && next.due_on === nextDue(task, task.due_on ?? task.done_on, hemisphere(db))) r.tasks.remove(next.id);
+    const untouched = next && !next.done_on && next.title === task.title && (next.notes ?? null) === (task.notes ?? null)
+      && next.due_on === nextDue(task, task.due_on ?? task.done_on, hemisphere(db));
+    if (untouched) r.tasks.remove(next.id);
+    keep = next && !untouched && !next.done_on && !next.deleted_at ? next.id : null;
     if (task.kind === 'auto' && task.auto_key?.startsWith('step:')) {
       const stepId = Number(task.auto_key.split(':')[1]);
       const step = r.batchSteps.get(stepId);
       if (step && step.done_on === task.done_on) r.batchSteps.update(stepId, { done_on: null });
     }
-    r.tasks.update(id, { done_on: null, spawned_id: null });
+    r.tasks.update(id, { done_on: null, spawned_id: keep });
   });
   return getTask(db, id);
 }
 
 export function snoozeTask(db, id, body) {
   const { until, today } = check({ until: 'date!', today: 'date' }, isObject(body) ? body : {});
-  const day = today ?? localToday();
+  const day = today ? clampDay(today) : localToday();
   if (until <= day) throw new HttpError(400, FIX, { until: 'Pick a day after today' });
   if (!repos(db).tasks.get(id)) throw notFound(GONE);
   repos(db).tasks.update(id, { snoozed_until: until });
@@ -253,7 +263,7 @@ export function dismissTask(ctx, id, body) {
   const { today } = check({ today: 'date' }, isObject(body) ? body : {});
   const task = repos(db).tasks.get(id);
   if (!task) throw notFound(GONE);
-  if (task.kind !== 'auto' || task.done_on) throw new HttpError(400, 'Only tasks made by the app can be dismissed.');
+  if (task.kind !== 'auto' || task.done_on) throw new HttpError(400, task.done_on ? 'This task is already done.' : 'Only tasks made by the app can be dismissed.');
   transaction(db, () => {
     db.prepare('INSERT OR REPLACE INTO task_dismissals (auto_key, dismissed_on) VALUES (?, ?)').run(task.auto_key, today ?? localToday());
     const stamp = new Date().toISOString();

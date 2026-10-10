@@ -162,3 +162,47 @@ it('deletes softly and restores', async () => {
   expect(await list('today')).toHaveLength(1);
   expect((await t.http().get(`/api/tasks/${a.id}`)).body.photos).toEqual([]);
 });
+
+it('editing a clamped monthly task keeps its anchor day', async () => {
+  t = makeTestContext();
+  const m = (await make({ title: 'Rent', repeat_kind: 'monthly', due_on: '2026-01-31' })).body;
+  const next = (await t.http().post(`/api/tasks/${m.id}/complete`).send({ today: TODAY })).body.next;
+  expect(next).toMatchObject({ due_on: '2026-02-28', repeat_anchor_day: 31 });
+  const res = await t.http().patch(`/api/tasks/${next.id}`).send({ title: 'Rent due', due_on: '2026-02-28', repeat_kind: 'monthly', today: TODAY });
+  expect(res.status).toBe(200);
+  expect((await t.http().get(`/api/tasks/${next.id}`)).body.repeat_anchor_day).toBe(31);
+});
+
+it('a task whose record was deleted can still be edited when the link is unchanged', async () => {
+  t = makeTestContext();
+  const item = (await t.http().post('/api/items').send({ section_id: 1, unit: 'g', name: 'Mugwort', amount: 50 })).body;
+  const task = (await make({ title: 'Check jar', related_type: 'item', related_id: item.id })).body;
+  await t.http().delete(`/api/items/${item.id}`);
+  const res = await t.http().patch(`/api/tasks/${task.id}`).send({ title: 'Check the jar', related_type: 'item', related_id: item.id, today: TODAY });
+  expect(res.status).toBe(200);
+  const other = await t.http().patch(`/api/tasks/${task.id}`).send({ related_type: 'item', related_id: 9999 });
+  expect(other.status).toBe(400);
+});
+
+it('uncomplete keeps an edited copy and completing again does not make a second one', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'Water', repeat_kind: 'daily', due_on: TODAY })).body;
+  const first = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body.next;
+  await t.http().patch(`/api/tasks/${first.id}`).send({ title: 'Water well' });
+  await t.http().post(`/api/tasks/${a.id}/uncomplete`).send({});
+  const again = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body;
+  expect(again.next.id).toBe(first.id);
+  const open = await list('upcoming');
+  expect(open.filter(r => r.title.startsWith('Water'))).toHaveLength(1);
+});
+
+it('complete and snooze trust the day only within a day of the clock', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'x', due_on: TODAY })).body;
+  const far = await t.http().post(`/api/tasks/${a.id}/snooze`).send({ until: '2026-10-12', today: '2030-01-01' });
+  expect(far.status).toBe(200);
+  const past = await t.http().post(`/api/tasks/${a.id}/snooze`).send({ until: '2026-10-09', today: '2020-01-01' });
+  expect(past.status).toBe(400);
+  const done = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: '2030-01-01' })).body;
+  expect(done.task.done_on).toBe('2026-10-11');
+});

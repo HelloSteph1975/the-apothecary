@@ -137,6 +137,7 @@ it('a stale auto task with photos is finished, not deleted; without photos it is
   const left = all();
   expect(left).toHaveLength(1);
   expect(left[0]).toMatchObject({ id: withPhoto.id, done_on: TODAY });
+  expect(t.ctx.db.prepare("SELECT deleted_at FROM photos WHERE owner_type = 'task' AND owner_id = ?").get(withPhoto.id).deleted_at).toBeNull();
 });
 
 it('only open automatic tasks can be dismissed', async () => {
@@ -144,7 +145,9 @@ it('only open automatic tasks can be dismissed', async () => {
   await addItem({ name: 'Sage', amount: 2, low_threshold: 5 });
   const [row] = await today();
   await t.http().post(`/api/tasks/${row.id}/complete`).send({ today: TODAY });
-  expect((await t.http().post(`/api/tasks/${row.id}/dismiss`).send({ today: TODAY })).status).toBe(400);
+  const res = await t.http().post(`/api/tasks/${row.id}/dismiss`).send({ today: TODAY });
+  expect(res.status).toBe(400);
+  expect(res.body.error ?? res.body.message).toBe('This task is already done.');
 });
 
 it('sync trusts a day only within a day of the clock', async () => {
