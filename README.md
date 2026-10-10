@@ -6,7 +6,7 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-This is Stage 4 of 8. It adds the sky and folk tradition to the herb cabinet, the grimoire, the recipe book and the batch journal.
+This is Stage 5 of 8. It adds a calendar and a to-do list to the herb cabinet, the grimoire, the recipe book, the batch journal and the sky.
 
 - Today shows a greeting and the date, plus the sky: the moon's phase and sign, the day's ruling planet, the next new or full moon and the next festival.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
@@ -17,6 +17,8 @@ This is Stage 4 of 8. It adds the sky and folk tradition to the herb cabinet, th
 - The recipe book keeps what you make. Recipe types are yours to manage: 22 starters you can edit, reorder or delete. A recipe takes ingredients from the grimoire or typed in, steps, wait time, shelf life, intention, timing notes and photos. Scale it by a factor or to the amount you want to end up with. Each recipe opens with its herbs' cautions, and skin recipes add a patch-test reminder. Herb pages list the recipes that use them.
 - The batch journal records what you actually make. Start a batch from a recipe, or free-form. The app matches your jars to the ingredients and converts units where it safely can, and it asks before drawing more than a jar holds. It sets steps for later from the recipe's wait time, and Today shows steps that are due. Finishing a batch can add the result to the cabinet as a new jar. Each batch prints as a one-page record sheet.
 - Sky and tradition. Today shows up to two folk timing suggestions, taken from rules you can edit or turn off in Settings. Batches show the sky on their start date, and starting one suggests good days in the next four weeks. Every suggestion is labelled folk tradition, and none of them ever changes a caution.
+- To-do keeps tasks with due dates, repeats (every day, week or month, every new moon, full moon or festival), a priority, a linked jar, recipe, batch or herb, and photos. The app also makes tasks of its own for batch steps, restocks and jars nearing their use-by date, which you can snooze or dismiss. Views are today, upcoming, by area and done, and Today lists what is due.
+- Calendar shows month, week and agenda views with each day's moon and sign, festivals and new and full moons marked, plus batch steps, tasks and use-by dates. Filters let you hide any of them, and each day has a page where you can add a task or start a batch on that day. Everything stays inside the app, with no syncing and no notifications outside it.
 - The other drawers say so when they are not built yet.
 
 ![The herb cabinet](docs/screenshots/shelves.jpg)
@@ -28,6 +30,8 @@ The grimoire is for learning and record keeping, not medical advice. Ask a docto
 ![The recipe book](docs/screenshots/recipes.jpg)
 
 ![The batch journal](docs/screenshots/batches.jpg)
+
+![The calendar](docs/screenshots/calendar.jpg)
 
 ## Install on Windows
 
