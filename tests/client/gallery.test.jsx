@@ -1,3 +1,4 @@
+process.env.TZ = 'America/Mexico_City';
 import { it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -90,19 +91,21 @@ it('opens a larger view with Previous, Next, arrow keys and Escape returning foc
   tile2.focus();
   await userEvent.keyboard('{Enter}');
   const dialog = await screen.findByRole('dialog');
-  expect(within(dialog).getByAltText('Caption 2')).toHaveAttribute('src', '/photos/p2.jpg');
+  const big = dialog.querySelector('img');
+  expect(big).toHaveAttribute('src', '/photos/p2.jpg');
+  expect(big).toHaveAttribute('alt', '');
   expect(within(dialog).getByText('Caption 2')).toBeInTheDocument();
   expect(within(dialog).getByText('Oct 9, 2026')).toBeInTheDocument();
   expect(within(dialog).getByRole('link', { name: /Full moon/ })).toHaveAttribute('href', '/journal/102');
   await userEvent.click(within(dialog).getByRole('button', { name: 'Next' }));
-  expect(within(dialog).getByAltText('Caption 3')).toBeInTheDocument();
+  expect(within(dialog).getByText('Caption 3')).toBeInTheDocument();
   expect(within(dialog).getByRole('button', { name: 'Next' })).toBeDisabled();
   await userEvent.click(within(dialog).getByRole('button', { name: 'Previous' }));
   await userEvent.keyboard('{ArrowLeft}');
-  expect(within(dialog).getByAltText('Caption 1')).toBeInTheDocument();
+  expect(within(dialog).getByText('Caption 1')).toBeInTheDocument();
   expect(within(dialog).getByRole('button', { name: 'Previous' })).toBeDisabled();
   await userEvent.keyboard('{ArrowRight}');
-  expect(within(dialog).getByAltText('Caption 2')).toBeInTheDocument();
+  expect(within(dialog).getByText('Caption 2')).toBeInTheDocument();
   // jsdom has no Escape-to-cancel; browsers fire this 'cancel' event on the dialog.
   fireEvent(dialog, new Event('cancel', { cancelable: true }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -125,4 +128,58 @@ it('shows an error with Try again', async () => {
     ? new Response(JSON.stringify({ error: 'Nope' }), { status: 500 }) : base(url, o)));
   open();
   expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
+});
+
+it('ignores arrow keys held with a modifier in the larger view', async () => {
+  photos = () => ({ photos: [photo(1), photo(2), photo(3)], total: 3, page: 1 });
+  open();
+  await screen.findByAltText('Caption 2');
+  await userEvent.click(screen.getByRole('button', { name: /Caption 2/ }));
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.keyDown(dialog, { key: 'ArrowRight', ctrlKey: true });
+  fireEvent.keyDown(dialog, { key: 'ArrowLeft', altKey: true });
+  fireEvent.keyDown(dialog, { key: 'ArrowRight', shiftKey: true });
+  fireEvent.keyDown(dialog, { key: 'ArrowRight', metaKey: true });
+  expect(within(dialog).getByText('Caption 2')).toBeInTheDocument();
+  expect(within(dialog).queryByText('Caption 3')).toBeNull();
+  expect(within(dialog).queryByText('Caption 1')).toBeNull();
+});
+
+it('keeps the photo alt text when there is no caption to show', async () => {
+  photos = () => ({ photos: [photo(2, 'herb', { caption: '' })], total: 1, page: 1 });
+  open();
+  await userEvent.click(await screen.findByRole('button', { name: /Mugwort photo/ }));
+  const dialog = await screen.findByRole('dialog');
+  expect(within(dialog).getByAltText('Mugwort photo')).toBeInTheDocument();
+});
+
+it('shows an error when loading more fails', async () => {
+  const base = global.fetch;
+  photos = () => ({ photos: Array.from({ length: 48 }, (_, i) => photo(i + 1)), total: 49, page: 1 });
+  global.fetch = vi.fn(async (url, o) => (url.includes('page=2')
+    ? new Response(JSON.stringify({ error: 'Could not load more.' }), { status: 500 }) : base(url, o)));
+  open();
+  await screen.findByAltText('Caption 1');
+  await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+  expect(await screen.findByText('Could not load more.')).toHaveAttribute('role', 'alert');
+  expect(screen.getByRole('button', { name: 'Load more' })).toBeEnabled();
+});
+
+it('starts again from the first page when a filter changes', async () => {
+  photos = p => (p.get('page') === '2'
+    ? { photos: [photo(49)], total: 49, page: 2 }
+    : { photos: Array.from({ length: 48 }, (_, i) => photo(i + 1)), total: 49, page: 1 });
+  kinds = [{ kind: 'item', count: 49 }];
+  open();
+  await screen.findByAltText('Caption 1');
+  await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+  await screen.findByAltText('Caption 49');
+  await userEvent.selectOptions(screen.getByLabelText('Kind'), 'item');
+  await waitFor(() => expect(galleryCalls().at(-1)).toContain('kind=item'));
+  await waitFor(() => expect(screen.queryByAltText('Caption 49')).toBeNull());
+  expect(await screen.findByRole('button', { name: 'Load more' })).toBeInTheDocument();
+});
+
+it('reads the photo day in the pinned time zone', () => {
+  expect(new Date(2026, 0, 1).getTimezoneOffset()).toBe(360);
 });

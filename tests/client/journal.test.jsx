@@ -44,6 +44,8 @@ it('writes the sky stamp and the date', () => {
   const sky = { phase: 'waxing gibbous', sign: 'Taurus', ruler: 'Venus', festival: null };
   expect(skyStampText(sky, '2026-10-09')).toBe('Waxing gibbous in Taurus, Friday under Venus');
   expect(skyStampText({ ...sky, festival: 'Samhain' }, '2026-10-09')).toBe('Waxing gibbous in Taurus, Friday under Venus, Samhain');
+  expect(skyStampText({ ...sky, phase: 'full', sign: 'Aries' }, '2026-10-09')).toBe('Full moon in Aries, Friday under Venus');
+  expect(skyStampText({ ...sky, phase: 'new', sign: 'Pisces' }, '2026-10-09')).toBe('New moon in Pisces, Friday under Venus');
   expect(entryWhen('2026-10-10', '21:30', new Date(2026, 5, 1))).toBe('Oct 10, 9:30 PM');
   expect(entryWhen('2026-10-10', null, new Date(2026, 5, 1))).toBe('Oct 10');
   expect(entryWhen('2025-10-10', '00:05', new Date(2026, 5, 1))).toBe('Oct 10, 2025, 12:05 AM');

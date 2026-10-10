@@ -86,9 +86,12 @@ export function Gallery() {
   const stepRef = useRef(step);
   stepRef.current = step;
   const isOpen = current !== null;
+  // If the photo being viewed leaves the list (a refresh, a new filter), close the viewer.
+  useEffect(() => { if (viewing !== null && index < 0) setViewing(null); }, [viewing, index]);
   useEffect(() => {
     if (!isOpen) return undefined;
     const onKey = e => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       if (e.key === 'ArrowLeft') { e.preventDefault(); stepRef.current(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); stepRef.current(1); }
     };
@@ -145,7 +148,7 @@ export function Gallery() {
         )}>
         {current && (
           <div className="photo-large">
-            <img src={`/photos/${current.filename}`} alt={altOf(current)} />
+            <img src={`/photos/${current.filename}`} alt={current.caption ? '' : altOf(current)} />
             {current.caption && <p>{current.caption}</p>}
             <p className="muted">
               <Link to={current.owner.link}>{KIND_LABELS[current.owner.kind]?.one ?? current.owner.kind}: {current.owner.name}</Link>

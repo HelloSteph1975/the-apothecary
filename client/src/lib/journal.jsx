@@ -1,3 +1,4 @@
+import { phaseText } from './calendar.js';
 import { Sparkles, Moon, Sun, Cloud, Sprout, Leaf, Feather, PenLine, Flame, Flower2, Star, BookOpen } from 'lucide-react';
 
 // Mirrors JOURNAL_ICONS and MOODS on the server (server/schemas.js); keep them in step.
@@ -24,7 +25,7 @@ const parseDay = day => { const [y, m, d] = day.split('-').map(Number); return n
 export function skyStampText(sky, day = sky?.day) {
   if (!sky || !sky.phase) return '';
   const weekday = day ? `${parseDay(day).toLocaleDateString('en-US', { weekday: 'long' })} ` : '';
-  const text = `${cap(sky.phase)} in ${sky.sign}, ${weekday}under ${sky.ruler}`;
+  const text = `${cap(phaseText(sky.phase))} in ${sky.sign}, ${weekday}under ${sky.ruler}`;
   return sky.festival ? `${text}, ${sky.festival}` : text;
 }
 

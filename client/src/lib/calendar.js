@@ -69,13 +69,16 @@ export const markerText = marker => ({ full: 'Full moon', new: 'New moon', 'firs
 export const phaseText = phase => (phase === 'full' || phase === 'new' ? `${phase} moon` : phase);
 export const badge = day => day.festival || markerText(day.marker);
 
-export const openCount = events => events.filter(e => !e.done).length;
+// Journal entries are records of the day, not things to do.
+export const openCount = events => events.filter(e => !e.done && e.kind !== 'journal').length;
 export const thingsDue = n => `${n} ${n === 1 ? 'thing' : 'things'} due`;
 
 // "Friday, October 9: waxing crescent in Scorpio, 2 things due"
 export function cellName(day, events) {
   const n = openCount(events);
-  return `${dayLabel(day.day)}: ${phaseText(day.phase)} in ${day.sign}${day.festival ? `, ${day.festival}` : ''}${n ? `, ${thingsDue(n)}` : ''}`;
+  const j = events.filter(e => e.kind === 'journal').length;
+  const entries = j ? `, ${j} journal ${j === 1 ? 'entry' : 'entries'}` : '';
+  return `${dayLabel(day.day)}: ${phaseText(day.phase)} in ${day.sign}${day.festival ? `, ${day.festival}` : ''}${n ? `, ${thingsDue(n)}` : ''}${entries}`;
 }
 
 export function byDay(events) {

@@ -68,3 +68,12 @@ it('stops stepping at the ends of the range', () => {
   expect(canStep('week', '2026-10-09', -1)).toBe(true);
   expect(canStep('agenda', '2100-12-20', 1)).toBe(false);
 });
+
+it('does not count journal entries as things due', () => {
+  const day = { day: '2026-10-09', phase: 'waxing crescent', sign: 'Scorpio', festival: null, marker: null };
+  const entry = { kind: 'journal', day: '2026-10-09', title: 'Walk', done: false };
+  const task = { kind: 'task', day: '2026-10-09', title: 'Water', done: false };
+  expect(cellName(day, [entry])).toBe('Friday, October 9: waxing crescent in Scorpio, 1 journal entry');
+  expect(cellName(day, [entry, { ...entry }])).toBe('Friday, October 9: waxing crescent in Scorpio, 2 journal entries');
+  expect(cellName(day, [entry, task])).toBe('Friday, October 9: waxing crescent in Scorpio, 1 thing due, 1 journal entry');
+});
