@@ -39,6 +39,8 @@ export function EntryForm() {
   const records = { herb: herbs, recipe: recipes, batch: batches };
   const tagList = useApi('/api/journal/tags');
   const listId = useId();
+  const tagInput = useRef(null);
+  const recordSelect = useRef(null);
   const [form, setForm] = useState(null);
   const [tags, setTags] = useState([]);
   const [tagDraft, setTagDraft] = useState('');
@@ -107,10 +109,15 @@ export function EntryForm() {
   };
   const removeTag = tag => {
     setTags(t => t.filter(x => x !== tag));
+    tagInput.current?.focus();
     setErrors(e => Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'tags' && !k.startsWith('tags.'))));
   };
 
   // Link errors are keyed by position, so any change to the list makes them stale.
+  const removeLink = i => {
+    changeLinks(links.filter((_, n) => n !== i));
+    recordSelect.current?.focus();
+  };
   const changeLinks = next => {
     setLinks(next);
     setErrors(e => Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'links' && !k.startsWith('links.'))));
@@ -134,7 +141,7 @@ export function EntryForm() {
       entry_date: form.entry_date,
       entry_time: orNull(form.entry_time),
       mood: form.mood === '' ? null : form.mood,
-      body: orNull(form.body),
+      body: form.body.trim() === '' ? null : form.body,
       tags: pending && !tags.includes(pending) ? [...tags, pending] : tags,
       links: links.map(l => ({ type: l.type, id: l.id })),
     };
@@ -194,9 +201,9 @@ export function EntryForm() {
             <TextArea rows={14} value={form.body} onChange={e => set('body', e.target.value)} />
           </Field>
         </ParchmentCard>
-        <ParchmentCard title="Finding it again">
-          <Field label="Tags" hint="Press Enter or type a comma to add one." error={tagError}>
-            <TextInput list={listId} value={tagDraft} onChange={e => onTagChange(e.target.value)} onKeyDown={onTagKey} />
+        <ParchmentCard title="Tags to find it again">
+          <Field label="Tags" hint="Press Enter or type a comma to add one. Up to 20 tags, 40 characters each." error={tagError}>
+            <TextInput ref={tagInput} maxLength={40} list={listId} value={tagDraft} onChange={e => onTagChange(e.target.value)} onKeyDown={onTagKey} />
           </Field>
           <datalist id={listId}>
             {(tagList.data ?? []).map(t => <option key={t.tag} value={t.tag} />)}
@@ -218,7 +225,7 @@ export function EntryForm() {
               <Select value={linkType} onChange={e => { setLinkType(e.target.value); setLinkId(''); }} options={LINK_TYPES} />
             </Field>
             <Field label="Record">
-              <Select value={linkId} onChange={e => setLinkId(e.target.value)} placeholder="Pick one" options={recordOptions} />
+              <Select ref={recordSelect} value={linkId} onChange={e => setLinkId(e.target.value)} placeholder="Pick one" options={recordOptions} />
             </Field>
             <Button type="button" variant="secondary" onClick={addLink} disabled={linkId === ''}>Add</Button>
           </div>
@@ -230,7 +237,7 @@ export function EntryForm() {
                 <li key={linkKey(l)} className="entry-link">
                   <span className="badge badge-brass entry-chip">
                     <span className="muted">{LINK_TYPES.find(t => t.value === l.type).label}:</span> {l.name}
-                    <button type="button" className="icon-btn" aria-label={`Remove link to ${l.name}`} onClick={() => changeLinks(links.filter((_, n) => n !== i))}>
+                    <button type="button" className="icon-btn" aria-label={`Remove link to ${l.name}`} onClick={() => removeLink(i)}>
                       <X size={14} aria-hidden="true" />
                     </button>
                   </span>

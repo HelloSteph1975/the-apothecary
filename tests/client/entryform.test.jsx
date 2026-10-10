@@ -21,11 +21,13 @@ let router;
 let fail;
 let slow;
 let typesFail;
+let editEntry;
 beforeEach(() => {
   calls = [];
   fail = null;
   slow = null;
   typesFail = false;
+  editEntry = null;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
@@ -46,7 +48,7 @@ beforeEach(() => {
       return json(existing);
     }
     if (url === '/api/journal/9') return json({ ...existing, id: 9 });
-    if (url === '/api/journal/4') return json(existing);
+    if (url === '/api/journal/4') return json(editEntry ?? existing);
     return json({});
   });
 });
@@ -240,4 +242,53 @@ it('shows an error with Try again when the types will not load', async () => {
   typesFail = false;
   await user.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByLabelText('Title (required)')).toBeInTheDocument();
+});
+
+it('titles the tag card, limits tag length and says how many tags fit', async () => {
+  await open('/journal/new');
+  expect(screen.getByText('Tags to find it again')).toBeInTheDocument();
+  const tags = screen.getByLabelText('Tags');
+  expect(tags).toHaveAttribute('maxlength', '40');
+  expect(screen.getByText(/Up to 20 tags, 40 characters each./)).toBeInTheDocument();
+});
+
+it('treats Moon and moon as the same tag', async () => {
+  const user = userEvent.setup();
+  await open('/journal/new');
+  const tags = screen.getByLabelText('Tags');
+  await user.type(tags, 'Moon{Enter}');
+  await user.type(tags, 'moon{Enter}');
+  expect(within(screen.getByRole('list', { name: 'Tags added' })).getAllByRole('listitem')).toHaveLength(1);
+});
+
+it('moves focus to the tag input after removing a tag, and to the Record select after removing a link', async () => {
+  const user = userEvent.setup();
+  await open('/journal/new?herb=6');
+  const tags = screen.getByLabelText('Tags');
+  await user.type(tags, 'owl{Enter}');
+  await user.click(screen.getByRole('button', { name: 'Remove tag owl' }));
+  expect(tags).toHaveFocus();
+  await user.click(screen.getByRole('button', { name: 'Remove link to Yarrow' }));
+  expect(screen.getByLabelText('Record')).toHaveFocus();
+});
+
+it('says a linked record is gone and does not send it', async () => {
+  const user = userEvent.setup();
+  editEntry = { ...existing, links: [...existing.links, { type: 'recipe', id: 5, name: 'Dream oil', live: false }] };
+  await open('/journal/4/edit');
+  expect(screen.getByText('A record this entry linked to is gone, so it was left out.')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saved()).toHaveLength(1));
+  expect(saved()[0].body.links).toEqual([{ type: 'herb', id: 3 }]);
+});
+
+it('sends the body as typed, and null only when it is empty', async () => {
+  const user = userEvent.setup();
+  await open('/journal/new');
+  await user.type(screen.getByLabelText('Title (required)'), 'T');
+  await user.selectOptions(screen.getByLabelText('Type (required)'), 'Ritual');
+  await user.type(screen.getByLabelText('Body'), '  Line one{Enter}  indented  ');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saved()).toHaveLength(1));
+  expect(saved()[0].body.body).toBe('  Line one' + String.fromCharCode(10) + '  indented  ');
 });
