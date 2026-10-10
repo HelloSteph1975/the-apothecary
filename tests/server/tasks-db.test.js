@@ -1,6 +1,7 @@
 import { it, expect, afterEach } from 'vitest';
 import { makeTestContext } from './helpers.js';
 import { repos } from '../../server/db/repos.js';
+import { migrations } from '../../server/db/migrations.js';
 import { PHOTO_OWNERS } from '../../server/services/photos.js';
 import { taskSchema } from '../../server/schemas.js';
 import { validate } from '../../server/validate.js';
@@ -12,7 +13,7 @@ it('migration 7 creates the task tables', () => {
   t = makeTestContext();
   const names = t.ctx.db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
   expect(names).toEqual(expect.arrayContaining(['tasks', 'task_dismissals']));
-  expect(t.ctx.db.prepare('PRAGMA user_version').get().user_version).toBe(7);
+  expect(t.ctx.db.prepare('PRAGMA user_version').get().user_version).toBe(migrations.length);
 });
 
 it('task defaults and checks', () => {
