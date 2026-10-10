@@ -25,6 +25,8 @@ import { BatchJournal } from './screens/batches/BatchJournal.jsx';
 import { NewBatch } from './screens/batches/NewBatch.jsx';
 import { BatchPage } from './screens/batches/BatchPage.jsx';
 import { RecordSheet } from './screens/batches/RecordSheet.jsx';
+import { Todo } from './screens/todo/Todo.jsx';
+import { TaskPage } from './screens/todo/TaskPage.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -57,13 +59,19 @@ function BatchPageRoute() {
   return <BatchPage key={id} />;
 }
 
+// Keyed by id so moving between tasks resets the edit dialog.
+function TaskPageRoute() {
+  const { id } = useParams();
+  return <TaskPage key={id} />;
+}
+
 // Keyed by id so moving between batches reloads the sheet.
 function RecordSheetRoute() {
   const { id } = useParams();
   return <RecordSheet key={id} />;
 }
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -91,6 +99,8 @@ export const routes = [
       { path: 'batches/new', element: <NewBatchRoute /> },
       { path: 'batches/:id', element: <BatchPageRoute /> },
       { path: 'batches/:id/sheet', element: <RecordSheetRoute /> },
+      { path: 'todo', element: <Todo /> },
+      { path: 'todo/:id', element: <TaskPageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },
