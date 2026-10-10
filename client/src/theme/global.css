@@ -353,3 +353,9 @@ textarea.input { resize: vertical; }
 .check-group { border: 0; margin: 0 0 12px; padding: 0; }
 .check-group legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
 .check-group-options { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.start-dates { margin: 4px 0 12px; padding-top: 10px; border-top: 1px solid var(--rule); }
+.start-dates h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 1.1rem; }
+.start-dates .today-list { gap: 12px; margin: 0; }
+.start-dates .today-list li { display: grid; justify-items: start; gap: 4px; }
+.start-dates .today-list p { margin: 0; font-size: .95rem; }
+.start-dates .btn[aria-pressed="true"] { background: var(--ink-green); color: #fff; }
