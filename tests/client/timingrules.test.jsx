@@ -162,3 +162,47 @@ it('moves a rule down with one call carrying the new order', async () => {
   expect(put.body).toEqual({ ids: [2, 1, 3] });
   expect(calls.some(c => c.method === 'PATCH')).toBe(false);
 });
+
+function keepOrder() {
+  let order = [...RULES];
+  const base = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    const method = opts.method || 'GET';
+    if (method === 'PUT' && url === '/api/timing-rules/order') {
+      const ids = JSON.parse(opts.body).ids;
+      order = ids.map(id => order.find(r => r.id === id));
+      calls.push({ url, method, body: { ids } });
+      return new Response(JSON.stringify(order), { status: 200 });
+    }
+    if (method === 'GET' && url === '/api/timing-rules') return new Response(JSON.stringify(order), { status: 200 });
+    return base(url, opts);
+  });
+}
+
+it('keeps focus on the moved row and says where it went', async () => {
+  const user = userEvent.setup();
+  keepOrder();
+  open();
+  await screen.findByText('Waxing text.');
+  const down = screen.getByRole('button', { name: 'Move Waxing moon down' });
+  await user.click(down);
+  expect(down).not.toBeDisabled();
+  await waitFor(() => expect(screen.getByText('Moved Waxing moon to position 2.')).toHaveAttribute('aria-live', 'polite'));
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).not.toHaveAttribute('aria-disabled');
+  // Moving it to the end leaves focus on its other move button.
+  await user.keyboard('{Enter}');
+  await waitFor(() => expect(screen.getByText('Moved Waxing moon to position 3.')).toHaveAttribute('aria-live', 'polite'));
+  expect(screen.getByRole('button', { name: 'Move Waxing moon up' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).toHaveAttribute('aria-disabled', 'true');
+  const puts = calls.filter(c => c.method === 'PUT');
+  expect(puts.map(p => p.body.ids)).toEqual([[2, 1, 3], [2, 3, 1]]);
+});
+
+it('does nothing when an end button is pressed', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon up' }));
+  expect(calls.some(c => c.method === 'PUT')).toBe(false);
+});

@@ -244,3 +244,25 @@ it('shows only sky facts and a note when suggestions are off', async () => {
   expect(within(card).queryByText('Folk tradition')).toBeNull();
   expect(within(card).getByText('Waxing gibbous, 78% lit')).toBeInTheDocument();
 });
+
+it('waits for settings before saying anything about suggestions', async () => {
+  withSky({}, []);
+  let release;
+  const gate = new Promise(r => { release = r; });
+  const base = global.fetch;
+  global.fetch = vi.fn(async (url, ...rest) => {
+    if (url === '/api/settings') { await gate; }
+    return base(url, ...rest);
+  });
+  settings.sky_suggestions = 'off';
+  today();
+  const card = await screen.findByRole('region', { name: 'The sky today' });
+  expect(within(card).getByText('Waxing gibbous, 78% lit')).toBeInTheDocument();
+  expect(within(card).queryByText(/No folk timing for today/)).toBeNull();
+  expect(within(card).queryByText(/Suggestions are off/)).toBeNull();
+  expect(within(card).queryByText("folk timing, for what you're making")).toBeNull();
+  await act(async () => { release(); });
+  expect(await within(card).findByText('Suggestions are off. Turn them on in Settings.')).toBeInTheDocument();
+  expect(within(card).getByText('the moon and the day')).toBeInTheDocument();
+  expect(within(card).queryByText("folk timing, for what you're making")).toBeNull();
+});

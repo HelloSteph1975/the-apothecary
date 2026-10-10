@@ -11,14 +11,18 @@ export function StartDates({ recipeId, current, onPick }) {
     <div role="group" aria-label="Good days to start" className="start-dates">
       <h3>Good days to start <span className="badge badge-brass">{FOLK_LABEL}</span></h3>
       <ul className="today-list">
-        {data.map(s => (
-          <li key={s.day}>
-            <button type="button" className="btn btn-secondary btn-sm" aria-pressed={current === s.day} onClick={() => onPick(s.day)}>
-              {suggestionLabel(s)}
-            </button>
-            {s.reasons.map((r, i) => <p key={i} className="muted">{r}</p>)}
-          </li>
-        ))}
+        {data.map(s => {
+          const ids = s.reasons.map((_, i) => `start-day-${recipeId}-${s.day}-${i}`);
+          return (
+            <li key={s.day}>
+              <button type="button" className="btn btn-secondary btn-sm" aria-pressed={current === s.day}
+                aria-describedby={ids.length ? ids.join(' ') : undefined} onClick={() => onPick(s.day)}>
+                {suggestionLabel(s)}
+              </button>
+              {s.reasons.map((r, i) => <p key={i} id={ids[i]} className="muted">{r}</p>)}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUp, ArrowDown, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -117,14 +117,36 @@ export function TimingRules() {
     r.elements.length > 0 && `Elements: ${r.elements.join(', ')}`,
   ].filter(Boolean).join(' · ');
 
+  const [announcement, setAnnouncement] = useState('');
+  const pending = useRef(null);
+  const listRef = useRef(null);
+
+  // Once the reordered list has loaded, put focus back on the button she just used (or the other one at an end) and say where the rule went.
+  useEffect(() => {
+    const p = pending.current;
+    if (!p || !rules.data || rules.loading) return;
+    pending.current = null;
+    const index = rules.data.findIndex(r => r.id === p.id);
+    if (index < 0) return;
+    const atEnd = p.dir === 'up' ? index === 0 : index === rules.data.length - 1;
+    const dir = atEnd ? (p.dir === 'up' ? 'down' : 'up') : p.dir;
+    listRef.current?.querySelector(`[data-move="${p.id}-${dir}"]`)?.focus();
+    setAnnouncement(`Moved ${p.title} to position ${index + 1}.`);
+  }, [rules.data, rules.loading]);
+
   const shift = async (i, by) => {
     if (moving) return;
     const ids = list.map(r => r.id);
     [ids[i], ids[i + by]] = [ids[i + by], ids[i]];
     setMoving(true);
+    setAnnouncement('');
+    pending.current = { id: list[i].id, dir: by < 0 ? 'up' : 'down', title: ruleTitle(list[i]) };
     try {
       await api.put('/api/timing-rules/order', { ids });
-    } catch (err) { toast.show({ message: err.message, duration: 6000 }); }
+    } catch (err) {
+      pending.current = null;
+      toast.show({ message: err.message, duration: 6000 });
+    }
     rules.reload();
     setMoving(false);
   };
@@ -139,9 +161,10 @@ export function TimingRules() {
     <>
       {header}
       <p><Button onClick={() => openForm('new')}>Add a rule</Button></p>
+      <p className="visually-hidden" role="status" aria-live="polite">{announcement}</p>
       <ParchmentCard title="Your rules" subtitle="the strongest matches show on Today">
         {list.length === 0 && <p className="muted">No rules yet. Add one to get folk timing on Today.</p>}
-        <ul className="type-list">
+        <ul className="type-list" ref={listRef}>
           {list.map((r, i) => (
             <li key={r.id} className="type-row">
               <div className="type-main">
@@ -151,8 +174,10 @@ export function TimingRules() {
               </div>
               <div className="type-actions">
                 <Button variant="secondary" size="sm" icon={Pencil} aria-label={`Edit ${ruleTitle(r)}`} onClick={() => openForm(r)} />
-                <Button variant="secondary" size="sm" icon={ArrowUp} aria-label={`Move ${ruleTitle(r)} up`} disabled={moving || i === 0} onClick={() => shift(i, -1)} />
-                <Button variant="secondary" size="sm" icon={ArrowDown} aria-label={`Move ${ruleTitle(r)} down`} disabled={moving || i === list.length - 1} onClick={() => shift(i, 1)} />
+                <Button variant="secondary" size="sm" icon={ArrowUp} aria-label={`Move ${ruleTitle(r)} up`} data-move={`${r.id}-up`}
+                  aria-disabled={moving || i === 0 ? 'true' : undefined} onClick={() => { if (!moving && i > 0) shift(i, -1); }} />
+                <Button variant="secondary" size="sm" icon={ArrowDown} aria-label={`Move ${ruleTitle(r)} down`} data-move={`${r.id}-down`}
+                  aria-disabled={moving || i === list.length - 1 ? 'true' : undefined} onClick={() => { if (!moving && i < list.length - 1) shift(i, 1); }} />
                 <Button variant="secondary" size="sm" icon={Trash2} aria-label={`Delete ${ruleTitle(r)}`}
                   onClick={() => deleteWithUndo({ url: `/api/timing-rules/${r.id}`, label: ruleTitle(r), onChange: rules.reload })} />
               </div>

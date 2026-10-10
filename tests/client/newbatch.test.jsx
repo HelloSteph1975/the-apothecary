@@ -471,3 +471,13 @@ it('shows no good days for a free-form batch and never asks for them', async () 
   expect(screen.queryByText('Good days to start')).toBeNull();
   expect(calls.some(c => c.url.includes('/start-dates'))).toBe(false);
 });
+
+it('ties each good day to its reasons for screen readers', async () => {
+  startDates = SUGGESTIONS;
+  open('/batches/new?recipe=7');
+  await ready();
+  const first = await screen.findByRole('button', { name: 'Fri, Oct 16: waxing gibbous in Taurus' });
+  expect(first).toHaveAccessibleDescription('Roots like to be started under an earth moon. A growing moon draws things in.');
+  const second = screen.getByRole('button', { name: 'Tue, Oct 20: full in Aries' });
+  expect(second).toHaveAccessibleDescription('Full moons are for strong brews.');
+});

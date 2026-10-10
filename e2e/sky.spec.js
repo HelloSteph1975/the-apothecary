@@ -5,6 +5,11 @@ import fs from 'node:fs';
 const slowExpect = expect.configure({ timeout: 15000 });
 const RULERS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
 
+// Whatever happens in the walk-through, leave suggestions on so later runs start from the same place.
+test.afterEach(async ({ request }) => {
+  await request.put('/api/settings', { data: { sky_suggestions: 'on' } });
+});
+
 test('shows the sky, switches suggestions off and on, edits timing rules and picks a start date', async ({ page }) => {
   test.setTimeout(150000);
   fs.mkdirSync('test-results', { recursive: true });

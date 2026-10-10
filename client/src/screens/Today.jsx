@@ -104,9 +104,9 @@ export function Today() {
       <p className="flourish-line">gather ✦ steep ✦ strain ✦ keep</p>
       <div className="card-grid">
         {data?.sky && (
-          <ParchmentCard title="The sky today" subtitle="folk timing, for what you're making">
+          <ParchmentCard title="The sky today" subtitle={settings && settings.sky_suggestions !== 'off' ? "folk timing, for what you're making" : 'the moon and the day'}>
             <p>{phaseText(data.sky.phase)}</p>
-            {settings?.sky_suggestions === 'off' ? (
+            {!settings ? null : settings.sky_suggestions === 'off' ? (
               <p className="muted">Suggestions are off. Turn them on in Settings.</p>
             ) : (data.suggestions ?? []).length === 0 ? (
               <p className="muted">No folk timing for today. You can add your own.</p>
