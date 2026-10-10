@@ -10,6 +10,7 @@ import {
 } from '../services/recipeTypes.js';
 import { listRecipes, getRecipeDetail, createRecipe, updateRecipe, deleteRecipe, restoreRecipe } from '../services/recipes.js';
 import { startDates } from '../services/timing.js';
+import { queryDates } from './sky.js';
 import { getSettings } from '../services/settings.js';
 import { cascadeDeletePhotos, cascadeRestorePhotos } from '../services/photos.js';
 
@@ -44,7 +45,7 @@ export function recipesRouter(ctx) {
   });
   r.get('/:id/start-dates', (req, res) => {
     const id = idParam(req);
-    const { from } = check({ from: 'date' }, { from: typeof req.query.from === 'string' ? req.query.from : undefined });
+    const { from } = queryDates(req.query, ['from']);
     res.json(startDates(ctx.db, id, { from }, getSettings(ctx.db)));
   });
   r.get('/:id', (req, res) => res.json(getRecipeDetail(ctx.db, idParam(req), req.query)));

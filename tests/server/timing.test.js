@@ -283,18 +283,6 @@ describe('startDates', () => {
     expect(res.every(r => r.score === 3 && r.sky.sign === 'Cancer')).toBe(true);
   });
 
-  it('scores a moon sign rule on the days the moon is in that sign', () => {
-    t = makeTestContext();
-    const db = t.ctx.db;
-    repos(db).timingRules.create({ ...lists, kind: 'moon_sign', value: 'Cancer', text: 'Cancer moon.', weight: 3, recipe_types: '["tincture"]' });
-    const recipe = recipeOf('tincture');
-    const res = startDates(db, recipe.id, { from: '2026-10-11' }, on);
-    const expected = days(28).filter(d => skyForDay(d).moon.sign === 'Cancer');
-    expect(expected.length).toBeGreaterThan(0);
-    expect(res.map(r => r.day)).toEqual(expected.slice(0, 5));
-    expect(res.every(r => r.score === 3 && r.sky.sign === 'Cancer')).toBe(true);
-  });
-
   it('lets Venus herbs favour Fridays', () => {
     t = makeTestContext();
     const db = t.ctx.db;

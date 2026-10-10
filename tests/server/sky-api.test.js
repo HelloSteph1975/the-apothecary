@@ -118,3 +118,38 @@ it('reorders timing rules in one call by position', async () => {
   const bad = await t.http().put('/api/timing-rules/order').send({ ids: 'nope' });
   expect(bad.status).toBe(400);
 });
+
+it('refuses years outside 1900 to 2100 and repeated parameters', async () => {
+  t = makeTestContext();
+  const msg = 'Pick a date between 1900 and 2100';
+  for (const date of ['1899-12-31', '2101-01-01']) {
+    const res = await t.http().get(`/api/sky?date=${date}`);
+    expect(res.status).toBe(400);
+    expect(res.body.details.date).toBe(msg);
+  }
+  let res = await t.http().get('/api/sky/range?from=1850-01-01&to=1850-01-03');
+  expect(res.status).toBe(400);
+  expect(res.body.details).toMatchObject({ from: msg, to: msg });
+  res = await t.http().get('/api/sky/range?from=2026-01-01&to=2101-01-03');
+  expect(res.status).toBe(400);
+  expect(res.body.details.to).toBe(msg);
+  expect((await t.http().get('/api/sky?date=1900-01-01')).status).toBe(200);
+  expect((await t.http().get('/api/sky?date=2100-12-31')).status).toBe(200);
+  res = await t.http().get('/api/sky?date=2026-10-01&date=2026-10-02');
+  expect(res.status).toBe(400);
+  expect(res.body.details.date).toBeTruthy();
+  res = await t.http().get('/api/sky/range?from=2026-10-01&from=2026-10-02&to=2026-10-03');
+  expect(res.status).toBe(400);
+  expect(res.body.details.from).toBeTruthy();
+});
+
+it('applies the same limits to start dates', async () => {
+  t = makeTestContext();
+  const recipe = (await t.http().get('/api/recipes')).body[0];
+  const id = recipe?.id ?? 1;
+  let res = await t.http().get(`/api/recipes/${id}/start-dates?from=1850-01-01`);
+  expect(res.status).toBe(400);
+  expect(res.body.details.from).toBe('Pick a date between 1900 and 2100');
+  res = await t.http().get(`/api/recipes/${id}/start-dates?from=2026-10-01&from=2026-10-02`);
+  expect(res.status).toBe(400);
+});

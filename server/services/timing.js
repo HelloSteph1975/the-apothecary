@@ -12,6 +12,7 @@ import { reorderGroups } from './groups.js';
 import { skyForDay, skyFacts, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../lib/sky.js';
 
 // Bump when timing-rules.json gains entries that existing installs should receive.
+// A future bump must seed only slugs that are new since the last version, so it never re-adds a starter rule she deleted.
 export const TIMING_RULES_SEED_VERSION = 1;
 
 const DATA_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data', 'timing-rules.json');

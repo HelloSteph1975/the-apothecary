@@ -4,9 +4,7 @@
   "description": "A witchy home apothecary keeper: herb cabinet, grimoire, recipes, batches, journal, calendar and garden log.",
   "type": "module",
   "license": "MIT",
-  "engines": {
-    "node": ">=24"
-  },
+  "engines": { "node": ">=24" },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "demo": "node --disable-warning=ExperimentalWarning server/index.js --demo",

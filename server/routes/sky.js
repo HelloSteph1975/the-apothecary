@@ -10,12 +10,33 @@ import {
 } from '../services/timing.js';
 
 const MAX_RANGE_DAYS = 62;
-const str = v => (typeof v === 'string' && v !== '' ? v : undefined);
+const FIX = 'Please fix the highlighted fields.';
+const RANGE_MSG = 'Pick a date between 1900 and 2100';
+
+// Reads one date from the query string. A repeated parameter is a 400, and years outside 1900-2100 are refused.
+export function queryDates(query, fields, required = false) {
+  const raw = {};
+  const problems = {};
+  for (const f of fields) {
+    const v = query[f];
+    if (Array.isArray(v)) problems[f] = 'Send one date only';
+    else raw[f] = typeof v === 'string' && v !== '' ? v : undefined;
+  }
+  if (Object.keys(problems).length) throw new HttpError(400, FIX, problems);
+  const spec = Object.fromEntries(fields.map(f => [f, required ? 'date!' : 'date']));
+  const data = check(spec, raw);
+  for (const f of fields) {
+    const year = data[f] ? Number(data[f].slice(0, 4)) : null;
+    if (year !== null && (year < 1900 || year > 2100)) problems[f] = RANGE_MSG;
+  }
+  if (Object.keys(problems).length) throw new HttpError(400, FIX, problems);
+  return data;
+}
 
 export function skyRouter(ctx) {
   const r = Router();
   r.get('/range', (req, res) => {
-    const { from, to } = check({ from: 'date!', to: 'date!' }, { from: str(req.query.from), to: str(req.query.to) });
+    const { from, to } = queryDates(req.query, ['from', 'to'], true);
     if (to < from) throw new HttpError(400, 'Please fix the highlighted fields.', { to: 'The end date must not be before the start date.' });
     if (addDays(from, MAX_RANGE_DAYS) <= to) {
       throw new HttpError(400, 'Please fix the highlighted fields.', { to: `Ask for at most ${MAX_RANGE_DAYS} days at a time.` });
@@ -26,7 +47,7 @@ export function skyRouter(ctx) {
     res.json(out);
   });
   r.get('/', (req, res) => {
-    const { date } = check({ date: 'date' }, { date: str(req.query.date) });
+    const { date } = queryDates(req.query, ['date']);
     res.json(skyForDay(date ?? localToday(), { hemisphere: getSettings(ctx.db).hemisphere }));
   });
   return r;
