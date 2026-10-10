@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
 import { ToastProvider } from '../../client/src/components/ToastProvider.jsx';
 import { ConfirmProvider } from '../../client/src/components/ConfirmProvider.jsx';
+import { todayString } from '../../client/src/lib/today.js';
 
 HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open', ''); };
 HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
@@ -220,7 +221,7 @@ it('saves with the right body and goes to the batch', async () => {
   await waitFor(() => expect(posts()).toHaveLength(1));
   const b = posts()[0].body;
   expect(b).toMatchObject({
-    name: 'Calendula oil, October 9', recipe_id: 7, start_date: '2026-10-09', factor: 1, intention: 'Soothe the skin',
+    name: 'Calendula oil, October 9', recipe_id: 7, start_date: todayString(), factor: 1, intention: 'Soothe the skin',
     method: 'Warm the oil.', base: 'Beeswax, Olive oil', label_notes: 'Keeps about 3 months.', notes: 'Used fresh petals',
     steps: [{ title: 'Strain and bottle', due_on: '2026-10-30' }],
   });
