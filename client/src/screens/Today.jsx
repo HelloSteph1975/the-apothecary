@@ -69,6 +69,7 @@ export function Today() {
   const failed = today.error || (allZero && items.error);
   const herbApi = useApi(`/api/herb-of-the-day?today=${day}`);
   const herb = herbApi.data?.id ? herbApi.data : null;
+  const due = data?.batchesDue ?? [];
   const retry = () => { today.reload(); items.reload(); };
   const nearing = data
     ? [
@@ -84,11 +85,27 @@ export function Today() {
       <PageHeader
         title={name ? `${greeting(now)}, ${name}` : greeting(now)}
         subtitle={longDate(now)}
-        actions={<WaxSeal onClick={() => navigate('/batches')}>Log a batch</WaxSeal>}
+        actions={<WaxSeal onClick={() => navigate('/batches/new')}>Log a batch</WaxSeal>}
       />
       <p className="flourish-line">gather ✦ steep ✦ strain ✦ keep</p>
       <div className="card-grid">
-        <ParchmentCard title="Batches due" subtitle="what's steeping, and when it's ready" botanical="calendula"><p className="muted">Batches arrive in a later stage.</p></ParchmentCard>
+        <ParchmentCard title="Batches due" subtitle="what's steeping, and when it's ready" botanical="calendula">
+          {status(!data ? <p className="muted">Looking in the journal…</p> : due.length === 0 ? (
+            <p className="muted">Nothing due in the next few days.</p>
+          ) : (
+            <>
+              <ul className="today-list">
+                {due.map(d => (
+                  <li key={d.step_id}>
+                    {d.title}: <Link to={`/batches/${d.batch_id}`}>{d.batch_name}</Link>, due {formatShortDay(d.due_on)}
+                    {d.overdue && <> <span className="badge badge-oxblood">Overdue</span></>}
+                  </li>
+                ))}
+              </ul>
+              <p><Link to="/batches">See all</Link></p>
+            </>
+          ))}
+        </ParchmentCard>
         <ParchmentCard title="Running low" subtitle="jars to refill soon" botanical="chamomile">
           {status(!data ? <p className="muted">Looking in the cabinet…</p> : cabinetEmpty ? <EmptyCabinet /> : data.runningLow.length === 0 ? (
             <p className="muted">Nothing is running low.</p>

@@ -22,6 +22,7 @@ import { RecipeForm } from './screens/recipes/RecipeForm.jsx';
 import { RecipePage } from './screens/recipes/RecipePage.jsx';
 import { BatchJournal } from './screens/batches/BatchJournal.jsx';
 import { NewBatch } from './screens/batches/NewBatch.jsx';
+import { BatchPage } from './screens/batches/BatchPage.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -46,6 +47,12 @@ function RecipeFormRoute() {
 function NewBatchRoute() {
   const { key } = useLocation();
   return <NewBatch key={key} />;
+}
+
+// Keyed by id so moving between batches resets the journal edit and the finish dialog.
+function BatchPageRoute() {
+  const { id } = useParams();
+  return <BatchPage key={id} />;
 }
 
 const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
@@ -74,6 +81,7 @@ export const routes = [
       { path: 'recipes/:id', element: <RecipePageRoute /> },
       { path: 'batches', element: <BatchJournal /> },
       { path: 'batches/new', element: <NewBatchRoute /> },
+      { path: 'batches/:id', element: <BatchPageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },

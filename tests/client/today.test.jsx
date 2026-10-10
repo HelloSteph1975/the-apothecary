@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -45,7 +45,7 @@ it('shows the three cabinet cards', async () => {
   for (const name of ['Batches due', 'Running low', 'Nearing expiry']) {
     expect(await screen.findByRole('heading', { level: 2, name })).toBeInTheDocument();
   }
-  expect(screen.getByText('Batches arrive in a later stage.')).toBeInTheDocument();
+  expect(screen.queryByText('Batches arrive in a later stage.')).toBeNull();
 });
 
 it('shows running low and nearing expiry rows that link to the herb', async () => {
@@ -98,9 +98,39 @@ it('says so and lets her try again when the cabinet cannot be read', async () =>
   expect(await screen.findByText('Nothing is running low.')).toBeInTheDocument();
 });
 
-it('has a wax seal button to log a batch', async () => {
+it('has a wax seal button that starts a new batch', async () => {
+  const router = createMemoryRouter(routes, { initialEntries: ['/'] });
+  render(<RouterProvider router={router} />);
+  await userEvent.click(await screen.findByRole('button', { name: /log a batch/i }));
+  expect(router.state.location.pathname).toBe('/batches/new');
+});
+
+it('lists the steps due in Batches due, linking each batch, with an Overdue badge', async () => {
+  summary = {
+    ...summary,
+    batchesDue: [
+      { step_id: 1, title: 'Strain and bottle', due_on: '2026-10-07', batch_id: 5, batch_name: 'Calendula oil, Sep 20', overdue: true },
+      { step_id: 2, title: 'Shake the jar', due_on: '2026-10-11', batch_id: 6, batch_name: 'Elderberry syrup', overdue: false },
+    ],
+    counts: { ...summary.counts, batchesDue: 2 },
+  };
   today();
-  expect(await screen.findByRole('button', { name: /log a batch/i })).toBeInTheDocument();
+  const card = await screen.findByRole('region', { name: 'Batches due' });
+  const first = await within(card).findByRole('link', { name: 'Calendula oil, Sep 20' });
+  expect(first).toHaveAttribute('href', '/batches/5');
+  expect(within(card).getByRole('link', { name: 'Elderberry syrup' })).toHaveAttribute('href', '/batches/6');
+  const rows = within(card).getAllByRole('listitem');
+  expect(rows[0]).toHaveTextContent('Strain and bottle');
+  expect(rows[0]).toHaveTextContent('Oct 7');
+  expect(within(rows[0]).getByText('Overdue')).toBeInTheDocument();
+  expect(within(rows[1]).queryByText('Overdue')).toBeNull();
+  expect(within(card).getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/batches');
+});
+
+it('says nothing is due when no steps are close', async () => {
+  today();
+  const card = await screen.findByRole('region', { name: 'Batches due' });
+  expect(await within(card).findByText('Nothing due in the next few days.')).toBeInTheDocument();
 });
 
 it('moves from morning to afternoon without a reload', async () => {
