@@ -258,3 +258,15 @@ it('after undo, a task changed to not repeat makes no copy and reuses none', asy
   const again = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body;
   expect(again.next).toBeNull();
 });
+
+it('after undo, a copy whose own repeat was edited but whose date matches is still reused', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'Water', repeat_kind: 'daily', due_on: TODAY })).body;
+  const B = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body.next;
+  await t.http().patch(`/api/tasks/${B.id}`).send({ repeat_kind: 'weekly' });
+  await t.http().post(`/api/tasks/${a.id}/uncomplete`).send({});
+  const again = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body;
+  expect(again.next.id).toBe(B.id);
+  const others = t.ctx.db.prepare("SELECT id FROM tasks WHERE title = 'Water' AND deleted_at IS NULL AND id != ?").all(a.id);
+  expect(others).toHaveLength(1);
+});
