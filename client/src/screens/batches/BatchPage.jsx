@@ -71,7 +71,7 @@ function Lines({ lines }) {
         return (
           <li key={l.id}>
             {amount && <span>{amount} </span>}
-            {l.herb_id != null && !l.herb_gone ? <Link to={`/grimoire/${l.herb_id}`}>{l.name}</Link> : <span>{l.name}</span>}
+            {l.herb_id != null && l.herb_live ? <Link to={`/grimoire/${l.herb_id}`}>{l.name}</Link> : <span>{l.name}</span>}
             {l.item ? (
               <span>, from {l.item.live ? <Link to={`/cabinet/items/${l.item.id}`}>{l.item.name}</Link> : <span>{l.item.name} <span className="muted">(removed)</span></span>}{drawn}</span>
             ) : <span className="muted">, not drawn from a jar</span>}

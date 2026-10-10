@@ -143,9 +143,10 @@ export function getBatchDetail(db, id) {
   const recipe = batch.recipe_id == null ? null : r.recipes.get(batch.recipe_id);
   const type = batch.type_id == null ? null : r.recipeTypes.get(batch.type_id, { includeDeleted: true });
   const getItem = db.prepare('SELECT id, name, deleted_at FROM items WHERE id = ?');
+  const herbLive = db.prepare('SELECT 1 FROM herbs WHERE id = ? AND deleted_at IS NULL');
   const lines = r.batchIngredients.list({ batch_id: id }).map(line => {
     const it = line.item_id == null ? null : getItem.get(line.item_id);
-    return { ...line, item: it ? { id: it.id, name: it.name, live: it.deleted_at == null } : null };
+    return { ...line, herb_live: line.herb_id != null && Boolean(herbLive.get(line.herb_id)), item: it ? { id: it.id, name: it.name, live: it.deleted_at == null } : null };
   });
   const steps = r.batchSteps.list({ batch_id: id });
   const made = batch.item_id == null ? null : r.items.get(batch.item_id);
@@ -230,17 +231,26 @@ export function createBatch(db, body) {
   const r = repos(db);
   if (data.recipe_id != null && data.type_id == null) data.type_id = r.recipes.get(data.recipe_id)?.type_id ?? null;
   const short = shortDraws(lines);
-  if (short.length && !(src.confirm_short === true || src.confirm_short === 'true' || src.confirm_short === 1)) {
+  if (short.length && !(src.confirm_short === true)) {
     throw new HttpError(409, 'Some jars hold less than you are drawing.', { short });
   }
   return transaction(db, () => {
     const batch = r.batches.create(data);
+    const left = new Map();
+    const given = [];
     for (const line of lines) {
       const { item, drawn, ...row } = line;
+      if (item && drawn > 0) {
+        const have = left.has(item.id) ? left.get(item.id) : item.amount;
+        const take = Math.min(drawn, have);
+        row.drawn_amount = take;
+        left.set(item.id, Math.max(0, have - take));
+        given.push([item.id, take]);
+      }
       r.batchIngredients.create({ ...row, batch_id: batch.id, drawn_unit: item && row.drawn_amount != null ? item.unit : null });
     }
     for (const step of steps) r.batchSteps.create({ ...step, batch_id: batch.id });
-    for (const line of lines) if (line.item && line.drawn > 0) drawFromItem(db, line.item.id, line.drawn);
+    for (const [itemId, take] of given) drawFromItem(db, itemId, take);
     return batch.id;
   });
 }
@@ -312,6 +322,7 @@ export function finishBatch(db, id, body) {
       if (cab.amount == null || cab.amount === '') errs['add_to_cabinet.amount'] = 'Add an amount';
     }
   }
+  if (data.yield_amount === 0) errs.yield_amount = 'Must be more than 0';
   if (Object.keys(errs).length) throw new HttpError(400, FIX, errs);
   if (data.yield_amount != null && data.yield_unit == null) throw new HttpError(400, FIX, { yield_unit: 'Pick a unit for the yield' });
   if (data.expires_on === undefined) {

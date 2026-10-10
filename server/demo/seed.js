@@ -96,7 +96,7 @@ function stockBatches(db, today) {
   const recipe = name => db.prepare('SELECT id FROM recipes WHERE name = ? AND deleted_at IS NULL').get(name)?.id ?? null;
 
   createBatch(db, {
-    name: 'Calendula skin salve', recipe_id: recipe('Calendula skin salve'), start_date: addDays(today, -10),
+    name: 'Calendula skin salve', recipe_id: recipe('Calendula skin salve'), start_date: addDays(today, -10), confirm_short: true,
     intention: 'A gentle salve for dry, chapped skin.', base: 'Olive oil and beeswax',
     method: 'Infused the calendula in warm olive oil, then left it to steep on the shelf.',
     lines: [
@@ -107,7 +107,7 @@ function stockBatches(db, today) {
   });
 
   const tea = createBatch(db, {
-    name: 'Sleepy chamomile tea', recipe_id: recipe('Sleepy chamomile tea'), start_date: addDays(today, -12),
+    name: 'Sleepy chamomile tea', recipe_id: recipe('Sleepy chamomile tea'), start_date: addDays(today, -12), confirm_short: true,
     intention: 'A soft evening cup.', method: 'Mixed the dried herbs in a jar and shook it well.',
     noticed: 'Sweet and calming. Lavender was just right.', would_change: 'A little more lemon balm next time.',
     lines: [

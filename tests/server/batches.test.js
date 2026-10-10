@@ -191,6 +191,35 @@ it('with confirm_short it empties the jar, never below zero, and marks it used u
   expect(item.used_up_at).toBeTruthy();
 });
 
+it('flags whether a line herb is still in the grimoire', async () => {
+  const s = setup();
+  const gone = repos(t.ctx.db).herbs.create({ common_name: 'Gone herb' });
+  const res = await s.h().post('/api/batches').send({ ...baseBatch, lines: [
+    { herb_id: s.cal.id, name: 'Calendula' }, { herb_id: gone.id, name: 'Gone herb' }, { name: 'Plain' },
+  ] });
+  expect(res.status).toBe(201);
+  repos(t.ctx.db).herbs.remove(gone.id, '2026-10-09 10:00:00');
+  const body = (await s.h().get(`/api/batches/${res.body.id}`)).body;
+  expect(body.lines.map(l => l.herb_live)).toEqual([true, false, false]);
+});
+
+it('stores what the jar really gave when a short draw is confirmed', async () => {
+  const s = setup();
+  const a = await addItem(s.h, { name: 'Calendula', amount: 4 });
+  const res = await s.h().post('/api/batches').send({ ...baseBatch, confirm_short: true,
+    lines: [{ name: 'Calendula', amount: 10, unit: 'g', item_id: a.id, drawn_amount: 10 }] });
+  expect(res.status).toBe(201);
+  expect(res.body.lines[0].amount).toBe(10);
+  expect(res.body.lines[0].drawn_amount).toBe(4);
+  expect(repos(t.ctx.db).items.get(a.id).amount).toBe(0);
+  const b = await addItem(s.h, { name: 'Rose', amount: 10 });
+  const res2 = await s.h().post('/api/batches').send({ ...baseBatch, confirm_short: true, lines: [
+    { name: 'Rose', item_id: b.id, drawn_amount: 6 }, { name: 'Rose again', item_id: b.id, drawn_amount: 6 },
+  ] });
+  expect(res2.status).toBe(201);
+  expect(res2.body.lines.map(l => l.drawn_amount)).toEqual([6, 4]);
+});
+
 it('counts two lines on one jar together', async () => {
   const s = setup();
   const a = await addItem(s.h, { name: 'Calendula', amount: 10 });
@@ -304,6 +333,14 @@ it('finishes, defaulting the expiry from the recipe shelf life, and closes open 
   expect(res.body).toMatchObject({ finished_on: '2026-10-23', expires_on: '2027-10-23', yield_amount: 180, status: 'finished' });
   expect(res.body.steps[0].done_on).toBe('2026-10-23');
   expect((await s.h().post(`/api/batches/${b.id}/finish`).send({ finished_on: '2026-10-24' })).status).toBe(409);
+});
+
+it('rejects a yield of zero with a 400', async () => {
+  const s = setup();
+  const b = await makeBatch(s, {});
+  const res = await s.h().post(`/api/batches/${b.id}/finish`).send({ finished_on: '2026-10-23', yield_amount: 0, yield_unit: 'ml' });
+  expect(res.status).toBe(400);
+  expect(res.body.details.yield_amount).toBe('Must be more than 0');
 });
 
 it('uses the type shelf life for a free-form batch and an explicit expiry when given', async () => {

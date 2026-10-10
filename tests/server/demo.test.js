@@ -255,6 +255,17 @@ it('gives an existing v4 demo folder the batches once', () => {
   expect(batchNames(t.ctx.db)).toEqual([]);
 });
 
+it('still seeds the batches when a demo jar holds less than the batch draws', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  clearBatchRows(t.ctx.db);
+  t.ctx.db.prepare("UPDATE items SET amount = 2 WHERE name = 'Calendula'").run();
+  t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
+  expect(() => seedDemo(t.ctx)).not.toThrow();
+  expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
+  expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(0);
+});
+
 it('leaves a v4 demo folder alone when it already has a batch', () => {
   t = makeTestContext();
   seedDemo(t.ctx);
