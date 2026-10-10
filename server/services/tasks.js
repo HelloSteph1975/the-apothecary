@@ -213,9 +213,11 @@ export function completeTask(db, id, body) {
   if (task.done_on) throw new HttpError(409, 'That task is already done.');
   return transaction(db, () => {
     const due = task.repeat_kind !== 'none' ? nextDue(task, task.due_on ?? today, hemisphere(db)) : null;
-    // A copy kept from an earlier completion (see uncompleteTask) is not made twice.
-    // A live copy (open or done) already stands for this completion.
-    const kept = task.spawned_id != null ? r.tasks.get(task.spawned_id) : null;
+    // A copy kept from an earlier completion (see uncompleteTask) is not made twice, but only while it is
+    // live and still the next occurrence under today's schedule. Otherwise a new copy is made and the old one is left alone.
+    const old = task.spawned_id != null ? r.tasks.get(task.spawned_id) : null;
+    const kept = due && old && !old.deleted_at && old.due_on === due
+      && (old.repeat_kind ?? null) === (task.repeat_kind ?? null) && (old.repeat_days ?? null) === (task.repeat_days ?? null) ? old : null;
     const spawned = kept ? kept : due ? r.tasks.create({
       title: task.title, notes: task.notes, due_on: due, repeat_kind: task.repeat_kind, repeat_days: task.repeat_days,
       repeat_anchor_day: task.repeat_anchor_day, priority: task.priority, related_type: task.related_type, related_id: task.related_id,

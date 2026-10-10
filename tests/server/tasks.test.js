@@ -234,3 +234,27 @@ it('complete, finish the copy, uncomplete, complete again makes only one copy', 
   const others = t.ctx.db.prepare("SELECT id FROM tasks WHERE title = 'Water' AND deleted_at IS NULL AND id != ?").all(a.id);
   expect(others).toHaveLength(2);
 });
+
+it('after undo, a changed due date makes a new copy on the new date instead of reusing the old one', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'Water', repeat_kind: 'daily', due_on: TODAY })).body;
+  const B = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body.next;
+  await t.http().post(`/api/tasks/${B.id}/complete`).send({ today: TODAY });
+  await t.http().post(`/api/tasks/${a.id}/uncomplete`).send({});
+  await t.http().patch(`/api/tasks/${a.id}`).send({ due_on: '2026-10-20' });
+  const again = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body;
+  expect(again.next.id).not.toBe(B.id);
+  expect(again.next.due_on).toBe('2026-10-21');
+  expect((await t.http().get(`/api/tasks/${B.id}`)).body.due_on).toBe('2026-10-11');
+});
+
+it('after undo, a task changed to not repeat makes no copy and reuses none', async () => {
+  t = makeTestContext();
+  const a = (await make({ title: 'Water', repeat_kind: 'daily', due_on: TODAY })).body;
+  const B = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body.next;
+  await t.http().post(`/api/tasks/${B.id}/complete`).send({ today: TODAY });
+  await t.http().post(`/api/tasks/${a.id}/uncomplete`).send({});
+  await t.http().patch(`/api/tasks/${a.id}`).send({ repeat_kind: 'none' });
+  const again = (await t.http().post(`/api/tasks/${a.id}/complete`).send({ today: TODAY })).body;
+  expect(again.next).toBeNull();
+});
