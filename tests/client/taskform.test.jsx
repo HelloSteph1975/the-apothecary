@@ -35,7 +35,8 @@ beforeEach(() => {
     return json({});
   });
 });
-const open = path => render(<ToastProvider><ConfirmProvider><RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} /></ConfirmProvider></ToastProvider>);
+let location;
+const open = path => { const router = createMemoryRouter(routes, { initialEntries: [path] }); location = () => router.state.location; return render(<ToastProvider><ConfirmProvider><RouterProvider router={router} /></ConfirmProvider></ToastProvider>); };
 const body = () => calls.find(c => c.method === 'POST' && c.url === '/api/tasks')?.body;
 
 it('needs a title', async () => {
@@ -130,4 +131,13 @@ it('an automatic task shows only the fields she can change, plus where it came f
   await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(calls.some(c => c.method === 'PATCH')).toBe(true));
   expect(calls.find(c => c.method === 'PATCH').body).toEqual({ title: 'Restock the lavender', notes: null, priority: 'normal' });
+});
+
+it('saving a prefilled form closes it without a leave warning and clears the prefill from the URL', async () => {
+  open('/todo?due=2026-10-20');
+  await screen.findByRole('dialog', { name: 'Add a task' });
+  await userEvent.type(screen.getByLabelText('Title'), 'Sweep');
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(location().search).toBe(''));
+  expect(screen.queryByText('Leave without saving?')).toBeNull();
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { MoreHorizontal } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -65,28 +65,35 @@ function RowMenu({ task, actions }) {
   const [picking, setPicking] = useState(false);
   const [until, setUntil] = useState('');
   const root = useRef(null);
+  const toggle = useRef(null);
+  const listId = useId();
   const today = todayString();
+  const close = (refocus = false) => {
+    setOpen(false); setPicking(false);
+    if (refocus) toggle.current?.focus();
+  };
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = e => { if (e.key === 'Escape') { setOpen(false); setPicking(false); root.current?.querySelector('button')?.focus(); } };
-    const onDown = e => { if (root.current && !root.current.contains(e.target)) setOpen(false); };
+    const onKey = e => { if (e.key === 'Escape') close(true); };
+    const onDown = e => { if (root.current && !root.current.contains(e.target)) close(); };
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onDown);
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
   }, [open]);
-  const done = async fn => { setOpen(false); setPicking(false); await fn(); };
+  const done = async fn => { close(true); await fn(); };
   return (
-    <div className="row-menu" ref={root}>
-      <Button variant="secondary" size="sm" icon={MoreHorizontal} aria-label={`Actions for ${task.title}`} aria-expanded={open} onClick={() => setOpen(o => !o)} />
+    <div className="row-menu" ref={root} onBlur={() => { if (open) setTimeout(() => { if (root.current && !root.current.contains(document.activeElement)) close(); }, 0); }}>
+      <Button ref={toggle} variant="secondary" size="sm" icon={MoreHorizontal} aria-label={`Actions for ${task.title}`}
+        aria-expanded={open} aria-controls={open ? listId : undefined} onClick={() => (open ? close() : setOpen(true))} />
       {open && (
-        <div className="row-menu-list">
+        <div className="row-menu-list" id={listId}>
           {!task.done_on && SNOOZES.map(([label, n]) => (
             <button key={label} type="button" className="row-menu-item" onClick={() => done(() => actions.snooze(task, addDaysTo(today, n)))}>Snooze {label}</button>
           ))}
           {!task.done_on && !picking && <button type="button" className="row-menu-item" onClick={() => setPicking(true)}>Pick a date</button>}
           {!task.done_on && picking && (
             <div className="row-menu-pick">
-              <Field label="Snooze until"><DateInput min={addDaysTo(today, 1)} value={until} onChange={e => setUntil(e.target.value)} /></Field>
+              <Field label="Snooze until"><DateInput ref={el => el?.focus()} min={addDaysTo(today, 1)} value={until} onChange={e => setUntil(e.target.value)} /></Field>
               <Button size="sm" disabled={!until} onClick={() => done(() => actions.snooze(task, until))}>Snooze until that day</Button>
             </div>
           )}
@@ -110,14 +117,17 @@ function TaskRow({ task, actions, today }) {
   const due = dueLabel(task, today);
   const repeat = repeatText(task);
   const asleep = !task.done_on && task.snoozed_until && task.snoozed_until > today;
+  // The row stays busy until the refreshed list hands it a new task, so a second click cannot repeat the change.
+  useEffect(() => { setBusy(false); }, [task]);
   const toggle = async () => {
     if (busy) return;
     setBusy(true);
-    try { await (task.done_on ? actions.uncomplete(task) : actions.complete(task)); } finally { setBusy(false); }
+    const res = await (task.done_on ? actions.uncomplete(task) : actions.complete(task));
+    if (!res) setBusy(false);
   };
   return (
     <li className="task-row">
-      <input type="checkbox" className="task-check" aria-label={`Done: ${task.title}`} checked={Boolean(task.done_on)} disabled={busy} onChange={toggle} />
+      <input type="checkbox" className="task-check" aria-label={`Done: ${task.title}`} checked={Boolean(task.done_on)} aria-disabled={busy || undefined} onChange={toggle} />
       <div className="task-main">
         <Link to={`/todo/${task.id}`} className="task-title">{task.title}</Link>
         <div className="task-meta">

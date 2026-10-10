@@ -44,7 +44,7 @@ export function TaskForm({ task = null, prefill = null, open, onClose, onSaved }
   const today = todayString();
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
 
-  useLeaveGuard(open && !same(form, start));
+  const markSaved = useLeaveGuard(open && !same(form, start));
 
   const list = open && form.related_type ? LISTS[form.related_type](today) : null;
   const records = useApi(list ? list[0] : null);
@@ -76,6 +76,7 @@ export function TaskForm({ task = null, prefill = null, open, onClose, onSaved }
       const saved = task ? await api.patch(`/api/tasks/${task.id}`, body) : await api.post('/api/tasks', body);
       onSaved?.(saved);
       toast.show({ message: task ? 'Saved' : `Added ${title}` });
+      markSaved();
       onClose();
     } catch (ex) {
       const details = ex.details ?? {};

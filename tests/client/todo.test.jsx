@@ -18,8 +18,10 @@ const task = (id, extra) => ({
 let views;
 let calls;
 let location;
+let slow = 0;
 beforeEach(() => {
   calls = [];
+  slow = 0;
   views = {
     today: [
       task(1, { title: 'Water the sage', due_on: day(0) }),
@@ -40,6 +42,7 @@ beforeEach(() => {
     const m = /^\/api\/tasks\?view=(\w+)&today=(.+)$/.exec(url);
     if (m) return json(views[m[1]]);
     if (method === 'POST' && /\/complete$/.test(url)) {
+      await new Promise(r => setTimeout(r, slow));
       const spawn = url.includes('/4/');
       return json({ task: task(4, { done_on: day(0) }), next: spawn ? task(40, { due_on: day(4) }) : null });
     }
@@ -211,4 +214,48 @@ it('Add a task opens an empty form', async () => {
   await screen.findByText('Water the sage');
   await userEvent.click(screen.getByRole('button', { name: 'Add a task' }));
   expect(await screen.findByLabelText('Title')).toHaveValue('');
+});
+
+it('a second click on a task being completed does not post again', async () => {
+  slow = 150;
+  open('/todo');
+  await screen.findByText('Water the sage');
+  const box = screen.getByRole('checkbox', { name: 'Done: Water the sage' });
+  await userEvent.click(box);
+  await userEvent.click(box);
+  await waitFor(() => expect(post(/\/api\/tasks\/1\/complete$/)).toBeTruthy());
+  expect(calls.filter(c => /\/api\/tasks\/1\/complete$/.test(c.url))).toHaveLength(1);
+});
+
+it('the row menu reports aria-expanded and gives focus back to its button on Escape', async () => {
+  open('/todo');
+  await screen.findByText('Water the sage');
+  const toggle = within(rowOf('Water the sage')).getByRole('button', { name: 'Actions for Water the sage' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await userEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(toggle).toHaveAttribute('aria-controls');
+  await userEvent.keyboard('{Escape}');
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(toggle).toHaveFocus();
+});
+
+it('Pick a date focuses the date field, and choosing an item returns focus to the menu button', async () => {
+  open('/todo');
+  await screen.findByText('Water the sage');
+  await menu('Water the sage');
+  await userEvent.click(screen.getByRole('button', { name: 'Pick a date' }));
+  expect(screen.getByLabelText('Snooze until')).toHaveFocus();
+  await userEvent.type(screen.getByLabelText('Snooze until'), day(4));
+  await userEvent.click(screen.getByRole('button', { name: 'Snooze until that day' }));
+  expect(screen.getByRole('button', { name: 'Actions for Water the sage' })).toHaveFocus();
+});
+
+it('the menu closes when focus leaves it', async () => {
+  open('/todo');
+  await screen.findByText('Water the sage');
+  await menu('Water the sage');
+  await userEvent.click(screen.getByRole('button', { name: 'Pick a date' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Done: Stir the oil' }));
+  await waitFor(() => expect(screen.queryByLabelText('Snooze until')).toBeNull());
 });
