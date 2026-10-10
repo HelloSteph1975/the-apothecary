@@ -6,7 +6,7 @@ import { DRAWERS } from '../../client/src/components/Cabinet.jsx';
 
 beforeEach(() => {
   global.fetch = vi.fn(async url => new Response(JSON.stringify(
-    url === '/api/health' ? { ok: true, demo: false } : { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' },
+    url === '/api/health' ? { ok: true, demo: false } : url.startsWith('/api/batches') ? [] : { keeper_name: '', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' },
   ), { status: 200 }));
 });
 
@@ -29,8 +29,8 @@ it('shows every drawer and marks the open one', async () => {
 });
 
 it('opens a drawer that is not built yet with a friendly note', async () => {
-  at('/garden');
-  expect(await screen.findByRole('heading', { level: 1, name: 'Garden log' })).toBeInTheDocument();
+  at('/journal');
+  expect(await screen.findByRole('heading', { level: 1, name: 'Journal' })).toBeInTheDocument();
   expect(screen.getByText(/being built/i)).toBeInTheDocument();
 });
 

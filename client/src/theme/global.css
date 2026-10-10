@@ -306,3 +306,44 @@ textarea.input { resize: vertical; }
 .icon-option:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 .icon-option input { accent-color: var(--forest); }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+
+/* Batch page */
+.step-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.step-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 12px; }
+.step-row.is-done .step-main strong { text-decoration: line-through; text-decoration-thickness: 1px; }
+.step-actions { display: inline-flex; gap: 6px; }
+.step-form { display: grid; gap: 4px; margin-bottom: 8px; }
+.step-form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pre-line { white-space: pre-line; }
+.finish-jar { margin: 8px 0 0; padding: 8px 12px 4px; border: 1px solid var(--rule); border-radius: var(--radius); }
+.finish-jar legend { padding: 0 6px; font-weight: 600; color: var(--ink-soft); }
+@media (max-width: 640px) { .step-row { grid-template-columns: auto 1fr; } .step-actions { grid-column: 2; } }
+
+/* Record sheet: on screen it sits inside the parchment page; in print it is the whole page. */
+.sheet-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.record-sheet { max-width: 760px; margin: 0 auto; }
+.record-frame { padding: 22px 28px; border: 3px double var(--ink-green); background: rgba(255, 252, 244, .5); }
+.record-frame h1 { text-align: center; margin-bottom: 0; font-size: 2rem; }
+.record-kicker { text-align: center; font-variant: small-caps; letter-spacing: .14em; color: var(--ink-soft); margin: 0 0 12px; }
+.sheet-field { break-inside: avoid; page-break-inside: avoid; margin-bottom: 12px; }
+.sheet-field h2 { font-size: 1.15rem; color: var(--ink-green); margin: 0 0 2px; border-bottom: 1px solid var(--rule); }
+.sheet-field p { margin: 0; }
+.sheet-herbs { margin: 0; padding-left: 1.2em; }
+.writing-lines { display: grid; gap: 0; }
+.writing-lines span { display: block; height: 30px; border-bottom: 1px solid var(--ink-soft); }
+
+@page { margin: 14mm; }
+@media print {
+  .cabinet, .topbar, .skip-link, .scrim, .toast-region, .sheet-vine, .no-print { display: none !important; }
+  html, body { background: #fff !important; background-image: none !important; color: #111; font-size: 12pt; line-height: 1.35; min-height: 0; }
+  .app-shell { display: block; min-height: 0; }
+  .main { padding: 0; }
+  .page, .sheet { max-width: none; margin: 0; padding: 0; border: 0; outline: 0; background: #fff !important; box-shadow: none; min-height: 0; color: #111; }
+  .record-sheet { max-width: none; }
+  .record-frame { background: #fff; border-color: #1f3a2a; padding: 8mm 10mm; }
+  .record-frame h1 { font-size: 20pt; }
+  .sheet-field { margin-bottom: 4mm; }
+  .sheet-field h2 { font-size: 12pt; color: #1f3a2a; }
+  .writing-lines span { height: 8mm; border-bottom-color: #555; }
+  .muted, .record-kicker { color: #333; }
+}

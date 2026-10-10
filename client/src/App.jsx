@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, useParams } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, useLocation, useParams } from 'react-router-dom';
 import { ToastProvider } from './components/ToastProvider.jsx';
 import { ConfirmProvider } from './components/ConfirmProvider.jsx';
 import { SettingsProvider } from './components/SettingsProvider.jsx';
@@ -20,6 +20,10 @@ import { RecipeBook } from './screens/recipes/RecipeBook.jsx';
 import { RecipeTypes } from './screens/recipes/RecipeTypes.jsx';
 import { RecipeForm } from './screens/recipes/RecipeForm.jsx';
 import { RecipePage } from './screens/recipes/RecipePage.jsx';
+import { BatchJournal } from './screens/batches/BatchJournal.jsx';
+import { NewBatch } from './screens/batches/NewBatch.jsx';
+import { BatchPage } from './screens/batches/BatchPage.jsx';
+import { RecordSheet } from './screens/batches/RecordSheet.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -40,7 +44,25 @@ function RecipeFormRoute() {
   return <RecipeForm key={id ?? 'new'} />;
 }
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+// A fresh form for each visit, so a second "Make this recipe" does not keep the last one's fields.
+function NewBatchRoute() {
+  const { key } = useLocation();
+  return <NewBatch key={key} />;
+}
+
+// Keyed by id so moving between batches resets the journal edit and the finish dialog.
+function BatchPageRoute() {
+  const { id } = useParams();
+  return <BatchPage key={id} />;
+}
+
+// Keyed by id so moving between batches reloads the sheet.
+function RecordSheetRoute() {
+  const { id } = useParams();
+  return <RecordSheet key={id} />;
+}
+
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -64,6 +86,10 @@ export const routes = [
       { path: 'recipes/new', element: <RecipeFormRoute /> },
       { path: 'recipes/:id/edit', element: <RecipeFormRoute /> },
       { path: 'recipes/:id', element: <RecipePageRoute /> },
+      { path: 'batches', element: <BatchJournal /> },
+      { path: 'batches/new', element: <NewBatchRoute /> },
+      { path: 'batches/:id', element: <BatchPageRoute /> },
+      { path: 'batches/:id/sheet', element: <RecordSheetRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },

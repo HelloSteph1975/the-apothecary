@@ -64,3 +64,18 @@ export const recipeIngredientSchema = {
   herb_id: 'int', name: 'string', amount: { type: 'number', min: 0 }, unit: RECIPE_UNITS, form: FORMS, plant_part: PLANT_PARTS,
   note: 'string', herb_gone: { type: 'bool', nullable: false },
 };
+
+export const batchSchema = {
+  name: 'string!', recipe_id: 'int', type_id: 'int', start_date: 'date!', factor: { type: 'number', min: 0.01, max: 100 },
+  base: 'string', intention: 'string', method: 'string', noticed: 'string', would_change: 'string', label_notes: 'string', notes: 'string',
+};
+export const batchLineSchema = {
+  herb_id: 'int', name: 'string', amount: { type: 'number', min: 0 }, unit: RECIPE_UNITS, item_id: 'int',
+  drawn_amount: { type: 'number', min: 0 },
+};
+export const batchStepSchema = {
+  title: 'string!', due_on: 'date', done_on: 'date', sort_order: { type: 'int', nullable: false },
+};
+export const finishSchema = {
+  finished_on: 'date!', yield_amount: { type: 'number', min: 0 }, yield_unit: RECIPE_UNITS, expires_on: 'date',
+};

@@ -116,6 +116,18 @@ export function restockItem(db, id, body) {
   });
 }
 
+// Takes an amount out of a live jar inside the caller's transaction and returns what is left.
+// Never goes below zero; a jar that reaches zero is marked used up. The caller asks first when the jar holds less.
+export function drawFromItem(db, itemId, amount) {
+  const item = repos(db).items.get(itemId);
+  if (!item) throw notFound('That item is not in the cabinet.');
+  const left = Math.max(0, Math.round((item.amount - amount + Number.EPSILON) * 1e6) / 1e6);
+  const changes = { amount: left };
+  if (left === 0) changes.used_up_at = new Date().toISOString();
+  repos(db).items.update(itemId, changes);
+  return left;
+}
+
 export function storageSpots(db) {
   return db.prepare(`SELECT DISTINCT storage_spot FROM items WHERE deleted_at IS NULL AND storage_spot IS NOT NULL
     ORDER BY storage_spot COLLATE NOCASE`).all().map(r => r.storage_spot);

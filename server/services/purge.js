@@ -13,23 +13,32 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
       OR (owner_type = 'item' AND owner_id IN (${old('items')}))
       OR (owner_type = 'supplier' AND owner_id IN (${old('suppliers')}))
       OR (owner_type = 'herb' AND owner_id IN (${old('herbs')}))
-      OR (owner_type = 'recipe' AND owner_id IN (${old('recipes')}))`;
+      OR (owner_type = 'recipe' AND owner_id IN (${old('recipes')}))
+      OR (owner_type = 'batch' AND owner_id IN (${old('batches')}))`;
     files = db.prepare(`SELECT filename FROM photos WHERE ${photoMatch}`).all(cutoff).map(r => r.filename);
     const counts = {};
     counts.photos = db.prepare(`DELETE FROM photos WHERE ${photoMatch}`).run(cutoff).changes;
     counts.purchases = db.prepare(`DELETE FROM purchases WHERE id IN (${old('purchases')}) OR item_id IN (${old('items')})`).run().changes;
+    db.prepare(`UPDATE batches SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
+    db.prepare(`UPDATE batch_ingredients SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     counts.items = db.prepare(`DELETE FROM items WHERE id IN (${old('items')})`).run().changes;
     db.prepare(`UPDATE purchases SET supplier_id = NULL WHERE supplier_id IN (${old('suppliers')})`).run();
     counts.suppliers = db.prepare(`DELETE FROM suppliers WHERE id IN (${old('suppliers')})`).run().changes;
     counts.cabinet_sections = db.prepare(`DELETE FROM cabinet_sections WHERE id IN (${old('cabinet_sections')})
       AND id NOT IN (SELECT section_id FROM items)`).run().changes;
     db.prepare(`DELETE FROM recipe_ingredients WHERE id IN (${old('recipe_ingredients')}) OR recipe_id IN (${old('recipes')})`).run();
+    db.prepare(`DELETE FROM batch_ingredients WHERE id IN (${old('batch_ingredients')}) OR batch_id IN (${old('batches')})`).run();
+    db.prepare(`DELETE FROM batch_steps WHERE id IN (${old('batch_steps')}) OR batch_id IN (${old('batches')})`).run();
+    counts.batches = db.prepare(`DELETE FROM batches WHERE id IN (${old('batches')})`).run().changes;
+    db.prepare(`UPDATE batches SET recipe_id = NULL WHERE recipe_id IN (${old('recipes')})`).run();
     counts.recipes = db.prepare(`DELETE FROM recipes WHERE id IN (${old('recipes')})`).run().changes;
     counts.recipe_types = db.prepare(`DELETE FROM recipe_types WHERE id IN (${old('recipe_types')})
-      AND id NOT IN (SELECT type_id FROM recipes)`).run().changes;
+      AND id NOT IN (SELECT type_id FROM recipes)
+      AND id NOT IN (SELECT type_id FROM batches WHERE type_id IS NOT NULL)`).run().changes;
     db.prepare(`DELETE FROM herb_sources WHERE id IN (${old('herb_sources')}) OR herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE items SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE recipe_ingredients SET herb_id = NULL, herb_gone = 1 WHERE herb_id IN (${old('herbs')})`).run();
+    db.prepare(`UPDATE batch_ingredients SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     counts.herbs = db.prepare(`DELETE FROM herbs WHERE id IN (${old('herbs')})`).run().changes;
     return counts;
   });

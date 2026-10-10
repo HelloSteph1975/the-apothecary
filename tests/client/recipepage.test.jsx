@@ -108,7 +108,7 @@ it('scales with ?scale= and shows the scaled amounts', async () => {
   expect(within(scalePanel).getByRole('status')).toBeEmptyDOMElement();
   expect(within(screen.getByLabelText('Make')).getAllByRole('option').map(o => o.textContent)).toEqual(['Half', 'As written', 'Double', 'Triple', 'Other']);
   await user.selectOptions(screen.getByLabelText('Make'), 'Double');
-  await waitFor(() => expect(within(scalePanel).getByRole('status')).toHaveTextContent('Scaled to 2×: makes 200 ml'), { timeout: 4000 });
+  await waitFor(() => expect(within(scalePanel).getByRole('status')).toHaveTextContent('Scaled to 2×: makes 200 ml'));
   expect(calls.some(c => c.url === '/api/recipes/7?scale=2')).toBe(true);
   expect(screen.getByText('60 g')).toBeInTheDocument();
   expect(router.state.location.search).toBe('?scale=2');
@@ -119,7 +119,7 @@ it('scales with ?scale= and shows the scaled amounts', async () => {
 
 it('keeps the scale from the URL', async () => {
   open('/recipes/7?scale=2');
-  expect(await screen.findByText('Scaled to 2×: makes 200 ml', {}, { timeout: 4000 })).toBeInTheDocument();
+  expect(await screen.findByText('Scaled to 2×: makes 200 ml')).toBeInTheDocument();
   expect(screen.getByLabelText('Make')).toHaveValue('2');
 });
 
@@ -128,7 +128,7 @@ it('sends ?yield= for a target yield', async () => {
   open();
   await screen.findByRole('region', { name: 'Ingredients' });
   await user.type(screen.getByLabelText('Or make (ml)'), '50');
-  expect(await screen.findByText('Scaled to 0.5×: makes 50 ml', {}, { timeout: 4000 })).toBeInTheDocument();
+  expect(await screen.findByText('Scaled to 0.5×: makes 50 ml')).toBeInTheDocument();
   expect(calls.some(c => c.url === '/api/recipes/7?yield=50')).toBe(true);
 });
 
@@ -183,7 +183,7 @@ it('deletes with undo that returns to the page', async () => {
 
 it('drops a bad scale from the link and shows the recipe at 1x', async () => {
   const router = open('/recipes/7?scale=500');
-  expect(await screen.findByRole('region', { name: 'Ingredients' }, { timeout: 4000 })).toBeInTheDocument();
+  expect(await screen.findByRole('region', { name: 'Ingredients' })).toBeInTheDocument();
   expect(router.state.location.search).toBe('');
   expect(screen.getByText(/scale in that link wasn't valid/)).toBeInTheDocument();
   expect(screen.getByLabelText('Make')).toHaveValue('1');

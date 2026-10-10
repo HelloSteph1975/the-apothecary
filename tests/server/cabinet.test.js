@@ -212,3 +212,19 @@ it('rejects a herb_id that is missing or deleted', async () => {
   expect(res.status).toBe(400);
   expect(res.body.details).toHaveProperty('herb_id');
 });
+
+it('drawFromItem subtracts, clamps at zero and marks the jar used up', async () => {
+  const { drawFromItem } = await import('../../server/services/cabinet.js');
+  const { repos } = await import('../../server/db/repos.js');
+  t = makeTestContext();
+  const r = repos(t.ctx.db);
+  const item = r.items.create({ section_id: 1, name: 'Sage', amount: 10, unit: 'g' });
+  expect(drawFromItem(t.ctx.db, item.id, 4)).toBe(6);
+  expect(r.items.get(item.id).used_up_at).toBe(null);
+  expect(drawFromItem(t.ctx.db, item.id, 0.1 + 0.2)).toBe(5.7);
+  expect(drawFromItem(t.ctx.db, item.id, 50)).toBe(0);
+  const row = r.items.get(item.id);
+  expect(row.amount).toBe(0);
+  expect(row.used_up_at).toBeTruthy();
+  expect(() => drawFromItem(t.ctx.db, 9999, 1)).toThrow();
+});
