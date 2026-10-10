@@ -3,9 +3,16 @@ import { todayString } from '../../lib/today.js';
 import { FOLK_LABEL, suggestionLabel } from '../../lib/sky.js';
 
 // Up to five days the timing rules like for this recipe. Choosing one hands the day to the start date,
-// which plans the batch again the same way a typed date does. Shows nothing when suggestions are off or none fit.
+// which plans the batch again the same way a typed date does. Shows nothing when suggestions are off or none fit, and a small note with Try again when the request fails.
 export function StartDates({ recipeId, current, onPick }) {
-  const { data } = useApi(`/api/recipes/${recipeId}/start-dates?from=${todayString()}`);
+  const { data, error, reload } = useApi(`/api/recipes/${recipeId}/start-dates?from=${todayString()}`);
+  if (error) {
+    return (
+      <p className="muted start-dates-error">
+        Couldn't load good days. <button type="button" className="btn btn-secondary btn-sm" onClick={reload}>Try again</button>
+      </p>
+    );
+  }
   if (!Array.isArray(data) || data.length === 0) return null;
   return (
     <div role="group" aria-label="Good days to start" className="start-dates">

@@ -45,6 +45,7 @@ let planFail;
 let scaleBad;
 let holdPlan;
 let startDates;
+let startDatesFail;
 beforeEach(() => {
   calls = [];
   shortOnce = false;
@@ -52,12 +53,13 @@ beforeEach(() => {
   scaleBad = false;
   holdPlan = null;
   startDates = [];
+  startDatesFail = false;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
     calls.push({ method, url, body });
     const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
-    if (url.startsWith('/api/recipes/') && url.includes('/start-dates')) return json(startDates);
+    if (url.startsWith('/api/recipes/') && url.includes('/start-dates')) return startDatesFail ? json({ error: 'No good days today.' }, 500) : json(startDates);
     if (url === '/api/recipes') return json(recipes);
     if (url.startsWith('/api/items')) return json(items);
     if (url === '/api/batches/plan') {
@@ -462,6 +464,20 @@ it('hides good days when there are none', async () => {
   await new Promise(r => setTimeout(r, 50));
   expect(screen.queryByText('Good days to start')).toBeNull();
   expect(screen.queryByText('Folk tradition')).toBeNull();
+});
+
+it('says when good days could not load, offers Try again, and still lets her start the batch', async () => {
+  const user = userEvent.setup();
+  startDatesFail = true;
+  open('/batches/new?recipe=7');
+  await ready();
+  expect(await screen.findByText("Couldn't load good days.")).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start batch' })).toBeEnabled();
+  startDatesFail = false;
+  startDates = SUGGESTIONS;
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByRole('button', { name: 'Tue, Oct 20: full in Aries' })).toBeInTheDocument();
+  expect(screen.queryByText("Couldn't load good days.")).toBeNull();
 });
 
 it('shows no good days for a free-form batch and never asks for them', async () => {
