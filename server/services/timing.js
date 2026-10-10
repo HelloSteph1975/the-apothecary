@@ -7,7 +7,6 @@ import { HttpError, notFound } from '../http.js';
 import { validate } from '../validate.js';
 import { timingRuleSchema, PLANETS, ELEMENTS } from '../schemas.js';
 import { addDays } from '../lib/dates.js';
-import { typeKey } from '../lib/slugify.js';
 import { reorderGroups } from './groups.js';
 import { skyForDay, skyFacts, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../lib/sky.js';
 
@@ -186,6 +185,10 @@ export function localToday() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+// The stable key a rule uses for a recipe type: a starter's slug, else `type-<id>`. It never depends on the name,
+// so renaming a type keeps its rules and similar names cannot collide. Mirrored in client/src/lib/sky.js (slugOf).
+export const typeKey = type => (type ? (type.slug ?? `type-${type.id}`) : null);
 
 // What a recipe is made of, for matching: its type slug, and the planets and elements of its linked live herbs.
 function recipeTraits(db, recipeId) {

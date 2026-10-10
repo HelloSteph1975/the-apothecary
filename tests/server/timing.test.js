@@ -8,10 +8,9 @@ import { skyForDay, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../../se
 import { PLANETS, ELEMENTS } from '../../server/schemas.js';
 import { getSettings } from '../../server/services/settings.js';
 import * as CLIENT from '../../client/src/lib/sky.js';
-import { typeKey } from '../../server/lib/slugify.js';
 import { seedRecipeTypes } from '../../server/services/recipeTypes.js';
 import {
-  seedTimingRules, loadStarterRules, rulesForDay, todaySuggestions, startDates, listTimingRules,
+  seedTimingRules, loadStarterRules, rulesForDay, todaySuggestions, startDates, listTimingRules, typeKey,
   TIMING_RULES_SEED_VERSION,
 } from '../../server/services/timing.js';
 
@@ -349,16 +348,45 @@ describe('list', () => {
 });
 
 describe('user-made recipe types', () => {
-  it('scores a recipe whose type has no slug by its hyphenated name', () => {
+  const setup = () => {
     t = makeTestContext();
     const db = t.ctx.db;
     const r = repos(db);
+    const rule = types => r.timingRules.create({ kind: 'moon_sign', value: 'Cancer', text: 'Cancer moon.', weight: 3, sort_order: 0, recipe_types: J(types), planets: '[]', elements: '[]' });
+    return { db, r, rule };
+  };
+  const run = (db, recipe) => startDates(db, recipe.id, { from: '2026-10-11' }, { sky_suggestions: 'on', hemisphere: 'north' });
+  it('scores a recipe whose type has no slug by its id key', () => {
+    const { db, r, rule } = setup();
     const type = r.recipeTypes.create({ name: 'Hair rinse', sort_order: 0, is_starter: 0 });
     const recipe = r.recipes.create({ name: 'Rosemary rinse', type_id: type.id });
-    r.timingRules.create({ kind: 'moon_sign', value: 'Cancer', text: 'Cancer moon.', weight: 3, sort_order: 0, recipe_types: J(['hair-rinse']), planets: '[]', elements: '[]' });
-    const res = startDates(db, recipe.id, { from: '2026-10-11' }, { sky_suggestions: 'on', hemisphere: 'north' });
+    expect(typeKey(type)).toBe(`type-${type.id}`);
+    rule([`type-${type.id}`]);
+    const res = run(db, recipe);
     expect(res.length).toBeGreaterThan(0);
     expect(res.every(x => x.score === 3 && x.sky.sign === 'Cancer')).toBe(true);
+  });
+  it('still matches after the type is renamed', () => {
+    const { db, r, rule } = setup();
+    const type = r.recipeTypes.create({ name: 'Hair rinse', sort_order: 0, is_starter: 0 });
+    const recipe = r.recipes.create({ name: 'Rosemary rinse', type_id: type.id });
+    rule([typeKey(type)]);
+    db.prepare('UPDATE recipe_types SET name = ? WHERE id = ?').run('Scalp rinse', type.id);
+    expect(run(db, recipe).length).toBeGreaterThan(0);
+  });
+  it('gives similarly named types different keys', () => {
+    const { r } = setup();
+    const a = r.recipeTypes.create({ name: 'Hair rinse', sort_order: 0, is_starter: 0 });
+    const b = r.recipeTypes.create({ name: 'Hair-rinse', sort_order: 1, is_starter: 0 });
+    expect(typeKey(a)).not.toBe(typeKey(b));
+  });
+  it('keeps a starter type slug as its key', () => {
+    expect(typeKey({ id: 4, slug: 'tincture', name: 'Tincture' })).toBe('tincture');
+  });
+  it('keeps the key of a very long type name short', () => {
+    const { r } = setup();
+    const type = r.recipeTypes.create({ name: 'A'.repeat(120), sort_order: 0, is_starter: 0 });
+    expect(typeKey(type).length).toBeLessThanOrEqual(40);
   });
 });
 
@@ -373,7 +401,9 @@ describe('client lists', () => {
     expect(CLIENT.RULE_KINDS.map(k => k.value)).toEqual(['phase_group', 'phase', 'moon_element', 'moon_sign', 'day_ruler', 'festival']);
   });
   it('make the same recipe type key as the server', () => {
-    for (const name of ['Hair rinse', '  Bath  salts ', 'Tea']) expect(CLIENT.slugOf({ slug: null, name })).toBe(typeKey({ slug: null, name }));
-    expect(CLIENT.slugOf({ slug: 'tincture', name: 'Tincture' })).toBe('tincture');
+    for (const type of [{ id: 12, slug: null, name: 'Hair rinse' }, { id: 7, slug: null, name: '  Bath  salts ' }, { id: 3, slug: 'tincture', name: 'Tincture' }]) {
+      expect(CLIENT.slugOf(type)).toBe(typeKey(type));
+    }
+    expect(CLIENT.slugOf({ id: 12, slug: null, name: 'Hair rinse' })).toBe('type-12');
   });
 });

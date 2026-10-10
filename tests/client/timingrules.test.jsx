@@ -95,7 +95,7 @@ it('adds a rule with the right body and counts the text', async () => {
   await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/timing-rules')).toBeTruthy());
   expect(calls.find(c => c.method === 'POST').body).toEqual({
     kind: 'moon_sign', value: 'Cancer', text: 'Good for soups', weight: 3,
-    recipe_types: ['tea-blend', 'bath-salts'], planets: ['Venus'], elements: ['Water'],
+    recipe_types: ['tea-blend', 'type-3'], planets: ['Venus'], elements: ['Water'],
   });
 });
 
