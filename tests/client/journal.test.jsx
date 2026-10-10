@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -199,4 +199,34 @@ it('shows the empty state when no moon group has entries', async () => {
   respond = () => ({ view: 'moon', groups: ['new', 'waxing', 'full', 'waning'].map(group => ({ group, count: 0 })), entries: [], total: 0, page: 1 });
   open('/journal?view=moon');
   expect(await screen.findByText('Your journal is empty.')).toBeInTheDocument();
+});
+
+it('drops a page that was still loading when the search changed and changed back', async () => {
+  const user = userEvent.setup();
+  respond = p => {
+    const n = Number(p.get('page') || 1);
+    return { entries: Array.from({ length: 30 }, (_, i) => entry((n - 1) * 30 + i + 1)), total: 100, page: n };
+  };
+  const router = open();
+  await screen.findByRole('link', { name: 'Entry 1' });
+  await user.click(screen.getByRole('button', { name: 'More entries' }));
+  await screen.findByRole('link', { name: 'Entry 31' });
+  let release;
+  const gate = new Promise(r => { release = r; });
+  const base = global.fetch.getMockImplementation();
+  global.fetch.mockImplementation(async (url, ...rest) => { if (url.includes('page=3')) { calls.push(url); await gate; } return base(url, ...rest); });
+  await user.click(screen.getByRole('button', { name: 'More entries' }));
+  await waitFor(() => expect(journalCalls().some(c => c.includes('page=3'))).toBe(true));
+  const before = journalCalls().length;
+  await act(() => router.navigate('/journal?q=moon'));
+  await waitFor(() => expect(journalCalls().slice(before).some(c => c.includes('q=moon'))).toBe(true));
+  const mid = journalCalls().length;
+  await act(() => router.navigate('/journal'));
+  await waitFor(() => expect(journalCalls().length).toBeGreaterThan(mid));
+  await waitFor(() => expect(screen.queryByRole('link', { name: 'Entry 31' })).toBeNull());
+  await act(async () => { release(); await new Promise(r => setTimeout(r, 20)); });
+  expect(screen.queryByRole('link', { name: 'Entry 61' })).toBeNull();
+  await user.click(await screen.findByRole('button', { name: 'More entries' }));
+  await screen.findByRole('link', { name: 'Entry 31' });
+  expect(journalCalls().at(-1)).toBe('/api/journal?view=list&page=2');
 });

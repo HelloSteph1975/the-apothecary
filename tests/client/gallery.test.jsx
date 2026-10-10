@@ -1,6 +1,6 @@
 process.env.TZ = 'America/Mexico_City';
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -182,4 +182,34 @@ it('starts again from the first page when a filter changes', async () => {
 
 it('reads the photo day in the pinned time zone', () => {
   expect(new Date(2026, 0, 1).getTimezoneOffset()).toBe(360);
+});
+
+it('drops a page that was still loading when the filter changed and changed back', async () => {
+  photos = p => {
+    const n = Number(p.get('page') || 1);
+    return { photos: Array.from({ length: 48 }, (_, i) => photo((n - 1) * 48 + i + 1)), total: 200, page: n };
+  };
+  kinds = [{ kind: 'item', count: 200 }];
+  const router = open();
+  await screen.findByAltText('Caption 1');
+  await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+  await screen.findByAltText('Caption 49');
+  let release;
+  const gate = new Promise(r => { release = r; });
+  const base = global.fetch.getMockImplementation();
+  global.fetch.mockImplementation(async (url, ...rest) => { if (url.includes('page=3')) { calls.push(url); await gate; } return base(url, ...rest); });
+  await userEvent.click(screen.getByRole('button', { name: 'Load more' }));
+  await waitFor(() => expect(galleryCalls().some(c => c.includes('page=3'))).toBe(true));
+  const before = galleryCalls().length;
+  await act(() => router.navigate('/journal/photos?kind=item'));
+  await waitFor(() => expect(galleryCalls().slice(before).some(c => c.includes('kind=item'))).toBe(true));
+  const mid = galleryCalls().length;
+  await act(() => router.navigate('/journal/photos'));
+  await waitFor(() => expect(galleryCalls().length).toBeGreaterThan(mid));
+  await waitFor(() => expect(screen.queryByAltText('Caption 49')).toBeNull());
+  await act(async () => { release(); await new Promise(r => setTimeout(r, 20)); });
+  expect(screen.queryByAltText('Caption 97')).toBeNull();
+  await userEvent.click(await screen.findByRole('button', { name: 'Load more' }));
+  await screen.findByAltText('Caption 49');
+  expect(galleryCalls().at(-1)).toBe('/api/gallery?page=2');
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -56,18 +56,21 @@ function useEntries(base) {
   const fresh = { base, pages: [], page: 1, error: null, busy: false };
   const [more, setMore] = useState(fresh);
   const current = more.base === base ? more : fresh;
-  useEffect(() => { setMore({ base, pages: [], page: 1, error: null, busy: false }); }, [base, first.data]);
+  // Every reset bumps the generation, so a page requested before it can't land in the new list.
+  const generation = useRef(0);
+  useEffect(() => { generation.current += 1; setMore({ base, pages: [], page: 1, error: null, busy: false }); }, [base, first.data]);
   const entries = first.data ? [...first.data.entries, ...current.pages] : [];
   const total = first.data?.total ?? 0;
   const loadMore = async () => {
     if (first.loading) return;
     const page = current.page + 1;
+    const mine = generation.current;
     setMore({ ...current, busy: true, error: null });
     try {
       const res = await api.get(`${base}&page=${page}`);
-      setMore(m => (m.base === base ? { ...m, pages: [...m.pages, ...res.entries], page, busy: false } : m));
+      setMore(m => (m.base === base && mine === generation.current ? { ...m, pages: [...m.pages, ...res.entries], page, busy: false } : m));
     } catch (err) {
-      setMore(m => (m.base === base ? { ...m, busy: false, error: err } : m));
+      setMore(m => (m.base === base && mine === generation.current ? { ...m, busy: false, error: err } : m));
     }
   };
   // keepPrevious leaves the old query's page on screen while a new one loads; paging waits for the new first page.
