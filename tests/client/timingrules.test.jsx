@@ -206,3 +206,81 @@ it('does nothing when an end button is pressed', async () => {
   await user.click(screen.getByRole('button', { name: 'Move Waxing moon up' }));
   expect(calls.some(c => c.method === 'PUT')).toBe(false);
 });
+
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+
+it('blocks a second move until the reloaded list arrives, then builds the next order from it', async () => {
+  const user = userEvent.setup();
+  keepOrder();
+  const inner = global.fetch;
+  let gate = null;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if ((opts.method || 'GET') === 'GET' && url === '/api/timing-rules' && gate) await gate.promise;
+    return inner(url, opts);
+  });
+  open();
+  await screen.findByText('Waxing text.');
+  gate = deferred();
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.filter(c => c.method === 'PUT')).toHaveLength(1));
+  // The reload is held back: a quick second move must be ignored, not sent from the old order.
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  expect(screen.getByRole('button', { name: 'Move Waxing moon down' })).toHaveAttribute('aria-disabled', 'true');
+  expect(calls.filter(c => c.method === 'PUT')).toHaveLength(1);
+  gate.resolve();
+  await waitFor(() => expect(screen.getByText('Moved Waxing moon to position 2.')).toBeInTheDocument());
+  gate = null;
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.filter(c => c.method === 'PUT')).toHaveLength(2));
+  expect(calls.filter(c => c.method === 'PUT').map(p => p.body.ids)).toEqual([[2, 1, 3], [2, 3, 1]]);
+});
+
+it('ignores an old save finishing after the dialog was closed and reopened', async () => {
+  const user = userEvent.setup();
+  const inner = global.fetch;
+  const hold = deferred();
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (opts.method === 'POST' && url === '/api/timing-rules') {
+      await hold.promise;
+      return new Response(JSON.stringify({ id: 9 }), { status: 201 });
+    }
+    return inner(url, opts);
+  });
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  let dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.type(within(dialog).getByLabelText('Text'), 'First try');
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  await user.type(within(dialog).getByLabelText('Text'), 'Second try');
+  hold.resolve();
+  await waitFor(() => expect(calls.filter(c => c.url === '/api/timing-rules' && c.method === 'GET').length).toBeGreaterThan(1));
+  expect(screen.getByRole('dialog', { name: 'Add a timing rule' })).toBeInTheDocument();
+  expect(within(screen.getByRole('dialog', { name: 'Add a timing rule' })).getByLabelText('Text')).toHaveValue('Second try');
+});
+
+it('shows a retryable error in the recipe types group when the types fail to load', async () => {
+  const user = userEvent.setup();
+  const inner = global.fetch;
+  let failTypes = true;
+  global.fetch = vi.fn(async (url, opts = {}) => {
+    if (url === '/api/recipe-types' && failTypes) return new Response(JSON.stringify({ error: 'Types are away.' }), { status: 500 });
+    return inner(url, opts);
+  });
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  const alert = await within(dialog).findByText(/Couldn't load your recipe types/);
+  expect(alert.closest('[role="alert"]') ?? alert).toBeInTheDocument();
+  // The rest of the form still works.
+  await user.type(within(dialog).getByLabelText('Text'), 'Still typing');
+  failTypes = false;
+  await user.click(within(dialog).getByRole('button', { name: 'Try again' }));
+  expect(await within(dialog).findByLabelText('Bath salts')).toBeInTheDocument();
+  expect(within(dialog).queryByText(/Couldn't load your recipe types/)).not.toBeInTheDocument();
+  expect(within(dialog).getByLabelText('Text')).toHaveValue('Still typing');
+});

@@ -27,7 +27,7 @@ function CheckGroup({ legend, options, selected, onToggle }) {
   );
 }
 
-function RuleForm({ rule, types, open, onClose, onSaved }) {
+function RuleForm({ rule, types, typesError, onRetryTypes, open, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState(() => (rule ? {
     kind: rule.kind, value: rule.value, text: rule.text, weight: String(rule.weight),
@@ -87,6 +87,11 @@ function RuleForm({ rule, types, open, onClose, onSaved }) {
           <Select value={form.weight} onChange={e => set('weight', e.target.value)} options={WEIGHTS} />
         </Field>
         <CheckGroup legend="Favours these recipe types" options={typeOptions} selected={form.recipe_types} onToggle={v => set('recipe_types', toggle(form.recipe_types, v))} />
+        {typesError && (
+          <p role="alert" className="field-error">
+            Couldn't load your recipe types. <Button type="button" variant="secondary" size="sm" onClick={onRetryTypes}>Try again</Button>
+          </p>
+        )}
         {errors.recipe_types && <small className="field-error" role="alert">{errors.recipe_types}</small>}
         <CheckGroup legend="Favours herbs ruled by" options={PLANETS.map(p => ({ value: p, label: p }))} selected={form.planets} onToggle={v => set('planets', toggle(form.planets, v))} />
         {errors.planets && <small className="field-error" role="alert">{errors.planets}</small>}
@@ -106,7 +111,14 @@ export function TimingRules() {
   const [editing, setEditing] = useState(null); // 'new' or a rule; kept after closing so the dialog can close cleanly
   const [formOpen, setFormOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
-  const openForm = r => { setEditing(r); setFormKey(k => k + 1); setFormOpen(true); };
+  // Which form instance is open right now; a save that started in an earlier one must not close a newer one.
+  const activeForm = useRef(null);
+  const openForm = r => {
+    const key = formKey + 1;
+    activeForm.current = key;
+    setEditing(r); setFormKey(key); setFormOpen(true);
+  };
+  const closeForm = key => { if (activeForm.current === key) { activeForm.current = null; setFormOpen(false); } };
   const list = rules.data || [];
   const [moving, setMoving] = useState(false);
 
@@ -119,12 +131,18 @@ export function TimingRules() {
 
   const [announcement, setAnnouncement] = useState('');
   const pending = useRef(null);
+  // While a move is in flight this holds the list she moved from; moves stay blocked until a different list arrives.
+  const awaiting = useRef(undefined);
   const listRef = useRef(null);
 
   // Once the reordered list has loaded, put focus back on the button she just used (or the other one at an end) and say where the rule went.
   useEffect(() => {
+    if (awaiting.current === undefined) return;
+    if (rules.data === awaiting.current && !rules.error) return;
+    awaiting.current = undefined;
+    setMoving(false);
     const p = pending.current;
-    if (!p || !rules.data || rules.loading) return;
+    if (!p || !rules.data) return;
     pending.current = null;
     const index = rules.data.findIndex(r => r.id === p.id);
     if (index < 0) return;
@@ -132,7 +150,7 @@ export function TimingRules() {
     const dir = atEnd ? (p.dir === 'up' ? 'down' : 'up') : p.dir;
     listRef.current?.querySelector(`[data-move="${p.id}-${dir}"]`)?.focus();
     setAnnouncement(`Moved ${p.title} to position ${index + 1}.`);
-  }, [rules.data, rules.loading]);
+  }, [rules.data, rules.error]);
 
   const shift = async (i, by) => {
     if (moving) return;
@@ -147,8 +165,8 @@ export function TimingRules() {
       pending.current = null;
       toast.show({ message: err.message, duration: 6000 });
     }
+    awaiting.current = rules.data;
     rules.reload();
-    setMoving(false);
   };
 
   const header = <PageHeader title="Timing rules" subtitle="Folk tradition, in your own words" actions={<Link to="/settings">Back to settings</Link>} />;
@@ -185,7 +203,8 @@ export function TimingRules() {
           ))}
         </ul>
       </ParchmentCard>
-      {editing && <RuleForm key={formKey} rule={editing === 'new' ? null : editing} types={types} open={formOpen} onClose={() => setFormOpen(false)} onSaved={rules.reload} />}
+      {editing && <RuleForm key={formKey} rule={editing === 'new' ? null : editing} types={types} typesError={Boolean(typesApi.error)} onRetryTypes={typesApi.reload}
+        open={formOpen} onClose={() => closeForm(formKey)} onSaved={rules.reload} />}
     </>
   );
 }
