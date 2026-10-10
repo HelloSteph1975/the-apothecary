@@ -118,6 +118,9 @@ it('converts draws into the jar unit and flags what cannot convert', async () =>
   expect(lines[1].suggested_draw).toBe(29.6);
   expect(lines[2]).toMatchObject({ suggested_draw: null, flag: 'no_conversion' });
   expect(lines[2].candidates[0].convertible).toBe(false);
+  expect(lines[2].candidates[0].draw).toBe(null);
+  expect(lines[0].candidates[0]).toMatchObject({ convertible: true, draw: 2 });
+  expect(lines[1].candidates[0].draw).toBe(29.6);
   expect(lines[3]).toMatchObject({ suggested_draw: 5, flag: 'not_enough' });
   expect(lines[4]).toMatchObject({ suggested_draw: null, flag: 'no_amount' });
 });

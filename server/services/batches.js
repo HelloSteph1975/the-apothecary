@@ -64,7 +64,7 @@ function buildLine(ing, items) {
   else if (best.amount < suggested_draw) flag = 'not_enough';
   return {
     herb_id: ing.herb_id, name: ing.name, amount: ing.amount, unit: ing.unit,
-    candidates: candidates.map(({ draw, ...c }) => c),
+    candidates,
     suggested_item_id: best?.id ?? null, suggested_draw: ing.amount == null ? null : suggested_draw, flag,
   };
 }
