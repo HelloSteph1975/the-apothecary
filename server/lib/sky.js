@@ -140,14 +140,17 @@ export function nextFestival(day, hemisphere = 'north') {
   return { name: found.name, day: found.day, in_days: daysBetween(day, found.day) };
 }
 
-export function skyForDay(day, { hemisphere = 'north' } = {}) {
+// `now` is optional. When the day is today's local day, the next new and full moon are searched from that
+// moment, so an event earlier today is not called "next" and one later today is not skipped. Other days search from noon.
+export function skyForDay(day, { hemisphere = 'north', now } = {}) {
   const noon = localNoon(day);
   const { start, end } = localDayBounds(day);
   const phase = phaseOn(day);
   const moon = moonSignAt(noon);
   const [year] = parseDay(day);
   const today = festivals(year, hemisphere).find(f => f.day === day);
-  const ahead = to => principalPhases(noon, new Date(noon.getTime() + 40 * 24 * HOUR)).find(p => p.name === to).at;
+  const searchFrom = now instanceof Date && dayString(now) === day ? now : noon;
+  const ahead = to => principalPhases(searchFrom, new Date(searchFrom.getTime() + 40 * 24 * HOUR)).find(p => p.name === to).at;
   return {
     day,
     phase: { name: phase.name, group: phase.group, illumination: phase.illumination },

@@ -48,7 +48,8 @@ export function skyRouter(ctx) {
   });
   r.get('/', (req, res) => {
     const { date } = queryDates(req.query, ['date']);
-    res.json(skyForDay(date ?? localToday(), { hemisphere: getSettings(ctx.db).hemisphere }));
+    const { hemisphere } = getSettings(ctx.db);
+    res.json(date ? skyForDay(date, { hemisphere }) : skyForDay(localToday(), { hemisphere, now: new Date() }));
   });
   return r;
 }

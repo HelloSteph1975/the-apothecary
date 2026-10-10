@@ -140,6 +140,26 @@ describe('skyForDay', () => {
     expect(new Date(s.next_full).getTime()).toBeGreaterThan(localNoon('2026-10-31').getTime());
     expect(s.next_festival.in_days).toBeGreaterThan(0);
   });
+  it('searches for the next new and full moon from the given moment on the same local day', () => {
+    // A full moon and a new moon, each with a "now" 30 minutes before and after it on its own local day.
+    for (const name of ['full', 'new']) {
+      const ev = principalPhases(new Date(2026, 9, 1), new Date(2026, 10, 30)).find(p => p.name === name);
+      const at = new Date(ev.at);
+      const day = local(at);
+      const before = new Date(at.getTime() - 30 * 60 * 1000);
+      const after = new Date(at.getTime() + 30 * 60 * 1000);
+      expect(local(before)).toBe(day);
+      expect(local(after)).toBe(day);
+      const key = `next_${name}`;
+      expect(near(skyForDay(day, { now: before })[key], ev.at)).toBeLessThan(1000);
+      const later = skyForDay(day, { now: after })[key];
+      expect(new Date(later).getTime()).toBeGreaterThan(at.getTime() + 20 * 24 * 3600 * 1000);
+    }
+  });
+  it('ignores now for a day that is not today', () => {
+    const noon = skyForDay('2026-10-31');
+    expect(skyForDay('2026-10-31', { now: new Date(2026, 9, 1, 8) })).toEqual(noon);
+  });
   it('has a null festival on an ordinary day and honours hemisphere', () => {
     expect(skyForDay('2026-10-09', { hemisphere: 'north' }).festival).toBeNull();
     expect(skyForDay('2026-10-31', { hemisphere: 'south' }).festival).toBe('Beltane');
