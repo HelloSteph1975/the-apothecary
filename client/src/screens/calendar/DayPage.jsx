@@ -45,7 +45,9 @@ export function DayPage() {
   if (error) return <>{header}<p role="alert">{error.message}</p><Button onClick={reload}>Try again</Button>{back}</>;
   if (!data) return <>{header}<p role="status">Opening the day…</p>{back}</>;
 
-  const { sky, suggestions, events } = data;
+  const { sky, suggestions } = data;
+  const events = data.events.filter(e => e.kind !== 'journal');
+  const entries = data.events.filter(e => e.kind === 'journal');
   const festival = festivalLine(sky);
   const showFolk = settings != null && settings.sky_suggestions !== 'off';
   return (
@@ -82,6 +84,16 @@ export function DayPage() {
         <p className="page-actions">
           <Button as={Link} to={`/todo?due=${day}`}>Add a task for this day</Button>
           <Button as={Link} variant="secondary" to={`/batches/new?start=${day}`}>Start a batch on this day</Button>
+        </p>
+      </ParchmentCard>
+      <ParchmentCard title="Journal entries">
+        {entries.length === 0 ? <p className="muted">No journal entries for this day.</p> : (
+          <ul className="cal-events">
+            {entries.map(e => <li key={e.id} className="cal-event cal-journal"><EventLink event={e} /></li>)}
+          </ul>
+        )}
+        <p className="page-actions">
+          <Button as={Link} to={`/journal/new?date=${day}`}>Add a journal entry</Button>
         </p>
       </ParchmentCard>
       {back}

@@ -267,3 +267,14 @@ it('shows blank cells and disables Next at December 2100', async () => {
   expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
   expect(screen.queryByRole('link', { name: /January 1, 2101|Friday, January 1/ })).toBeNull();
 });
+
+it('shows journal entries and hides them with the Journal entries filter', async () => {
+  const user = userEvent.setup();
+  events = [...EVENTS, ev('journal', '2026-10-09', 'Full moon walk', { link: '/journal/4', id: 4 })];
+  await open('/calendar?view=month&date=2026-10-09');
+  const td = cell(/^Friday, October 9/).closest('td');
+  expect(within(td).getByRole('link', { name: 'Full moon walk' })).toHaveAttribute('href', '/journal/4');
+  await user.click(screen.getByRole('checkbox', { name: 'Journal entries' }));
+  expect(location().search).toContain('hide=journal');
+  expect(td).not.toHaveTextContent('Full moon walk');
+});

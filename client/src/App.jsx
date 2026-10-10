@@ -23,6 +23,8 @@ import { RecipeForm } from './screens/recipes/RecipeForm.jsx';
 import { RecipePage } from './screens/recipes/RecipePage.jsx';
 import { Journal } from './screens/journal/Journal.jsx';
 import { JournalTypes } from './screens/journal/JournalTypes.jsx';
+import { EntryPage } from './screens/journal/EntryPage.jsx';
+import { EntryForm } from './screens/journal/EntryForm.jsx';
 import { BatchJournal } from './screens/batches/BatchJournal.jsx';
 import { NewBatch } from './screens/batches/NewBatch.jsx';
 import { BatchPage } from './screens/batches/BatchPage.jsx';
@@ -37,6 +39,18 @@ import { DRAWERS } from './components/Cabinet.jsx';
 function HerbFormRoute() {
   const { id } = useParams();
   return <HerbForm key={id ?? 'new'} />;
+}
+
+// Keyed by id so moving between entries reloads the page.
+function EntryPageRoute() {
+  const { id } = useParams();
+  return <EntryPage key={id} />;
+}
+
+// A fresh form per entry, so moving between edit pages does not keep the last entry's fields.
+function EntryFormRoute() {
+  const { id } = useParams();
+  return <EntryForm key={id ?? 'new'} />;
 }
 
 // Keyed by id so moving between recipes resets the scale and page state.
@@ -107,6 +121,9 @@ export const routes = [
       { path: 'recipes/:id', element: <RecipePageRoute /> },
       { path: 'journal', element: <Journal /> },
       { path: 'journal/types', element: <JournalTypes /> },
+      { path: 'journal/new', element: <EntryFormRoute /> },
+      { path: 'journal/:id/edit', element: <EntryFormRoute /> },
+      { path: 'journal/:id', element: <EntryPageRoute /> },
       { path: 'batches', element: <BatchJournal /> },
       { path: 'batches/new', element: <NewBatchRoute /> },
       { path: 'batches/:id', element: <BatchPageRoute /> },

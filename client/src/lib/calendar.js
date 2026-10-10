@@ -5,6 +5,7 @@ export const KINDS = [
   { kind: 'step', label: 'Batch steps' },
   { kind: 'task', label: 'Tasks' },
   { kind: 'expiry', label: 'Jars to use up' },
+  { kind: 'journal', label: 'Journal entries' },
 ];
 export const AGENDA_DAYS = 30;
 // The server only knows these years, so the grid never asks for days outside them.
