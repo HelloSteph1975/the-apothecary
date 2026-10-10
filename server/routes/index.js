@@ -10,6 +10,7 @@ import { todayRoute } from './today.js';
 import { recipeTypesRouter, recipesRouter } from './recipes.js';
 import { batchesRouter } from './batches.js';
 import { skyRouter, timingRulesRouter } from './sky.js';
+import { tasksRouter } from './tasks.js';
 
 export function apiRouter(ctx, { onShutdown }) {
   const r = Router();
@@ -26,6 +27,7 @@ export function apiRouter(ctx, { onShutdown }) {
   r.use('/batches', batchesRouter(ctx));
   r.use('/sky', skyRouter(ctx));
   r.use('/timing-rules', timingRulesRouter(ctx));
+  r.use('/tasks', tasksRouter(ctx));
   r.get('/herb-of-the-day', herbOfTheDayRoute(ctx));
   r.get('/expiry-suggestion', expirySuggestionRoute(ctx));
   r.get('/storage-spots', storageSpotsRoute(ctx));
