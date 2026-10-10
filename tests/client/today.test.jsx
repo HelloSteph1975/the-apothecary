@@ -181,3 +181,66 @@ it('shows an error line on the herb card when it fails, and retries only that re
   expect(global.fetch.mock.calls.filter(c => String(c[0]).startsWith('/api/today')).length).toBe(before);
   expect(card).toBeTruthy();
 });
+
+// Sky ---------------------------------------------------------------------
+const SKY = {
+  day: '2026-10-09',
+  phase: { name: 'waxing gibbous', group: 'waxing', illumination: 78 },
+  moon: { sign: 'Taurus', element: 'Earth', changes: [] },
+  ruler: 'Venus',
+  festival: null,
+  next_new: '2026-11-09T21:00:00.000Z',
+  next_full: '2026-10-26T04:12:00.000Z',
+  next_festival: { name: 'Samhain', day: '2026-10-31', in_days: 22 },
+};
+const withSky = (sky = {}, suggestions = []) => { summary = { ...summary, sky: { ...SKY, ...sky }, suggestions }; };
+
+it('shows the sky line, the sooner of next full or new moon, and the next festival under the date', async () => {
+  withSky();
+  today();
+  expect(await screen.findByText('Waxing gibbous in Taurus, Friday under Venus')).toBeInTheDocument();
+  expect(screen.getByText(/^Next full moon \w{3}, Oct 2[5-6], \d{1,2}:\d{2} (AM|PM)$/)).toBeInTheDocument();
+  expect(screen.queryByText(/Next new moon/)).toBeNull();
+  expect(screen.getByText('Samhain in 22 days')).toBeInTheDocument();
+});
+
+it('shows the next new moon when it comes first', async () => {
+  withSky({ next_new: '2026-10-20T10:00:00.000Z', next_full: '2026-11-04T10:00:00.000Z' });
+  today();
+  expect(await screen.findByText(/^Next new moon /)).toBeInTheDocument();
+  expect(screen.queryByText(/Next full moon/)).toBeNull();
+});
+
+it('says when today is a festival', async () => {
+  withSky({ festival: 'Samhain' });
+  today();
+  expect(await screen.findByText('Today is Samhain')).toBeInTheDocument();
+  expect(screen.queryByText(/Samhain in/)).toBeNull();
+});
+
+it('lists a moon sign change today', async () => {
+  withSky({ moon: { sign: 'Taurus', element: 'Earth', changes: [{ at: new Date(2026, 9, 9, 15, 12).toISOString(), sign: 'Gemini' }] } });
+  today();
+  expect(await screen.findByText('Moon enters Gemini at 3:12 PM')).toBeInTheDocument();
+});
+
+it('shows up to two suggestions, each labelled Folk tradition, in The sky today', async () => {
+  withSky({}, [{ id: 1, text: 'Waxing moon: a time to start tinctures.' }, { id: 2, text: 'Venus day: good for rose and love blends.' }]);
+  today();
+  const card = await screen.findByRole('region', { name: 'The sky today' });
+  expect(within(card).getByText("folk timing, for what you're making")).toBeInTheDocument();
+  expect(within(card).getByText('Waxing moon: a time to start tinctures.')).toBeInTheDocument();
+  expect(within(card).getAllByText('Folk tradition')).toHaveLength(2);
+  expect(within(card).getByText('Waxing gibbous, 78% lit')).toBeInTheDocument();
+  expect(within(card).getByRole('link', { name: 'Timing rules' })).toHaveAttribute('href', '/settings/timing-rules');
+});
+
+it('shows only sky facts and a note when suggestions are off', async () => {
+  withSky({}, []);
+  settings.sky_suggestions = 'off';
+  today();
+  const card = await screen.findByRole('region', { name: 'The sky today' });
+  expect(await within(card).findByText('Suggestions are off. Turn them on in Settings.')).toBeInTheDocument();
+  expect(within(card).queryByText('Folk tradition')).toBeNull();
+  expect(within(card).getByText('Waxing gibbous, 78% lit')).toBeInTheDocument();
+});

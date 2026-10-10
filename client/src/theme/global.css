@@ -347,3 +347,9 @@ textarea.input { resize: vertical; }
   .writing-lines span { height: 8mm; border-bottom-color: #555; }
   .muted, .record-kicker { color: #333; }
 }
+
+.sky-lines { margin: 0 0 12px; }
+.sky-lines p { margin: 2px 0; }
+.check-group { border: 0; margin: 0 0 12px; padding: 0; }
+.check-group legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+.check-group-options { display: flex; flex-wrap: wrap; gap: 6px 16px; }

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ParchmentCard } from '../components/ParchmentCard.jsx';
-import { Field, TextInput, NumberInput, Select } from '../components/Field.jsx';
+import { Link } from 'react-router-dom';
+import { Field, TextInput, NumberInput, Select, Checkbox } from '../components/Field.jsx';
 import { WaxSeal } from '../components/WaxSeal.jsx';
 import { useSettings } from '../components/SettingsProvider.jsx';
 import { useConfirm } from '../components/ConfirmProvider.jsx';
@@ -96,6 +97,11 @@ export function Settings() {
               <Select value={form.units} onChange={e => set('units', e.target.value)}
                 options={[{ value: 'metric', label: 'Metric (g, ml)' }, { value: 'us', label: 'US (oz, fl oz)' }]} />
             </Field>
+            <p>
+              <Checkbox label="Show folk timing suggestions" checked={form.sky_suggestions !== 'off'}
+                onChange={e => set('sky_suggestions', e.target.checked ? 'on' : 'off')} />
+            </p>
+            <p className="muted">Folk tradition only. They never change a caution. <Link to="/settings/timing-rules">Edit timing rules</Link></p>
             <WaxSeal type="submit">Save settings</WaxSeal>
           </form>
         </ParchmentCard>
