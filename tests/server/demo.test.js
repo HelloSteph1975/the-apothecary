@@ -65,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -184,7 +184,7 @@ it('gives an existing v3 demo folder the recipes once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '3' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
   t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM recipe_ingredients; DELETE FROM recipes');
   seedDemo(t.ctx);
   expect(recipeNames(t.ctx.db)).toEqual([]);
@@ -249,7 +249,7 @@ it('gives an existing v4 demo folder the batches once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
   clearBatchRows(t.ctx.db);
   seedDemo(t.ctx);
   expect(batchNames(t.ctx.db)).toEqual([]);
@@ -343,7 +343,7 @@ it('gives an existing v5 demo folder the tasks once, only when it has none', () 
   t.ctx.db.prepare("UPDATE settings SET value = '5' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(taskTitles(t.ctx.db)).toEqual(DEMO_TASKS);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
   t.ctx.db.exec('DELETE FROM tasks');
   seedDemo(t.ctx);
   expect(taskTitles(t.ctx.db)).toEqual([]);
@@ -375,4 +375,68 @@ it('reset clears tasks and dismissals, trashes task photos and does not double u
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM task_dismissals').get().n).toBe(0);
   expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'task'").get().n).toBe(0);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', filename))).toBe(false);
+});
+
+const DEMO_ENTRIES = ['Dreamt of a lavender field', 'First calendula harvest', 'Full moon water'];
+const entryTitles = db => db.prepare('SELECT title FROM journal_entries WHERE deleted_at IS NULL ORDER BY title').all().map(r => r.title);
+
+it('adds three demo journal entries with the right types, links, tag and a full moon date', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const db = t.ctx.db;
+  expect(entryTitles(db)).toEqual(DEMO_ENTRIES);
+  const get = title => db.prepare(`SELECT e.*, jt.slug FROM journal_entries e JOIN journal_types jt ON jt.id = e.type_id WHERE e.title = ?`).get(title);
+  expect(get('Full moon water').slug).toBe('moon-observance');
+  expect(get('Full moon water').sky_phase).toBe('full');
+  expect(get('Full moon water').entry_date <= localToday()).toBe(true);
+  expect(get('Dreamt of a lavender field').slug).toBe('dream');
+  expect(get('First calendula harvest').slug).toBe('garden');
+  const links = title => db.prepare(`SELECT link_type, link_id FROM journal_links WHERE deleted_at IS NULL AND entry_id = ?`).all(get(title).id);
+  const salve = db.prepare("SELECT id FROM recipes WHERE name = 'Calendula skin salve'").get().id;
+  const calendula = db.prepare("SELECT id FROM herbs WHERE slug = 'calendula'").get().id;
+  expect(links('Full moon water')).toEqual([{ link_type: 'recipe', link_id: salve }]);
+  expect(links('First calendula harvest')).toEqual([{ link_type: 'herb', link_id: calendula }]);
+  expect(db.prepare('SELECT tag FROM journal_tags WHERE entry_id = ? AND deleted_at IS NULL').all(get('Full moon water').id).map(r => r.tag)).toEqual(['moon water']);
+});
+
+it('gives an existing v6 demo folder the journal entries once, only when it has none', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec('DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM journal_entries');
+  t.ctx.db.prepare("UPDATE settings SET value = '6' WHERE key = 'demo_seeded'").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(entryTitles(t.ctx.db)).toEqual(DEMO_ENTRIES);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
+  t.ctx.db.exec('DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM journal_entries');
+  seedDemo(t.ctx);
+  expect(entryTitles(t.ctx.db)).toEqual([]);
+});
+
+it('leaves a v6 demo folder alone when it already has an entry', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec("DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM journal_entries WHERE title != 'Full moon water'");
+  t.ctx.db.prepare("UPDATE settings SET value = '6' WHERE key = 'demo_seeded'").run();
+  seedDemo(t.ctx);
+  expect(entryTitles(t.ctx.db)).toEqual(['Full moon water']);
+});
+
+it('reset clears entries, links, tags and photos, keeps the types and does not double up', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const types = t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_types').get().n;
+  const entry = t.ctx.db.prepare("SELECT id FROM journal_entries WHERE title = 'Full moon water'").get();
+  const filename = '1700000000004-abcdef12.jpg';
+  fs.mkdirSync(path.join(t.dataDir, 'photos', '_trash'), { recursive: true });
+  fs.writeFileSync(path.join(t.dataDir, 'photos', filename), 'x');
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('journal', ?, ?)").run(entry.id, filename);
+  seedDemo(t.ctx, { reset: true });
+  seedDemo(t.ctx, { reset: true });
+  expect(entryTitles(t.ctx.db)).toEqual(DEMO_ENTRIES);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_entries').get().n).toBe(3);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_links').get().n).toBe(2);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_tags').get().n).toBe(1);
+  expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'journal'").get().n).toBe(0);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_types').get().n).toBe(types);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
 });
