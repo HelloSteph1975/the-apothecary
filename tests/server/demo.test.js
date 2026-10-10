@@ -65,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('5');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -184,7 +184,7 @@ it('gives an existing v3 demo folder the recipes once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '3' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('5');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
   t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM recipe_ingredients; DELETE FROM recipes');
   seedDemo(t.ctx);
   expect(recipeNames(t.ctx.db)).toEqual([]);
@@ -249,7 +249,7 @@ it('gives an existing v4 demo folder the batches once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('5');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
   clearBatchRows(t.ctx.db);
   seedDemo(t.ctx);
   expect(batchNames(t.ctx.db)).toEqual([]);
@@ -314,4 +314,65 @@ it('reset clears and re-adds the demo batches, trashes their photos and does not
   expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(20);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
   expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'batch'").get().n).toBe(0);
+});
+
+const DEMO_TASKS = ['Label the new tinctures', 'Make moon water', 'Water the rosemary'];
+const taskTitles = db => db.prepare("SELECT title FROM tasks WHERE kind = 'manual' AND deleted_at IS NULL ORDER BY title").all().map(r => r.title);
+
+it('adds three manual demo tasks with the right repeats and a link to the steeping batch', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  expect(taskTitles(t.ctx.db)).toEqual(DEMO_TASKS);
+  const get = title => t.ctx.db.prepare('SELECT * FROM tasks WHERE title = ?').get(title);
+  expect(get('Water the rosemary')).toMatchObject({ repeat_kind: 'weekly', repeat_days: '[1,4]' });
+  expect([1, 4]).toContain(new Date(`${get('Water the rosemary').due_on}T00:00:00Z`).getUTCDay());
+  expect(get('Make moon water')).toMatchObject({ repeat_kind: 'full_moon' });
+  expect(get('Make moon water').due_on).toBeTruthy();
+  const label = get('Label the new tinctures');
+  const [y, m, d] = localToday().split('-').map(Number);
+  expect(label.due_on).toBe(new Date(Date.UTC(y, m - 1, d + 2)).toISOString().slice(0, 10));
+  expect(label.priority).toBe('high');
+  const batch = t.ctx.db.prepare("SELECT id FROM batches WHERE name = 'Calendula skin salve'").get();
+  expect(label).toMatchObject({ related_type: 'batch', related_id: batch.id });
+});
+
+it('gives an existing v5 demo folder the tasks once, only when it has none', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec('DELETE FROM tasks; DELETE FROM task_dismissals');
+  t.ctx.db.prepare("UPDATE settings SET value = '5' WHERE key = 'demo_seeded'").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(taskTitles(t.ctx.db)).toEqual(DEMO_TASKS);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('6');
+  t.ctx.db.exec('DELETE FROM tasks');
+  seedDemo(t.ctx);
+  expect(taskTitles(t.ctx.db)).toEqual([]);
+});
+
+it('leaves a v5 demo folder alone when it already has a task', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec("DELETE FROM tasks WHERE title != 'Make moon water'");
+  t.ctx.db.prepare("UPDATE settings SET value = '5' WHERE key = 'demo_seeded'").run();
+  seedDemo(t.ctx);
+  expect(taskTitles(t.ctx.db)).toEqual(['Make moon water']);
+});
+
+it('reset clears tasks and dismissals, trashes task photos and does not double up', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const task = t.ctx.db.prepare("SELECT id FROM tasks WHERE title = 'Make moon water'").get();
+  const filename = '1700000000003-abcdef12.jpg';
+  fs.mkdirSync(path.join(t.dataDir, 'photos', '_trash'), { recursive: true });
+  fs.writeFileSync(path.join(t.dataDir, 'photos', filename), 'x');
+  t.ctx.db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('task', ?, ?)").run(task.id, filename);
+  t.ctx.db.prepare("INSERT INTO task_dismissals (auto_key, dismissed_on) VALUES ('restock:1:0', ?)").run(localToday());
+  t.ctx.db.prepare("INSERT INTO tasks (title, kind, auto_key) VALUES ('Auto', 'auto', 'restock:9:0')").run();
+  seedDemo(t.ctx, { reset: true });
+  seedDemo(t.ctx, { reset: true });
+  expect(taskTitles(t.ctx.db)).toEqual(DEMO_TASKS);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM tasks').get().n).toBe(3);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM task_dismissals').get().n).toBe(0);
+  expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'task'").get().n).toBe(0);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', filename))).toBe(false);
 });
