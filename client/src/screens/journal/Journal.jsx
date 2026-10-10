@@ -60,6 +60,7 @@ function useEntries(base) {
   const entries = first.data ? [...first.data.entries, ...current.pages] : [];
   const total = first.data?.total ?? 0;
   const loadMore = async () => {
+    if (first.loading) return;
     const page = current.page + 1;
     setMore({ ...current, busy: true, error: null });
     try {
@@ -69,7 +70,9 @@ function useEntries(base) {
       setMore(m => (m.base === base ? { ...m, busy: false, error: err } : m));
     }
   };
-  return { first, entries, hasMore: entries.length < total, loadMore, busy: current.busy, moreError: current.error };
+  // keepPrevious leaves the old query's page on screen while a new one loads; paging waits for the new first page.
+  const settled = Boolean(first.data) && !first.loading;
+  return { first, entries, hasMore: settled && entries.length < total, loadMore, busy: current.busy, moreError: current.error };
 }
 
 function EntryList({ state, empty }) {
@@ -160,9 +163,11 @@ export function Journal() {
         <MoonGroup key={`${g.group}|${urlQ}`} group={MOON_GROUPS.find(m => m.value === g.group)} count={g.count} q={urlQ} />
       ));
     }
-  } else if (view === 'list') {
+  } else if (state.first.error) {
     body = <EntryList state={state} empty={empty} />;
-  } else if (state.first.error || !head) {
+  } else if (!head || head.view !== view) {
+    body = <p>Opening the journal…</p>;
+  } else if (view === 'list') {
     body = <EntryList state={state} empty={empty} />;
   } else {
     const items = view === 'type' ? head.types : head.tags;
@@ -172,7 +177,7 @@ export function Journal() {
           {view === 'type' ? items.map(t => chip(String(t.id), t.name, t.count)) : items.map(t => chip(t.tag, t.tag, t.count))}
         </p>
         {choice
-          ? <EntryList state={state} empty={<p className="muted">No entries match.</p>} />
+          ? <EntryList state={state} empty={empty} />
           : <p className="muted">{view === 'type' ? 'Pick a type to see its entries.' : 'Pick a tag to see its entries.'}</p>}
       </>
     );

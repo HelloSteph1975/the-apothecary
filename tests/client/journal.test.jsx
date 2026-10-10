@@ -22,7 +22,14 @@ beforeEach(() => {
     const json = b => new Response(JSON.stringify(b), { status: 200 });
     if (url === '/api/health') return json({ ok: true, demo: false });
     if (url === '/api/settings') return json({ keeper_name: '' });
-    if (url.startsWith('/api/journal?')) return json(respond(new URL(url, 'http://x').searchParams));
+    if (url.startsWith('/api/journal?')) {
+      const p = new URL(url, 'http://x').searchParams;
+      const view = p.get('view') || 'list';
+      const r = respond(p);
+      // Like the real API: the list view returns only entries, total and page.
+      const own = view === 'list' ? { entries: r.entries, total: r.total, page: r.page } : r;
+      return json({ view, ...own });
+    }
     return json({});
   });
 });
@@ -113,6 +120,45 @@ it('keeps the view in the URL and groups by type', async () => {
   expect(await screen.findByRole('link', { name: 'A dream' })).toBeInTheDocument();
   expect(router.state.location.search).toBe('?view=type&type_id=2');
   expect(journalCalls().at(-1)).toBe('/api/journal?view=type&type_id=2');
+});
+
+it('switches from All to By type and By tag without breaking', async () => {
+  const user = userEvent.setup();
+  respond = p => {
+    const view = p.get('view');
+    if (view === 'type') return { types: [{ id: 1, name: 'Ritual', icon: 'sparkles', count: 1 }], entries: [], total: 0, page: 1 };
+    if (view === 'tag') return { tags: [{ tag: 'rose', count: 1 }], entries: [], total: 0, page: 1 };
+    return { entries: [entry(1)], total: 1, page: 1 };
+  };
+  open();
+  await screen.findByRole('link', { name: 'Entry 1' });
+  await user.click(screen.getByRole('link', { name: 'By type' }));
+  expect(await screen.findByRole('button', { name: /Ritual\s*\(1\)/ })).toBeInTheDocument();
+  await user.click(screen.getByRole('link', { name: 'By tag' }));
+  expect(await screen.findByRole('button', { name: /rose\s*\(1\)/ })).toBeInTheDocument();
+  await user.click(screen.getByRole('link', { name: 'All' }));
+  expect(await screen.findByRole('link', { name: 'Entry 1' })).toBeInTheDocument();
+});
+
+it('resets paging when the search changes and hides More entries while loading', async () => {
+  const user = userEvent.setup();
+  let release;
+  respond = p => (p.get('q') === 'moon'
+    ? { entries: [entry(50, { title: 'Moon entry' })], total: 40, page: 1 }
+    : { entries: Array.from({ length: 30 }, (_, i) => entry(i + 1)), total: 31, page: 1 });
+  open();
+  await screen.findByRole('link', { name: 'Entry 1' });
+  const base = global.fetch.getMockImplementation();
+  const gate = new Promise(r => { release = r; });
+  global.fetch.mockImplementation(async (url, ...rest) => { if (url.includes('q=moon')) await gate; return base(url, ...rest); });
+  await user.type(screen.getByLabelText('Search'), 'moon');
+  await waitFor(() => expect(global.fetch.mock.calls.some(([u]) => u.includes('q=moon'))).toBe(true));
+  expect(screen.queryByRole('button', { name: 'More entries' })).toBeNull();
+  release();
+  expect(await screen.findByRole('link', { name: 'Moon entry' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Entry 1' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'More entries' })).toBeInTheDocument();
+  expect(calls.some(c => c.includes('page=2'))).toBe(false);
 });
 
 it('groups by tag as plain chips with counts', async () => {
