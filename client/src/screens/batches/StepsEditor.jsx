@@ -9,11 +9,18 @@ import { formatShortDay } from '../../lib/cabinet.js';
 import { isOverdue } from '../../lib/batches.js';
 import { todayString } from '../../lib/today.js';
 
-function StepForm({ step, onSave, onCancel }) {
+function StepForm({ step, onSave, onCancel, onDirty }) {
   const [title, setTitle] = useState(step?.title ?? '');
   const [dueOn, setDueOn] = useState(step?.due_on ?? '');
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Tell the page when this form holds changes that are not saved yet.
+  const changed = title !== (step?.title ?? '') || dueOn !== (step?.due_on ?? '');
+  useEffect(() => {
+    onDirty?.(changed);
+    return () => onDirty?.(false);
+  }, [changed, onDirty]);
 
   async function submit(e) {
     e.preventDefault();
@@ -44,7 +51,7 @@ function StepForm({ step, onSave, onCancel }) {
 }
 
 // The batch's checklist: tick steps off, add, edit or delete them. Every change reloads the batch.
-export function StepsEditor({ batchId, steps, onChange }) {
+export function StepsEditor({ batchId, steps, onChange, onDirty }) {
   const editRefs = useRef({});
   const listRef = useRef(null);
   const returnFocus = useRef(null);
@@ -80,7 +87,7 @@ export function StepsEditor({ batchId, steps, onChange }) {
       {steps.length === 0 && editing !== 'new' && <p className="muted">No steps yet.</p>}
       <ul className="step-list" ref={listRef} tabIndex={-1}>
         {steps.map(s => (editing === s.id ? (
-          <li key={s.id}><StepForm step={s} onSave={save(s.id)} onCancel={() => setEditing(null)} /></li>
+          <li key={s.id}><StepForm step={s} onSave={save(s.id)} onCancel={() => setEditing(null)} onDirty={onDirty} /></li>
         ) : (
           <li key={s.id} className={`step-row${s.done_on ? ' is-done' : ''}`}>
             <Checkbox label="Done" aria-label={`Done: ${s.title}`} checked={Boolean(s.done_on)} disabled={busy === s.id} onChange={e => toggle(s, e.target.checked)} />
@@ -99,7 +106,7 @@ export function StepsEditor({ batchId, steps, onChange }) {
         )))}
       </ul>
       {editing === 'new'
-        ? <StepForm onSave={save('new')} onCancel={() => setEditing(null)} />
+        ? <StepForm onSave={save('new')} onCancel={() => setEditing(null)} onDirty={onDirty} />
         : <p><Button variant="secondary" onClick={() => setEditing('new')}>Add a step</Button></p>}
     </>
   );

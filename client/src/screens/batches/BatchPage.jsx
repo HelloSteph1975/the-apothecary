@@ -95,15 +95,18 @@ export function BatchPage() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [stepDirty, setStepDirty] = useState(false);
+  const latest = useRef(0); // bumps on every load and every successful write, so an older answer never wins
   const finishedHeading = useRef(null);
   const pageHeading = useRef(null);
   const [focusAfter, setFocusAfter] = useState(null); // 'finished' | 'page', set when finishing or undoing it
 
   useEffect(() => {
     let live = true;
+    const mine = ++latest.current;
     api.get(`/api/batches/${id}`).then(
-      data => { if (live) { setBatch(data); setLoadError(null); } },
-      err => { if (live) { setLoadError(err); setBatch(null); } },
+      data => { if (live && latest.current === mine) { setBatch(data); setLoadError(null); } },
+      err => { if (live && latest.current === mine) { setLoadError(err); setBatch(null); } },
     );
     return () => { live = false; };
   }, [id, tick]);
@@ -116,7 +119,8 @@ export function BatchPage() {
 
   const reload = () => setTick(t => t + 1);
   const dirty = Boolean(editing && batch && JOURNAL.some(([k]) => form[k] !== s(batch[k])));
-  useLeaveGuard(dirty);
+  useLeaveGuard(dirty || stepDirty);
+  const applyWrite = detail => { latest.current += 1; setBatch(detail); };
 
   if (loadError) {
     return (
@@ -140,7 +144,7 @@ export function BatchPage() {
     setSaving(true);
     try {
       const body = Object.fromEntries(JOURNAL.map(([k]) => [k, orNull(form[k])]));
-      setBatch(await api.patch(`/api/batches/${batch.id}`, body));
+      applyWrite(await api.patch(`/api/batches/${batch.id}`, body));
       setEditing(false);
     } catch (ex) {
       setErrors(ex.details && Object.keys(ex.details).length ? ex.details : { form: ex.message });
@@ -149,13 +153,13 @@ export function BatchPage() {
   async function unfinish() {
     try {
       const hadJar = Boolean(batch.made_item);
-      setBatch(await api.post(`/api/batches/${batch.id}/unfinish`));
+      applyWrite(await api.post(`/api/batches/${batch.id}/unfinish`));
       setFocusAfter('page');
       toast.show({ message: hadJar ? 'Finishing undone. The jar you added stays in your cabinet.' : 'Finishing undone.', duration: 6000 });
     } catch (err) { toast.show({ message: err.message, duration: 6000 }); }
   }
   const onFinished = detail => {
-    setBatch(detail);
+    applyWrite(detail);
     setFinishOpen(false);
     setFocusAfter('finished');
     toast.show({ message: `Finished ${detail.name}` });
@@ -180,7 +184,7 @@ export function BatchPage() {
         )} />
       <div className="card-grid">
         <ParchmentCard title="Steps">
-          <StepsEditor batchId={batch.id} steps={batch.steps} onChange={reload} />
+          <StepsEditor batchId={batch.id} steps={batch.steps} onChange={reload} onDirty={setStepDirty} />
         </ParchmentCard>
 
         <ParchmentCard title="What went in">

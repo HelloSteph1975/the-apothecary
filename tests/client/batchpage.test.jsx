@@ -35,18 +35,29 @@ let calls;
 let failFinish;
 let recipeYield;
 let failLoads;
+let holdGet;
 beforeEach(() => {
   calls = [];
   batch = JSON.parse(JSON.stringify(base));
   failFinish = null;
   recipeYield = { scaled_yield_amount: 200, yield_unit: 'ml' };
   failLoads = new Set();
+  holdGet = null;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
     calls.push({ method, url, body });
     const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
-    if (url === '/api/batches/5' && method === 'GET') return json(batch);
+    if (url === '/api/batches/5' && method === 'GET') {
+      if (holdGet) {
+        const snapshot = JSON.parse(JSON.stringify(batch));
+        const wait = holdGet.promise;
+        holdGet = null;
+        await wait;
+        return json(snapshot);
+      }
+      return json(batch);
+    }
     if (url === '/api/batches/5' && method === 'PATCH') { batch = { ...batch, ...body }; return json(batch); }
     if (url === '/api/batches/5' && method === 'DELETE') return json({ ok: true, restore: '/api/batches/5/restore' });
     if (url === '/api/batches/5/restore') return json(batch);
@@ -375,4 +386,67 @@ it('does not offer Delete while the journal is being edited', async () => {
   await screen.findByRole('heading', { level: 1, name: 'Calendula oil, Oct 1' });
   await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
   expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+});
+
+// Greptile round 1 -------------------------------------------------------------
+
+it('leaves without asking when the new step form is untouched', async () => {
+  const user = userEvent.setup();
+  const router = open();
+  const steps = await stepsPanel();
+  await user.click(within(steps).getByRole('button', { name: 'Add a step' }));
+  await user.click(screen.getByRole('link', { name: 'Print record sheet' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/batches/5/sheet'));
+});
+
+it('warns about an unsaved step edit before leaving', async () => {
+  const user = userEvent.setup();
+  const router = open();
+  const steps = await stepsPanel();
+  await user.click(within(steps).getByRole('button', { name: 'Edit Strain and bottle' }));
+  await user.type(within(steps).getByLabelText('Step'), ' twice');
+  await user.click(screen.getByRole('link', { name: 'Print record sheet' }));
+  expect(await screen.findByText('Leave without saving?')).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe('/batches/5');
+});
+
+it('warns about a typed new step before leaving', async () => {
+  const user = userEvent.setup();
+  const router = open();
+  const steps = await stepsPanel();
+  await user.click(within(steps).getByRole('button', { name: 'Add a step' }));
+  await user.type(within(steps).getByLabelText('Step'), 'Rinse the jars');
+  await user.click(screen.getByRole('link', { name: 'Print record sheet' }));
+  expect(await screen.findByText('Leave without saving?')).toBeInTheDocument();
+  expect(router.state.location.pathname).toBe('/batches/5');
+});
+
+it('stops warning once the step is saved or cancelled', async () => {
+  const user = userEvent.setup();
+  const router = open();
+  const steps = await stepsPanel();
+  await user.click(within(steps).getByRole('button', { name: 'Add a step' }));
+  await user.type(within(steps).getByLabelText('Step'), 'Rinse the jars');
+  await user.click(within(steps).getByRole('button', { name: 'Cancel' }));
+  await user.click(screen.getByRole('link', { name: 'Print record sheet' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/batches/5/sheet'));
+});
+
+it('does not let an older reload overwrite a newer saved journal', async () => {
+  const user = userEvent.setup();
+  open();
+  const steps = await stepsPanel();
+  let release;
+  holdGet = { promise: new Promise(r => { release = r; }) };
+  await user.click(within(steps).getByRole('checkbox', { name: 'Done: Strain and bottle' }));
+  await waitFor(() => expect(sent('PATCH', '/api/batches/5/steps/21')).toHaveLength(1));
+  await waitFor(() => expect(holdGet).toBeNull());
+  await user.click(screen.getByRole('button', { name: 'Edit' }));
+  const journal = screen.getByRole('region', { name: 'Journal' });
+  await user.type(within(journal).getByLabelText('What I noticed'), 'Smells sunny');
+  await user.click(within(journal).getByRole('button', { name: 'Save' }));
+  expect(await within(journal).findByText('Smells sunny')).toBeInTheDocument();
+  release();
+  await new Promise(r => setTimeout(r, 50));
+  expect(within(screen.getByRole('region', { name: 'Journal' })).getByText('Smells sunny')).toBeInTheDocument();
 });
