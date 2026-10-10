@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../../components/Button.jsx';
 import { Field, TextInput, DateInput, Checkbox } from '../../components/Field.jsx';
@@ -45,6 +45,9 @@ function StepForm({ step, onSave, onCancel }) {
 
 // The batch's checklist: tick steps off, add, edit or delete them. Every change reloads the batch.
 export function StepsEditor({ batchId, steps, onChange }) {
+  const editRefs = useRef({});
+  const listRef = useRef(null);
+  const returnFocus = useRef(null);
   const toast = useToast();
   const del = useDeleteWithUndo();
   const [editing, setEditing] = useState(null); // a step id, or 'new'
@@ -60,19 +63,27 @@ export function StepsEditor({ batchId, steps, onChange }) {
   }
   const save = id => async body => {
     if (id === 'new') await api.post(base, body); else await api.patch(`${base}/${id}`, body);
+    returnFocus.current = id;
     setEditing(null);
     onChange();
   };
+  // After a step form closes, put focus back on that step's Edit button (or the list after adding one).
+  useEffect(() => {
+    const id = returnFocus.current;
+    if (id == null || editing != null) return;
+    const target = id === 'new' ? listRef.current : editRefs.current[id];
+    if (target) { returnFocus.current = null; target.focus(); }
+  }, [editing, steps]);
 
   return (
     <>
       {steps.length === 0 && editing !== 'new' && <p className="muted">No steps yet.</p>}
-      <ul className="step-list">
+      <ul className="step-list" ref={listRef} tabIndex={-1}>
         {steps.map(s => (editing === s.id ? (
           <li key={s.id}><StepForm step={s} onSave={save(s.id)} onCancel={() => setEditing(null)} /></li>
         ) : (
           <li key={s.id} className={`step-row${s.done_on ? ' is-done' : ''}`}>
-            <Checkbox label="Done" checked={Boolean(s.done_on)} disabled={busy === s.id} onChange={e => toggle(s, e.target.checked)} />
+            <Checkbox label="Done" aria-label={`Done: ${s.title}`} checked={Boolean(s.done_on)} disabled={busy === s.id} onChange={e => toggle(s, e.target.checked)} />
             <span className="step-main">
               <strong>{s.title}</strong>
               {s.done_on ? <span className="muted"> done {formatShortDay(s.done_on)}</span>
@@ -80,7 +91,7 @@ export function StepsEditor({ batchId, steps, onChange }) {
               {!s.done_on && isOverdue(s, today) && <> <span className="badge badge-oxblood">Overdue</span></>}
             </span>
             <span className="step-actions">
-              <Button variant="secondary" size="sm" icon={Pencil} aria-label={`Edit ${s.title}`} onClick={() => setEditing(s.id)} />
+              <Button variant="secondary" size="sm" icon={Pencil} ref={el => { editRefs.current[s.id] = el; }} aria-label={`Edit ${s.title}`} onClick={() => setEditing(s.id)} />
               <Button variant="secondary" size="sm" icon={Trash2} aria-label={`Delete ${s.title}`}
                 onClick={() => del({ url: `${base}/${s.id}`, label: s.title, onChange })} />
             </span>

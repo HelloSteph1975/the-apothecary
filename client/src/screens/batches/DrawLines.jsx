@@ -88,6 +88,7 @@ export function DrawLines({ lines, onChange, free = false, items = [], errors = 
         const err = f => errors[`lines.${i}.${f}`];
         const pool = free ? items : x.candidates;
         const note = free ? null : noteFor(x);
+        const jarPicked = pool.find(c => String(c.id) === x.item_id);
         const legend = free ? `Ingredient ${n}` : `${x.amount == null ? '' : `${formatAmount(x.amount, x.unit)} `}${x.name}`;
         return (
           <fieldset key={x.key} className="source-row">
@@ -108,7 +109,7 @@ export function DrawLines({ lines, onChange, free = false, items = [], errors = 
             <Field label="From jar" error={err('item_id')}>
               <Select value={x.item_id} onChange={e => pickJar(i, e.target.value)} placeholder="Don't draw from a jar" options={pool.map(c => ({ value: String(c.id), label: jarLabel(c) }))} />
             </Field>
-            <Field label="Amount to draw" error={err('drawn_amount')}>
+            <Field label={jarPicked ? `Amount to draw (${jarPicked.unit})` : 'Amount to draw'} error={err('drawn_amount')}>
               <NumberInput min="0" disabled={x.item_id === ''} value={x.draw} onChange={e => update(i, { draw: e.target.value })} />
             </Field>
             {note && <p className="muted">{note}</p>}

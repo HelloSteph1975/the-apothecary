@@ -50,7 +50,7 @@ test('makes a recipe into a batch, finishes it and prints the record sheet', asy
   await slowExpect(page.getByRole('heading', { level: 1, name: 'Start a batch' })).toBeVisible();
   const calendula = page.getByRole('group', { name: /Calendula/ });
   await slowExpect(calendula.getByText('This jar holds only 50 g.')).toBeVisible();
-  await expect(calendula.getByLabel('Amount to draw')).toHaveValue('60');
+  await expect(calendula.getByLabel('Amount to draw (g)')).toHaveValue('60');
   const oil = page.getByRole('group', { name: /Olive oil/ });
   await slowExpect(oil.getByText('No jar in the cabinet matches. You can still make it.')).toBeVisible();
 
@@ -72,8 +72,8 @@ test('makes a recipe into a batch, finishes it and prints the record sheet', asy
 
   // 4. Check the step done, then finish and add a new jar.
   await page.goto(batchUrl);
-  await page.getByLabel('Done').click();
-  await slowExpect(page.getByLabel('Done')).toBeChecked();
+  await page.getByLabel('Done: Strain and bottle').click();
+  await slowExpect(page.getByLabel('Done: Strain and bottle')).toBeChecked();
   await page.getByRole('button', { name: 'Finish this batch' }).click();
   const finish = page.getByRole('dialog', { name: 'Finish this batch' });
   await slowExpect(finish).toBeVisible();

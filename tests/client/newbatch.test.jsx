@@ -41,10 +41,12 @@ const items = [
 let calls;
 let shortOnce;
 let planFail;
+let scaleBad;
 beforeEach(() => {
   calls = [];
   shortOnce = false;
   planFail = false;
+  scaleBad = false;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     const body = opts.body ? JSON.parse(opts.body) : undefined;
@@ -54,6 +56,7 @@ beforeEach(() => {
     if (url.startsWith('/api/items')) return json(items);
     if (url === '/api/batches/plan') {
       if (planFail) return json({ error: 'That recipe is not in the book.' }, 404);
+      if (scaleBad && body.scale === 99) return json({ error: 'Fix the scale.', details: { scale: 'That is too large.' } }, 400);
       return json(planFor(body.scale ?? 1));
     }
     if (url === '/api/batches' && method === 'POST') {
@@ -97,7 +100,7 @@ it('carries the scale from the link and re-plans when it changes', async () => {
   expect(plans()[0].body).toMatchObject({ recipe_id: 7, scale: 2 });
   expect(screen.getByLabelText('Make')).toHaveValue('2');
   await user.selectOptions(screen.getByLabelText('Make'), '3');
-  await screen.findByRole('group', { name: '90 g Calendula' }, { timeout: 4000 });
+  await screen.findByRole('group', { name: '90 g Calendula' });
   expect(plans().at(-1).body).toMatchObject({ recipe_id: 7, scale: 3 });
 });
 
@@ -112,7 +115,25 @@ it('re-plans when the recipe changes and when the start date changes', async () 
   const date = screen.getByLabelText('Start date');
   await user.clear(date);
   await user.type(date, '2026-11-01');
-  await waitFor(() => expect(plans().at(-1).body.start_date).toBe('2026-11-01'), { timeout: 3000 });
+  await waitFor(() => expect(plans().at(-1).body.start_date).toBe('2026-11-01'));
+});
+
+it('forgets the scale and yield when another recipe is picked', async () => {
+  const user = userEvent.setup();
+  open('/batches/new?recipe=7&scale=2');
+  await screen.findByRole('group', { name: '60 g Calendula' });
+  const n = plans().length;
+  await user.selectOptions(screen.getByLabelText('Recipe'), '8');
+  await waitFor(() => expect(plans().length).toBe(n + 1));
+  expect(plans().at(-1).body).toEqual({ recipe_id: 8, start_date: expect.any(String) });
+});
+
+it('shows a scale error with Reset instead of waiting for jars', async () => {
+  scaleBad = true;
+  open('/batches/new?recipe=7&scale=99');
+  expect(await screen.findByText('That is too large.')).toBeInTheDocument();
+  expect(screen.queryByText('Working out the jars…')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Reset' })).toBeInTheDocument();
 });
 
 it('shows a draw row per ingredient with the flag notes', async () => {
@@ -120,14 +141,14 @@ it('shows a draw row per ingredient with the flag notes', async () => {
   await ready();
   const cal = await group('30 g Calendula');
   expect(within(cal).getByLabelText('From jar')).toHaveValue('11');
-  expect(within(cal).getByLabelText('Amount to draw')).toHaveValue(30);
+  expect(within(cal).getByLabelText('Amount to draw (g)')).toHaveValue(30);
   expect(within(cal).getByRole('option', { name: 'Calendula (dried flower), 40 g left' })).toBeInTheDocument();
   expect(within(cal).getByRole('option', { name: "Don't draw from a jar" })).toBeInTheDocument();
   const wax = await group('10 g Beeswax');
   expect(within(wax).getByText('No jar in the cabinet matches. You can still make it.')).toBeInTheDocument();
   const oil = await group('2 tbsp Olive oil');
   expect(within(oil).getByText("Can't convert tbsp to g. Enter the amount to draw by hand.")).toBeInTheDocument();
-  expect(within(oil).getByLabelText('Amount to draw')).toHaveValue(null);
+  expect(within(oil).getByLabelText('Amount to draw (g)')).toHaveValue(null);
   const rose = await group('20 g Rose');
   expect(within(rose).getByText('This jar holds only 5 g.')).toBeInTheDocument();
   const sage = await group('Sage');
@@ -140,9 +161,9 @@ it('recalculates the draw when the jar offers a conversion, and clears it when n
   await ready();
   const cal = await group('30 g Calendula');
   await user.selectOptions(within(cal).getByLabelText('From jar'), '12');
-  expect(within(cal).getByLabelText('Amount to draw')).toHaveValue(1.06);
+  expect(within(cal).getByLabelText('Amount to draw (oz)')).toHaveValue(1.06);
   await user.selectOptions(within(cal).getByLabelText('From jar'), '13');
-  expect(within(cal).getByLabelText('Amount to draw')).toHaveValue(null);
+  expect(within(cal).getByLabelText('Amount to draw (ml)')).toHaveValue(null);
   expect(within(cal).getByText("Can't convert g to ml. Enter the amount to draw by hand.")).toBeInTheDocument();
   await user.selectOptions(within(cal).getByLabelText('From jar'), '');
   expect(within(cal).getByLabelText('Amount to draw')).toBeDisabled();
@@ -159,10 +180,10 @@ it('builds a free-form batch with its own ingredient rows', async () => {
   await user.type(within(row).getByLabelText('Amount'), '15');
   await user.selectOptions(within(row).getByLabelText('Unit'), 'g');
   await user.selectOptions(within(row).getByLabelText('From jar'), '21');
-  expect(within(row).getByLabelText('Amount to draw')).toHaveValue(15);
-  await user.clear(within(row).getByLabelText('Amount to draw'));
-  await user.type(within(row).getByLabelText('Amount to draw'), '12');
-  expect(within(row).getByLabelText('Amount to draw')).toHaveValue(12);
+  expect(within(row).getByLabelText('Amount to draw (g)')).toHaveValue(15);
+  await user.clear(within(row).getByLabelText('Amount to draw (g)'));
+  await user.type(within(row).getByLabelText('Amount to draw (g)'), '12');
+  expect(within(row).getByLabelText('Amount to draw (g)')).toHaveValue(12);
   await user.click(screen.getByRole('button', { name: 'Remove ingredient 1' }));
   expect(screen.queryByRole('group', { name: 'Ingredient 1' })).not.toBeInTheDocument();
 });
@@ -213,7 +234,7 @@ it('saves a free-form batch without a recipe', async () => {
   const row = await group('Ingredient 1');
   await user.type(within(row).getByLabelText('Ingredient name'), 'Lavender');
   await user.selectOptions(within(row).getByLabelText('From jar'), '21');
-  await user.type(within(row).getByLabelText('Amount to draw'), '5');
+  await user.type(within(row).getByLabelText('Amount to draw (g)'), '5');
   await user.click(screen.getByRole('button', { name: 'Start batch' }));
   await waitFor(() => expect(posts()).toHaveLength(1));
   const b = posts()[0].body;

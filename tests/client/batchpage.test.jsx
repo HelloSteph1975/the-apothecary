@@ -19,7 +19,7 @@ const base = {
   label_notes: 'Keeps 6 months.', notes: null, finished_on: null, yield_amount: null, yield_unit: null, expires_on: null, item_id: null,
   recipe: { id: 7, name: 'Calendula oil' }, type: { id: 2, name: 'Infused oil' },
   lines: [
-    { id: 1, herb_id: 3, name: 'Calendula', amount: 40, unit: 'g', item_id: 11, drawn_amount: 40, drawn_unit: 'g', item: { id: 11, name: 'Calendula jar', live: true } },
+    { id: 1, herb_id: 3, herb_live: true, name: 'Calendula', amount: 40, unit: 'g', item_id: 11, drawn_amount: 40, drawn_unit: 'g', item: { id: 11, name: 'Calendula jar', live: true } },
     { id: 2, herb_id: null, name: 'Olive oil', amount: 500, unit: 'ml', item_id: null, drawn_amount: null, drawn_unit: null, item: null },
   ],
   steps: [
@@ -121,12 +121,12 @@ it('links to the record sheet', async () => {
 it('checks a step done with today and unchecks it to clear the date', async () => {
   open();
   const rows = within(await stepsPanel()).getAllByRole('listitem');
-  await userEvent.click(within(rows[0]).getByRole('checkbox', { name: 'Done' }));
+  await userEvent.click(within(rows[0]).getByRole('checkbox', { name: 'Done: Strain and bottle' }));
   await waitFor(() => expect(sent('PATCH', '/api/batches/5/steps/21')).toHaveLength(1));
   expect(sent('PATCH', '/api/batches/5/steps/21')[0].body).toEqual({ done_on: TODAY });
   await waitFor(() => expect(within(within(screen.getByRole('region', { name: 'Steps' })).getAllByRole('listitem')[0]).getByRole('checkbox')).toBeChecked());
   const again = within(screen.getByRole('region', { name: 'Steps' })).getAllByRole('listitem');
-  await userEvent.click(within(again[1]).getByRole('checkbox', { name: 'Done' }));
+  await userEvent.click(within(again[1]).getByRole('checkbox', { name: 'Done: Label it' }));
   await waitFor(() => expect(sent('PATCH', '/api/batches/5/steps/22')).toHaveLength(1));
   expect(sent('PATCH', '/api/batches/5/steps/22')[0].body).toEqual({ done_on: null });
 });
@@ -313,4 +313,38 @@ it('says so when the batch cannot be opened and offers Try again', async () => {
   global.fetch = real;
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByRole('heading', { level: 1, name: 'Calendula oil, Oct 1' })).toBeInTheDocument();
+});
+
+it('links a herb only while it is still in the grimoire', async () => {
+  batch.lines.push({ id: 3, herb_id: 9, herb_live: false, name: 'Gone herb', amount: 1, unit: 'g', item_id: null, drawn_amount: null, drawn_unit: null, item: null });
+  open();
+  await screen.findByRole('heading', { level: 1, name: 'Calendula oil, Oct 1' });
+  expect(screen.getByRole('link', { name: 'Calendula' })).toHaveAttribute('href', '/grimoire/3');
+  expect(screen.queryByRole('link', { name: 'Gone herb' })).toBeNull();
+  expect(screen.getByText('Gone herb')).toBeInTheDocument();
+});
+
+it('moves focus to the Finished heading after finishing and to the page heading after undoing', async () => {
+  const dialog = await openFinish();
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Finish' }));
+  const heading = await screen.findByRole('heading', { level: 2, name: 'Finished' });
+  await waitFor(() => expect(heading).toHaveFocus());
+  await userEvent.click(screen.getByRole('button', { name: 'Undo finishing' }));
+  const h1 = await screen.findByRole('heading', { level: 1, name: 'Calendula oil, Oct 1' });
+  await waitFor(() => expect(h1).toHaveFocus());
+});
+
+it('returns focus to the step Edit button after a step is saved', async () => {
+  open();
+  const panel = await stepsPanel();
+  await userEvent.click(within(panel).getByRole('button', { name: 'Edit Strain and bottle' }));
+  await userEvent.click(within(panel).getByRole('button', { name: 'Save step' }));
+  await waitFor(() => expect(within(panel).getByRole('button', { name: 'Edit Strain and bottle' })).toHaveFocus());
+});
+
+it('does not offer Delete while the journal is being edited', async () => {
+  open();
+  await screen.findByRole('heading', { level: 1, name: 'Calendula oil, Oct 1' });
+  await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
 });

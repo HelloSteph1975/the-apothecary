@@ -59,7 +59,7 @@ export function ScaleControl({ recipe, scaleParam, yieldParam, setScale, error, 
           ? `Scaled to ${num(recipe.factor)}×${recipe.scaled_yield_amount != null ? `: makes ${formatAmount(recipe.scaled_yield_amount, unit)}` : ''}`
           : badLink ? "The scale in that link wasn't valid, so this is the recipe as written." : ''}
       </p>
-      {scaled && <p><Button variant="secondary" onClick={reset}>Reset</Button></p>}
+      {(scaled || error?.scale || error?.yield) && <p><Button variant="secondary" onClick={reset}>Reset</Button></p>}
     </ParchmentCard>
   );
 }

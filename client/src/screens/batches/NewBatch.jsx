@@ -98,6 +98,9 @@ export function NewBatch() {
     edited.current = new Set();
     setForm(f => ({ ...EMPTY, notes: f.notes }));
     setRecipeId(value);
+    setScale('');
+    setYield('');
+    setScaleError(null);
     setPlan(null);
     setLines([]);
     setSteps([]);
@@ -174,7 +177,8 @@ export function NewBatch() {
 
   const picked = recipes.data.find(r => String(r.id) === recipeId);
   const recipeInfo = { factor: plan?.factor ?? 1, yield_amount: picked?.yield_amount, yield_unit: picked?.yield_unit, scaled_yield_amount: null };
-  const waiting = !free && !plan;
+  const waiting = !free && !plan && !scaleError;
+  const blocked = !free && !plan && Boolean(scaleError);
 
   return (
     <>

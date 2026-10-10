@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -95,6 +95,9 @@ export function BatchPage() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const finishedHeading = useRef(null);
+  const pageHeading = useRef(null);
+  const [focusAfter, setFocusAfter] = useState(null); // 'finished' | 'page', set when finishing or undoing it
 
   useEffect(() => {
     let live = true;
@@ -104,6 +107,12 @@ export function BatchPage() {
     );
     return () => { live = false; };
   }, [id, tick]);
+
+  useEffect(() => {
+    if (!focusAfter || !batch) return;
+    const el = focusAfter === 'finished' ? finishedHeading.current : pageHeading.current;
+    if (el) { setFocusAfter(null); el.focus(); }
+  }, [focusAfter, batch]);
 
   const reload = () => setTick(t => t + 1);
   const dirty = Boolean(editing && batch && JOURNAL.some(([k]) => form[k] !== s(batch[k])));
@@ -141,25 +150,27 @@ export function BatchPage() {
     try {
       const hadJar = Boolean(batch.made_item);
       setBatch(await api.post(`/api/batches/${batch.id}/unfinish`));
+      setFocusAfter('page');
       toast.show({ message: hadJar ? 'Finishing undone. The jar you added stays in your cabinet.' : 'Finishing undone.', duration: 6000 });
     } catch (err) { toast.show({ message: err.message, duration: 6000 }); }
   }
   const onFinished = detail => {
     setBatch(detail);
     setFinishOpen(false);
+    setFocusAfter('finished');
     toast.show({ message: `Finished ${detail.name}` });
   };
 
   return (
     <>
-      <PageHeader title={batch.name}
+      <PageHeader title={batch.name} headingRef={pageHeading}
         subtitle={<>{startedText} <span className={`badge ${finished ? 'badge-brass' : 'badge-oxblood'}`}>{STATUS[batch.status]?.(batch) ?? ''}</span></>}
         actions={(
           <>
             {!finished && <WaxSeal onClick={() => setFinishOpen(true)}>Finish this batch</WaxSeal>}
             <Button as={Link} variant="secondary" to={`/batches/${batch.id}/sheet`}>Print record sheet</Button>
             <Button variant="secondary" onClick={startEdit} disabled={editing}>Edit</Button>
-            <Button variant="danger" onClick={async () => {
+            <Button variant="danger" disabled={editing} onClick={async () => {
               if (await del({
                 url: `/api/batches/${batch.id}`, label: batch.name, body: 'Delete this batch? The amounts drawn from your jars stay drawn.',
                 onUndo: () => navigate(`/batches/${batch.id}`),
@@ -182,7 +193,7 @@ export function BatchPage() {
         </ParchmentCard>
 
         {finished && (
-          <ParchmentCard title="Finished">
+          <ParchmentCard title="Finished" headingRef={finishedHeading}>
             <dl className="dl-grid">
               <dt>Finished on</dt><dd>{formatDay(batch.finished_on)}</dd>
               {batch.yield_amount != null && <><dt>Yield</dt><dd>{formatAmount(batch.yield_amount, batch.yield_unit)}</dd></>}
