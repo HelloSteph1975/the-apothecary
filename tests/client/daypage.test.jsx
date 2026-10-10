@@ -27,9 +27,11 @@ let settings;
 let failOnce;
 let hold;
 let location;
+let settingsFail;
 beforeEach(() => {
   calls = [];
   failOnce = false;
+  settingsFail = false;
   hold = null;
   settings = { keeper_name: '', sky_suggestions: 'on' };
   payload = {
@@ -45,7 +47,7 @@ beforeEach(() => {
     calls.push({ url, method: opts.method ?? 'GET' });
     const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
     if (url === '/api/health') return json({ ok: true, demo: false });
-    if (url === '/api/settings') return json(settings);
+    if (url === '/api/settings') return settingsFail ? json({ error: 'No settings.' }, 500) : json(settings);
     const m = /^\/api\/calendar\/day\/([\d-]+)$/.exec(url);
     if (m) {
       if (failOnce) { failOnce = false; return json({ error: 'The day would not open.' }, 500); }
@@ -84,6 +86,14 @@ it('shows folk timing with its label', async () => {
   const card = cardOf('Folk timing');
   expect(within(card).getByText('A good night for ancestor work.')).toBeInTheDocument();
   expect(within(card).getByText('Folk tradition')).toBeInTheDocument();
+});
+
+it('still opens the day when settings fail, without the folk timing card', async () => {
+  settingsFail = true;
+  await open('/calendar/2026-10-31');
+  expect(await screen.findByRole('heading', { level: 2, name: 'Sky' })).toBeInTheDocument();
+  expect(screen.getByText('Light a candle')).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Folk timing' })).not.toBeInTheDocument();
 });
 
 it('hides folk timing when suggestions are off', async () => {

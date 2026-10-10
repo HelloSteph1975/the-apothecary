@@ -17,7 +17,7 @@ it('fits a month that starts on Sunday and ends on Saturday exactly', () => {
   expect(span(rangeFor('month', '2026-02-14'))).toEqual({ from: '2026-02-01', to: '2026-02-28', n: 28 });
 });
 
-it('starts on Sunday and ends on a Saturday that closes the month', () => {
+it('pads a month out to whole Sunday-to-Saturday weeks', () => {
   expect(span(rangeFor('month', '2026-03-20'))).toEqual({ from: '2026-03-01', to: '2026-04-04', n: 35 });
   expect(span(rangeFor('month', '2026-10-09'))).toEqual({ from: '2026-09-27', to: '2026-10-31', n: 35 });
 });

@@ -21,9 +21,11 @@ const EVENTS = [
 let calls;
 let location;
 let events;
+let hold;
 beforeEach(() => {
   calls = [];
   events = EVENTS;
+  hold = null;
   global.fetch = vi.fn(async url => {
     calls.push(url);
     const json = b => new Response(JSON.stringify(b), { status: 200 });
@@ -31,6 +33,7 @@ beforeEach(() => {
     if (url === '/api/settings') return json({ keeper_name: '' });
     const m = /^\/api\/calendar\?from=([\d-]+)&to=([\d-]+)$/.exec(url);
     if (m) {
+      if (hold && m[1] === '2026-11-01') await hold;
       const days = [];
       for (let d = m[1]; d <= m[2]; d = addDaysTo(d, 1)) {
         const full = d === '2026-10-26';
@@ -125,6 +128,23 @@ it('carries the arrow keys into the next month from the end of the grid', async 
   await user.keyboard('{ArrowDown}');
   expect(await screen.findByRole('heading', { name: 'November 2026' })).toBeInTheDocument();
   await waitFor(() => expect(cell(/^Wednesday, November 4/)).toHaveFocus());
+});
+
+it('does not pull focus into the grid after an abandoned cross-month move', async () => {
+  const user = userEvent.setup();
+  await open('/calendar?view=month&date=2026-10-09');
+  let release;
+  hold = new Promise(r => { release = r; });
+  cell(/^Saturday, October 31/).focus();
+  await user.keyboard('{ArrowRight}');
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  expect(await screen.findByRole('heading', { name: 'December 2026' })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText('Opening the calendar...')).toBeNull());
+  await user.click(screen.getByRole('button', { name: 'Previous' }));
+  release();
+  expect(await screen.findByRole('heading', { name: 'November 2026' })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText('Opening the calendar...')).toBeNull());
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Previous' }));
 });
 
 it('crosses a month boundary inside the grid without leaving the page', async () => {

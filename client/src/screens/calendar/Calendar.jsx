@@ -33,6 +33,8 @@ export function Calendar() {
     }
     setParams(next, { replace: true });
   };
+  // Any move of her own cancels a keyboard move that was still waiting for its month to load.
+  const go = changes => { pendingFocus.current = null; update(changes); };
   const toggle = kind => {
     const next = new Set(hidden);
     if (next.has(kind)) next.delete(kind); else next.add(kind);
@@ -62,13 +64,13 @@ export function Calendar() {
         <div className="cal-controls">
           <div className="cal-switch" role="group" aria-label="View">
             {VIEWS.map(v => (
-              <Button key={v} variant={v === view ? 'primary' : 'secondary'} size="sm" aria-pressed={v === view} onClick={() => update({ view: v })}>{LABELS[v]}</Button>
+              <Button key={v} variant={v === view ? 'primary' : 'secondary'} size="sm" aria-pressed={v === view} onClick={() => go({ view: v })}>{LABELS[v]}</Button>
             ))}
           </div>
           <div className="cal-nav" role="group" aria-label="Move">
-            <Button variant="secondary" size="sm" onClick={() => update({ date: step(view, date, -1) })}>Previous</Button>
-            <Button variant="secondary" size="sm" onClick={() => update({ date: null })}>Today</Button>
-            <Button variant="secondary" size="sm" onClick={() => update({ date: step(view, date, 1) })}>Next</Button>
+            <Button variant="secondary" size="sm" onClick={() => go({ date: step(view, date, -1) })}>Previous</Button>
+            <Button variant="secondary" size="sm" onClick={() => go({ date: null })}>Today</Button>
+            <Button variant="secondary" size="sm" onClick={() => go({ date: step(view, date, 1) })}>Next</Button>
           </div>
         </div>
         <fieldset className="cal-filters">
