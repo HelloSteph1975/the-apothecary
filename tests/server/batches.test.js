@@ -113,14 +113,15 @@ it('converts draws into the jar unit and flags what cannot convert', async () =>
   await addItem(s.h, { name: 'Lavender', unit: 'g', amount: 2 });
   await addItem(s.h, { name: 'Sage', unit: 'g', amount: 2 });
   const lines = (await plan(s, { recipe_id: rec.id })).body.lines;
-  expect(lines[0].suggested_draw).toBe(2);
+  expect(lines[0].suggested_draw).toBeCloseTo(2, 4);
   expect(lines[0].flag).toBe(null);
-  expect(lines[1].suggested_draw).toBe(29.6);
+  expect(lines[1].suggested_draw).toBe(29.5736);
   expect(lines[2]).toMatchObject({ suggested_draw: null, flag: 'no_conversion' });
   expect(lines[2].candidates[0].convertible).toBe(false);
   expect(lines[2].candidates[0].draw).toBe(null);
-  expect(lines[0].candidates[0]).toMatchObject({ convertible: true, draw: 2 });
-  expect(lines[1].candidates[0].draw).toBe(29.6);
+  expect(lines[0].candidates[0]).toMatchObject({ convertible: true });
+  expect(lines[0].candidates[0].draw).toBeCloseTo(2, 4);
+  expect(lines[1].candidates[0].draw).toBe(29.5736);
   expect(lines[3]).toMatchObject({ suggested_draw: 5, flag: 'not_enough' });
   expect(lines[4]).toMatchObject({ suggested_draw: null, flag: 'no_amount' });
 });
@@ -443,4 +444,41 @@ it('lists steps due within three days, overdue first, skipping finished and dele
   const res = await s.h().get('/api/today?today=2026-10-08');
   expect(res.body.batchesDue.map(x => x.title)).toEqual(['Overdue', 'Edge']);
   expect(res.body.counts.batchesDue).toBe(2);
+});
+
+// Greptile round 1 -------------------------------------------------------------
+
+it('keeps working after a backup restore swaps the database handle', async () => {
+  const s = setup();
+  const { backupNow, restoreBackup } = await import('../../server/services/backup.js');
+  const { name } = backupNow(t.ctx.db, t.dataDir);
+  restoreBackup(t.ctx, name);
+  const res = await s.h().get('/api/batches');
+  expect(res.status, JSON.stringify(res.body)).toBe(200);
+  expect((await s.h().post('/api/batches/plan').send({ recipe_id: (await makeRecipe(s)).id })).status).toBe(200);
+});
+
+it('suggests a jar by name for a herb-linked ingredient when no jar is linked to the herb', async () => {
+  const s = setup();
+  const rec = await makeRecipe(s);
+  const jar = await addItem(s.h, { name: 'calendula', amount: 100 });
+  const res = await plan(s, { recipe_id: rec.id, start_date: '2026-10-09' });
+  const line = res.body.lines[0];
+  expect(line.candidates.map(c => c.id)).toEqual([jar.id]);
+  expect(line.suggested_item_id).toBe(jar.id);
+});
+
+it('lists herb-linked jars before name-only matches, without duplicates', async () => {
+  const s = setup();
+  const rec = await makeRecipe(s);
+  const named = await addItem(s.h, { name: 'Calendula', amount: 500 });
+  const linked = await addItem(s.h, { name: 'Marigold flowers', herb_id: s.cal.id, amount: 100 });
+  const both = await addItem(s.h, { name: 'Calendula', herb_id: s.cal.id, amount: 100 });
+  const res = await plan(s, { recipe_id: rec.id, start_date: '2026-10-09' });
+  const ids = res.body.lines[0].candidates.map(c => c.id);
+  expect(ids).toHaveLength(3);
+  expect(new Set(ids).size).toBe(3);
+  expect(ids.indexOf(named.id)).toBe(2);
+  expect(ids.slice(0, 2).sort()).toEqual([linked.id, both.id].sort());
+  expect(res.body.lines[0].suggested_item_id).not.toBe(named.id);
 });

@@ -42,19 +42,22 @@ function dayName(iso) {
 
 function buildLine(ing, items) {
   const wanted = ing.name?.trim().toLowerCase();
+  const linked = it => ing.herb_id != null && it.herb_id === ing.herb_id;
+  const named = it => Boolean(wanted) && it.name.trim().toLowerCase() === wanted;
   const candidates = items
-    .filter(it => (ing.herb_id != null ? it.herb_id === ing.herb_id : wanted && it.name.trim().toLowerCase() === wanted))
+    .filter(it => linked(it) || named(it))
     .map(it => {
       const draw = ing.amount != null && ing.unit ? convert(ing.amount, ing.unit, it.unit) : null;
-      return { id: it.id, name: it.name, amount: it.amount, unit: it.unit, expires_on: it.expires_on, convertible: draw != null, draw };
+      return { id: it.id, name: it.name, amount: it.amount, unit: it.unit, expires_on: it.expires_on, convertible: draw != null, draw, linked: linked(it) };
     });
-  const rank = c => [c.convertible ? 0 : 1, c.convertible && c.amount >= c.draw ? 0 : 1];
+  const rank = c => [c.linked ? 0 : 1, c.convertible ? 0 : 1, c.convertible && c.amount >= c.draw ? 0 : 1];
   candidates.sort((a, b) => {
     const [ra, rb] = [rank(a), rank(b)];
-    return ra[0] - rb[0] || ra[1] - rb[1]
+    return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2]
       || (a.expires_on ?? '9999').localeCompare(b.expires_on ?? '9999')
       || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) || a.id - b.id;
   });
+  for (const c of candidates) delete c.linked;
   const best = candidates[0] ?? null;
   const suggested_draw = best?.draw ?? null;
   let flag = null;

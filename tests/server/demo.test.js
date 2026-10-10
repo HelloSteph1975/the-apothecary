@@ -266,6 +266,29 @@ it('still seeds the batches when a demo jar holds less than the batch draws', ()
   expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(0);
 });
 
+it('draws the demo grams in the jar unit, so a kilogram jar loses 0.01 kg', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  clearBatchRows(t.ctx.db);
+  t.ctx.db.prepare("UPDATE items SET amount = 0.5, unit = 'kg' WHERE name = 'Calendula'").run();
+  t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
+  seedDemo(t.ctx);
+  expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(0.49);
+  const line = t.ctx.db.prepare("SELECT drawn_amount, drawn_unit FROM batch_ingredients WHERE name = 'Calendula'").get();
+  expect(line).toEqual({ drawn_amount: 0.01, drawn_unit: 'kg' });
+});
+
+it('does not draw from a demo jar whose unit cannot be converted from grams', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  clearBatchRows(t.ctx.db);
+  t.ctx.db.prepare("UPDATE items SET amount = 5, unit = 'count' WHERE name = 'Calendula'").run();
+  t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
+  seedDemo(t.ctx);
+  expect(t.ctx.db.prepare("SELECT amount FROM items WHERE name = 'Calendula'").get().amount).toBe(5);
+  expect(t.ctx.db.prepare("SELECT item_id FROM batch_ingredients WHERE name = 'Calendula'").get().item_id).toBeNull();
+});
+
 it('leaves a v4 demo folder alone when it already has a batch', () => {
   t = makeTestContext();
   seedDemo(t.ctx);

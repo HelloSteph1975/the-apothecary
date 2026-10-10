@@ -1,5 +1,3 @@
-import { roundAmount } from './scale.js';
-
 // Each unit's size in its family's base unit (g for mass, ml for volume). Cups are US cups.
 // count, drops and parts have no family: they only convert to themselves. Mass and volume never mix (no density guesses).
 export const UNIT_FAMILIES = {
@@ -20,5 +18,6 @@ export function convert(amount, from, to) {
   const family = unitFamily(from);
   if (!family || family !== unitFamily(to)) return null;
   const sizes = UNIT_FAMILIES[family];
-  return roundAmount(amount * sizes[from] / sizes[to], to);
+  // Stock precision: six decimals only. Display rounding happens in the UI.
+  return Math.round(amount * sizes[from] / sizes[to] * 1e6) / 1e6;
 }

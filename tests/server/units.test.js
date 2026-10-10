@@ -1,6 +1,5 @@
 import { it, expect } from 'vitest';
 import { UNIT_FAMILIES, unitFamily, convert } from '../../server/lib/units.js';
-import { roundAmount } from '../../server/lib/scale.js';
 
 const SIZE = {
   mass: { g: 1, kg: 1000, oz: 28.3495, lb: 453.592 },
@@ -19,14 +18,14 @@ it('converts every pair in each family', () => {
   for (const fam of Object.keys(SIZE)) {
     for (const from of Object.keys(SIZE[fam])) {
       for (const to of Object.keys(SIZE[fam])) {
-        const expected = roundAmount(100 * SIZE[fam][from] / SIZE[fam][to], to);
+        const expected = Math.round(100 * SIZE[fam][from] / SIZE[fam][to] * 1e6) / 1e6;
         expect(convert(100, from, to), `${from} -> ${to}`).toBe(from === to ? 100 : expected);
       }
     }
   }
   expect(convert(1, 'kg', 'g')).toBe(1000);
   expect(convert(1, 'lb', 'oz')).toBe(16);
-  expect(convert(1, 'cup', 'tbsp')).toBe(16);
+  expect(convert(1, 'cup', 'tbsp')).toBeCloseTo(16, 3);
 });
 
 it('round trips stay close', () => {
@@ -55,9 +54,11 @@ it('count, drops and parts only match themselves', () => {
   expect(convert(5, 'bogus', 'g')).toBeNull();
 });
 
-it('rounds by the target unit', () => {
-  expect(convert(1, 'oz', 'g')).toBe(28.3);
-  expect(convert(1, 'g', 'oz')).toBe(0.04);
-  expect(convert(1, 'tsp', 'ml')).toBe(4.93);
+it('keeps stock precision: six decimal places, not display rounding', () => {
+  expect(convert(4, 'g', 'kg')).toBe(0.004);
+  expect(convert(6, 'g', 'kg')).toBe(0.006);
+  expect(convert(1, 'oz', 'g')).toBe(28.3495);
+  expect(convert(1, 'g', 'oz')).toBe(0.035274);
+  expect(convert(1, 'tsp', 'ml')).toBe(4.92892);
   expect(convert(1, 'l', 'ml')).toBe(1000);
 });

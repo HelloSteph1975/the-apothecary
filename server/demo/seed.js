@@ -8,6 +8,7 @@ import { trashPhotoFile } from '../services/photos.js';
 import { seedRecipeTypes } from '../services/recipeTypes.js';
 import { createRecipe } from '../services/recipes.js';
 import { createBatch, finishBatch } from '../services/batches.js';
+import { convert } from '../lib/units.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
 const SEED_VERSION = '5';
@@ -87,11 +88,14 @@ function stockRecipes(db) {
 // Draws go through the batch service so the jars end up with the right amounts.
 function stockBatches(db, today) {
   const jar = name => db.prepare('SELECT id FROM items WHERE name = ? AND deleted_at IS NULL AND used_up_at IS NULL ORDER BY id').get(name)?.id ?? null;
+  const jarUnit = id => db.prepare('SELECT unit FROM items WHERE id = ?').get(id)?.unit;
   const herb = slug => db.prepare('SELECT id FROM herbs WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id ?? null;
   // Draws from a jar only when it is there (an older folder may not have the demo jars).
   const draw = (slug, name, amount) => {
     const item_id = jar(name);
-    return { herb_id: herb(slug), name, amount, unit: 'g', ...(item_id ? { item_id, drawn_amount: amount } : {}) };
+    // The amounts here are grams; the jar may hold another unit. Draw only when grams convert to it.
+    const drawn = item_id ? convert(amount, 'g', jarUnit(item_id)) : null;
+    return { herb_id: herb(slug), name, amount, unit: 'g', ...(drawn != null ? { item_id, drawn_amount: drawn } : {}) };
   };
   const recipe = name => db.prepare('SELECT id FROM recipes WHERE name = ? AND deleted_at IS NULL').get(name)?.id ?? null;
 
