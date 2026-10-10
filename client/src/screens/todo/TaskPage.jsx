@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -17,6 +17,15 @@ export function TaskPage() {
   const { data: task, error, reload } = useApi(`/api/tasks/${id}?today=${todayString()}`);
   const actions = useTaskActions({ onChange: () => reload() });
   const [form, setForm] = useState({ key: 0, open: false });
+  // One change at a time: the buttons stay busy until the refreshed task arrives or the change fails.
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setBusy(false); }, [task?.id, task?.done_on]);
+  const guard = fn => async () => {
+    if (busy) return;
+    setBusy(true);
+    const res = await fn();
+    if (!res) setBusy(false);
+  };
 
   if (error) {
     return (
@@ -39,15 +48,17 @@ export function TaskPage() {
         actions={(
           <>
             {task.done_on
-              ? <Button variant="secondary" onClick={() => actions.uncomplete(task)}>Undo done</Button>
-              : <Button onClick={() => actions.complete(task)}>Done</Button>}
+              ? <Button variant="secondary" aria-disabled={busy || undefined} onClick={guard(() => actions.uncomplete(task))}>Undo done</Button>
+              : <Button aria-disabled={busy || undefined} onClick={guard(() => actions.complete(task))}>Done</Button>}
             <Button variant="secondary" onClick={() => setForm(f => ({ key: f.key + 1, open: true }))}>Edit</Button>
             {auto
-              ? !task.done_on && <Button variant="danger" onClick={async () => { if (await actions.dismiss(task)) navigate('/todo'); }}>Dismiss</Button>
+              ? !task.done_on && <Button variant="danger" aria-disabled={busy || undefined} onClick={guard(async () => { const ok = await actions.dismiss(task); if (ok) navigate('/todo'); return ok; })}>Dismiss</Button>
               : (
-                <Button variant="danger" onClick={async () => {
-                  if (await actions.remove(task, { onChange: undefined, onUndo: () => navigate(`/todo/${task.id}`) })) navigate('/todo');
-                }}>Delete</Button>
+                <Button variant="danger" aria-disabled={busy || undefined} onClick={guard(async () => {
+                  const ok = await actions.remove(task, { onChange: undefined, onUndo: () => navigate(`/todo/${task.id}`) });
+                  if (ok) navigate('/todo');
+                  return ok;
+                })}>Delete</Button>
               )}
           </>
         )} />

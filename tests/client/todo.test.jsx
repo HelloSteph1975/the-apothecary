@@ -259,3 +259,13 @@ it('the menu closes when focus leaves it', async () => {
   await userEvent.click(screen.getByRole('checkbox', { name: 'Done: Stir the oil' }));
   await waitFor(() => expect(screen.queryByLabelText('Snooze until')).toBeNull());
 });
+
+it('the menu stays open while focus moves inside it', async () => {
+  open('/todo');
+  await screen.findByText('Water the sage');
+  await menu('Water the sage');
+  await userEvent.click(screen.getByRole('button', { name: 'Pick a date' }));
+  await userEvent.tab();
+  expect(screen.getByLabelText('Snooze until')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Snooze until that day' })).toBeInTheDocument();
+});

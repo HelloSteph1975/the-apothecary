@@ -67,6 +67,7 @@ function RowMenu({ task, actions }) {
   const [until, setUntil] = useState('');
   const root = useRef(null);
   const toggle = useRef(null);
+  const dateInput = useRef(null);
   const listId = useId();
   const today = todayString();
   const close = (refocus = false) => {
@@ -81,9 +82,10 @@ function RowMenu({ task, actions }) {
     document.addEventListener('mousedown', onDown);
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
   }, [open]);
+  useEffect(() => { if (picking) dateInput.current?.focus(); }, [picking]);
   const done = async fn => { close(true); await fn(); };
   return (
-    <div className="row-menu" ref={root} onBlur={() => { if (open) setTimeout(() => { if (root.current && !root.current.contains(document.activeElement)) close(); }, 0); }}>
+    <div className="row-menu" ref={root} onBlur={e => { if (open && e.relatedTarget && !root.current?.contains(e.relatedTarget)) close(); }}>
       <Button ref={toggle} variant="secondary" size="sm" icon={MoreHorizontal} aria-label={`Actions for ${task.title}`}
         aria-expanded={open} aria-controls={open ? listId : undefined} onClick={() => (open ? close() : setOpen(true))} />
       {open && (
@@ -94,7 +96,7 @@ function RowMenu({ task, actions }) {
           {!task.done_on && !picking && <button type="button" className="row-menu-item" onClick={() => setPicking(true)}>Pick a date</button>}
           {!task.done_on && picking && (
             <div className="row-menu-pick">
-              <Field label="Snooze until"><DateInput ref={el => el?.focus()} min={addDaysTo(today, 1)} value={until} onChange={e => setUntil(e.target.value)} /></Field>
+              <Field label="Snooze until"><DateInput ref={dateInput} min={addDaysTo(today, 1)} value={until} onChange={e => setUntil(e.target.value)} /></Field>
               <Button size="sm" disabled={!until} onClick={() => done(() => actions.snooze(task, until))}>Snooze until that day</Button>
             </div>
           )}

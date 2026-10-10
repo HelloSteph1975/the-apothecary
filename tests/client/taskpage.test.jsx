@@ -17,13 +17,16 @@ const base = {
 };
 let current;
 let calls;
+let slow;
 beforeEach(() => {
+  slow = 0;
   current = base;
   calls = [];
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method || 'GET';
     calls.push({ url, method, body: opts.body ? JSON.parse(opts.body) : undefined });
     const json = (b, status = 200) => new Response(JSON.stringify(b), { status });
+    if (slow && method !== 'GET') await new Promise(r => setTimeout(r, slow));
     if (url === '/api/health') return json({ ok: true, demo: false });
     if (url === '/api/settings') return json({ keeper_name: '' });
     if (method === 'DELETE') return json({ ok: true, restore: '/api/tasks/12/restore' });
@@ -53,6 +56,28 @@ it('marks it done with the local day', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Done' }));
   await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/tasks/12/complete')).toBe(true));
   expect(calls.find(c => /complete/.test(c.url)).body).toEqual({ today: todayString() });
+});
+
+it('a double click on Done sends one request', async () => {
+  slow = 150;
+  open('/todo/12');
+  const btn = await screen.findByRole('button', { name: 'Done' });
+  await userEvent.click(btn);
+  await userEvent.click(btn);
+  expect(btn).toHaveAttribute('aria-disabled', 'true');
+  await waitFor(() => expect(calls.some(c => c.url === '/api/tasks/12/complete')).toBe(true));
+  expect(calls.filter(c => c.url === '/api/tasks/12/complete')).toHaveLength(1);
+});
+
+it('a double click on Undo done sends one request', async () => {
+  slow = 150;
+  current = { ...base, done_on: '2026-10-10' };
+  open('/todo/12');
+  const btn = await screen.findByRole('button', { name: 'Undo done' });
+  await userEvent.click(btn);
+  await userEvent.click(btn);
+  await waitFor(() => expect(calls.some(c => c.url === '/api/tasks/12/uncomplete')).toBe(true));
+  expect(calls.filter(c => c.url === '/api/tasks/12/uncomplete')).toHaveLength(1);
 });
 
 it('offers Undo done on a finished task', async () => {
