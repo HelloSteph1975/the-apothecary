@@ -110,7 +110,7 @@ test('makes a recipe into a batch, finishes it and prints the record sheet', asy
   await page.goto(batchUrl);
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
-  const undo = page.getByRole('button', { name: 'Undo' });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
   await slowExpect(undo).toBeVisible();
   await undo.click();
   await slowExpect(page.getByRole('heading', { level: 1, name: /Batch test oil/ })).toBeVisible();
