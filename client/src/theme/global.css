@@ -410,3 +410,15 @@ textarea.input { resize: vertical; }
 .cal-agenda-day .cal-badge { margin-bottom: 4px; }
 @media (max-width: 900px) { .cal-week { grid-template-columns: 1fr; } .cal-cell { height: auto; min-height: 84px; } }
 @media (forced-colors: active) { .cal-cell.is-today, .cal-col.is-today { outline: 3px solid Highlight; } }
+
+/* Journal */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.chip {
+  font: inherit; font-size: .95rem; color: var(--ink-on-parchment); background: #f7efdc; cursor: pointer;
+  border: 1px solid var(--parchment-edge); border-radius: 999px; padding: 4px 12px;
+}
+.chip[aria-pressed='true'] { color: #fff; background: var(--ink-green); border-color: var(--ink-green); }
+.chip[aria-pressed='true'] .muted { color: inherit; }
+.chip:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 2px; }
+.journal-type { display: flex; align-items: center; gap: 6px; margin: 0; }
+.journal-group { margin: 0 0 24px; }

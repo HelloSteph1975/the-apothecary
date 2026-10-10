@@ -29,8 +29,8 @@ it('shows every drawer and marks the open one', async () => {
 });
 
 it('opens a drawer that is not built yet with a friendly note', async () => {
-  at('/journal');
-  expect(await screen.findByRole('heading', { level: 1, name: 'Journal' })).toBeInTheDocument();
+  at('/labels');
+  expect(await screen.findByRole('heading', { level: 1, name: 'Labels' })).toBeInTheDocument();
   expect(screen.getByText(/being built/i)).toBeInTheDocument();
 });
 

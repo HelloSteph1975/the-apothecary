@@ -21,6 +21,8 @@ import { RecipeBook } from './screens/recipes/RecipeBook.jsx';
 import { RecipeTypes } from './screens/recipes/RecipeTypes.jsx';
 import { RecipeForm } from './screens/recipes/RecipeForm.jsx';
 import { RecipePage } from './screens/recipes/RecipePage.jsx';
+import { Journal } from './screens/journal/Journal.jsx';
+import { JournalTypes } from './screens/journal/JournalTypes.jsx';
 import { BatchJournal } from './screens/batches/BatchJournal.jsx';
 import { NewBatch } from './screens/batches/NewBatch.jsx';
 import { BatchPage } from './screens/batches/BatchPage.jsx';
@@ -79,7 +81,7 @@ function RecordSheetRoute() {
   return <RecordSheet key={id} />;
 }
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar' && d.to !== '/journal').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -103,6 +105,8 @@ export const routes = [
       { path: 'recipes/new', element: <RecipeFormRoute /> },
       { path: 'recipes/:id/edit', element: <RecipeFormRoute /> },
       { path: 'recipes/:id', element: <RecipePageRoute /> },
+      { path: 'journal', element: <Journal /> },
+      { path: 'journal/types', element: <JournalTypes /> },
       { path: 'batches', element: <BatchJournal /> },
       { path: 'batches/new', element: <NewBatchRoute /> },
       { path: 'batches/:id', element: <BatchPageRoute /> },
