@@ -16,6 +16,7 @@ import { journalTypesRouter, journalRouter } from './journal.js';
 import { galleryRouter } from './gallery.js';
 import { gardenRouter } from './garden.js';
 import { shoppingRouter } from './shopping.js';
+import { labelsRouter } from './labels.js';
 
 export function apiRouter(ctx, { onShutdown }) {
   const r = Router();
@@ -39,6 +40,7 @@ export function apiRouter(ctx, { onShutdown }) {
   r.use('/gallery', galleryRouter(ctx));
   r.use('/garden', gardenRouter(ctx));
   r.use('/shopping', shoppingRouter(ctx));
+  r.use('/labels', labelsRouter(ctx));
   r.get('/herb-of-the-day', herbOfTheDayRoute(ctx));
   r.get('/expiry-suggestion', expirySuggestionRoute(ctx));
   r.get('/storage-spots', storageSpotsRoute(ctx));
