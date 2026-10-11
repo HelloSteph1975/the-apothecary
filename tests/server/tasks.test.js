@@ -49,7 +49,7 @@ it('area view groups open tasks by related record', async () => {
   await make({ title: 'Check jar', related_type: 'item', related_id: item.id });
   await make({ title: 'Loose' });
   const g = await list('area');
-  expect(Object.keys(g)).toEqual(['item', 'recipe', 'batch', 'herb', 'none']);
+  expect(Object.keys(g)).toEqual(['item', 'recipe', 'batch', 'herb', 'garden_plant', 'none']);
   expect(titles(g.item)).toEqual(['Check jar']);
   expect(g.item[0].related).toEqual({ type: 'item', id: item.id, name: 'Mugwort', live: true });
   expect(titles(g.none)).toEqual(['Loose']);

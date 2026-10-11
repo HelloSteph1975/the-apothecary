@@ -30,7 +30,7 @@ beforeEach(() => {
       task(4, { title: 'Turn the compost', repeat_kind: 'weekly', repeat_days: [1, 4] }),
     ],
     upcoming: [task(5, { title: 'Bottle the tincture', due_on: day(1) }), task(6, { title: 'Order jars', due_on: day(9) })],
-    area: { item: [task(3, { title: 'Restock lavender', related: { type: 'item', id: 7, name: 'Lavender jar', live: true } })], recipe: [], batch: [], herb: [], none: [task(1, { title: 'Water the sage' })] },
+    area: { item: [task(3, { title: 'Restock lavender', related: { type: 'item', id: 7, name: 'Lavender jar', live: true } })], recipe: [], batch: [], herb: [], garden_plant: [task(9, { title: 'Harvest Back bed calendula', related: { type: 'garden_plant', id: 7, name: 'Back bed calendula', live: true } })], none: [task(1, { title: 'Water the sage' })] },
     done: [task(8, { title: 'Dry the mint', done_on: day(0) })],
   };
   global.fetch = vi.fn(async (url, opts = {}) => {
@@ -109,7 +109,9 @@ it('groups by area', async () => {
   open('/todo?view=area');
   await screen.findByText('Restock lavender');
   expect(screen.getByRole('heading', { name: 'Jars' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Garden' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: 'Other' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Back bed calendula' })).toHaveAttribute('href', '/garden/plants/7');
 });
 
 it('shows the empty states', async () => {

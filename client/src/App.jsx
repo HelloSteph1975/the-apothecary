@@ -35,6 +35,8 @@ import { TaskPage } from './screens/todo/TaskPage.jsx';
 import { Calendar } from './screens/calendar/Calendar.jsx';
 import { DayPage } from './screens/calendar/DayPage.jsx';
 import { Garden } from './screens/garden/Garden.jsx';
+import { PlantPage } from './screens/garden/PlantPage.jsx';
+import { PlantForm } from './screens/garden/PlantForm.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -97,6 +99,18 @@ function RecordSheetRoute() {
   return <RecordSheet key={id} />;
 }
 
+// Keyed by id so moving between plants reloads the page.
+function PlantPageRoute() {
+  const { id } = useParams();
+  return <PlantPage key={id} />;
+}
+
+// A fresh form per plant, so moving between edit pages does not keep the last plant's fields.
+function PlantFormRoute() {
+  const { id } = useParams();
+  return <PlantForm key={id ?? 'new'} />;
+}
+
 const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar' && d.to !== '/journal' && d.to !== '/garden').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
@@ -136,6 +150,9 @@ export const routes = [
       { path: 'calendar', element: <Calendar /> },
       { path: 'calendar/:day', element: <DayPageRoute /> },
       { path: 'garden', element: <Garden /> },
+      { path: 'garden/plants/new', element: <PlantFormRoute /> },
+      { path: 'garden/plants/:id/edit', element: <PlantFormRoute /> },
+      { path: 'garden/plants/:id', element: <PlantPageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },

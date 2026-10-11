@@ -123,7 +123,7 @@ export function listTasks(db, view, today) {
       .map(out);
   }
   if (view === 'area') {
-    const groups = { item: [], recipe: [], batch: [], herb: [], none: [] };
+    const groups = { item: [], recipe: [], batch: [], herb: [], garden_plant: [], none: [] };
     for (const r of openRows(db).sort((a, b) => byDate(a, b) || byPriority(a, b) || byTitle(a, b))) groups[r.related_type ?? 'none'].push(out(r));
     return groups;
   }
