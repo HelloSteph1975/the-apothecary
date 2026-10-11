@@ -346,7 +346,59 @@ textarea.input { resize: vertical; }
   .sheet-field h2 { font-size: 12pt; color: #1f3a2a; }
   .writing-lines span { height: 8mm; border-bottom-color: #555; }
   .muted, .record-kicker { color: #333; }
+  /* Label sheets: one letter page per sheet, drawn at full size, nothing else on the page. */
+  body:has(.label-sheets) .page-header { display: none !important; }
+  .label-preview { margin: 0; }
+  .label-sheets { display: block; page: labels; }
+  .label-page-frame { width: auto !important; max-width: none; break-after: page; page-break-after: always; }
+  .label-page-frame:last-child { break-after: auto; page-break-after: auto; }
+  .label-page-frame .label-page { zoom: 1 !important; width: 8.5in !important; height: 10.98in !important; box-shadow: none !important; background: transparent !important; overflow: hidden; }
+  .label-card { border-color: #8a7a68; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .label-slot-empty { display: none; }
 }
+
+@page labels { size: letter; margin: 0; }
+
+/* ---------- Labels ---------- */
+.label-picks { max-height: 320px; overflow-y: auto; }
+.label-picks h3 { font-size: 1.05rem; color: var(--ink-green); margin: 10px 0 2px; }
+.label-pick-list { list-style: none; margin: 0; padding: 0; }
+.label-pick-list li { padding: 3px 0; }
+.label-options { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 12px; }
+.label-setup { border-top: 1px solid var(--rule); padding: 10px 0 4px; }
+.label-setup-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.label-setup-head h3 { margin: 0; font-size: 1.15rem; }
+.label-setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 4px 16px; align-items: start; }
+.label-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.label-save-error p { margin: 6px 0 0; }
+.label-files { list-style: none; margin: 0; padding: 0; }
+.label-files li { padding: 3px 0; }
+/* Screen-only layout. It sits in @media screen so it can never override the print rules above. */
+@media screen {
+  .label-preview { margin: 24px 0; }
+  .label-sheets { display: flex; flex-wrap: wrap; gap: 20px; }
+}
+.label-page-title { margin: 0 0 4px; font-style: italic; color: var(--ink-soft); }
+/* Each sheet is built at full size in inches and shown at half size on screen. */
+@media screen {
+  .label-page-frame { width: 4.25in; max-width: 100%; }
+  .label-page-frame .label-page { zoom: .5; }
+}
+.label-page { position: relative; width: 8.5in; height: 11in; background: #fffdf7; box-shadow: 0 1px 6px rgba(46, 29, 18, .35); overflow: hidden; }
+.label-card, .label-slot-empty { position: absolute; box-sizing: border-box; }
+.label-card {
+  display: flex; flex-direction: column; overflow: hidden; color: #2b2118; border: .5pt solid #8a7a68;
+  font-family: var(--font-body); line-height: 1.15; text-align: left;
+}
+.label-card.label-circle { border-radius: 50%; justify-content: center; align-items: center; text-align: center; }
+.label-slot-empty { border: .5pt dashed rgba(138, 122, 104, .45); }
+.label-slot-empty.label-circle { border-radius: 50%; }
+.label-text { margin: 0; max-width: 100%; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; }
+.label-name { font-family: var(--font-head); font-weight: 600; }
+.label-latin { font-style: italic; }
+.label-made { display: flex; align-items: center; gap: 4px; }
+.label-made span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.label-made .moon-glyph { flex: none; color: #4a3a2c; }
 
 .sky-lines { margin: 0 0 12px; }
 .sky-lines p { margin: 2px 0; }
@@ -447,3 +499,16 @@ ul.chip-row { list-style: none; padding: 0; }
 .moon-garden h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .moon-garden .chip { display: inline-block; text-decoration: none; }
 .moon-garden-card { margin-top: 24px; }
+
+/* Shopping list */
+.shopping-rows { list-style: none; margin: 0; padding: 0; }
+.shopping-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.shopping-row:last-child { border-bottom: 0; }
+.shopping-box { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--ink-green); }
+.shopping-box:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.shopping-main { flex: 1 1 200px; min-width: 0; }
+.shopping-main p { margin: 2px 0 0; }
+.shopping-name { font-weight: 600; }
+.shopping-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.shopping-checked .shopping-name { text-decoration: line-through; }
+.shopping-checked .shopping-name, .shopping-checked .muted { color: var(--ink-soft); }

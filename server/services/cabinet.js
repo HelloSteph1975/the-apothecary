@@ -4,6 +4,7 @@ import { transaction } from '../db/connection.js';
 import { repos } from '../db/repos.js';
 import { itemSchema, purchaseSchema, restockSchema } from '../schemas.js';
 import { addDays, addMonths, isDate } from '../lib/dates.js';
+import { localToday } from './timing.js';
 import { assertLive, deleteGroup, reorderGroups } from './groups.js';
 
 export const EXPIRY_KEYS = {
@@ -100,6 +101,12 @@ export function createItem(db, body) {
     const item = r.items.create(data);
     if (entry) r.gardenEntries.update(entry.id, { item_id: item.id });
     if (purchase) r.purchases.create({ ...purchase, item_id: item.id, unit: item.unit });
+    // Bringing home something from the shopping list checks it off. A list item that is already gone is not a reason to refuse the jar.
+    const listId = body?.shopping_item_id;
+    if (Number.isInteger(listId) && listId > 0) {
+      db.prepare("UPDATE shopping_items SET checked_on = ?, updated_at = datetime('now') WHERE id = ? AND deleted_at IS NULL")
+        .run(item.acquired_on ?? localToday(), listId);
+    }
     return item;
   });
 }

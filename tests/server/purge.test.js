@@ -372,3 +372,43 @@ it('drops harvest dismissals once their plant is purged and keeps those of a liv
   purgeSoftDeleted(db, t.dataDir);
   expect(db.prepare('SELECT auto_key FROM task_dismissals').all().map(r => r.auto_key)).toEqual([`harvest:${live}:2026-10-12`]);
 });
+
+it('purges old shopping items, nulls their links first, and drops checks for jars that are gone', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const run = (sql, ...a) => db.prepare(sql).run(...a);
+  const id = r => Number(r.lastInsertRowid);
+  const sec = id(run("INSERT INTO cabinet_sections (name) VALUES ('Old shelf')"));
+  const sup = id(run("INSERT INTO suppliers (name) VALUES ('Old shop')"));
+  const herb = id(run("INSERT INTO herbs (slug, common_name) VALUES ('old', 'Old herb')"));
+  const jar = id(run("INSERT INTO items (section_id, name, unit, amount) VALUES (1, 'Old jar', 'g', 1)"));
+  const keepJar = id(run("INSERT INTO items (section_id, name, unit, amount) VALUES (1, 'Kept jar', 'g', 1)"));
+  run('UPDATE cabinet_sections SET deleted_at = ? WHERE id = ?', old, sec);
+  run('UPDATE suppliers SET deleted_at = ? WHERE id = ?', old, sup);
+  run('UPDATE herbs SET deleted_at = ? WHERE id = ?', old, herb);
+  run('UPDATE items SET deleted_at = ? WHERE id = ?', old, jar);
+  const linked = id(run('INSERT INTO shopping_items (name, section_id, supplier_id, herb_id, item_id) VALUES (?, ?, ?, ?, ?)', 'Linked', sec, sup, herb, jar));
+  run('INSERT INTO shopping_items (name, deleted_at) VALUES (?, ?)', 'Old item', old);
+  const recent = id(run('INSERT INTO shopping_items (name, deleted_at) VALUES (?, ?)', 'Recent item', new Date().toISOString()));
+  run("INSERT INTO shopping_checks (auto_key, checked_on) VALUES (?, '2026-10-01')", `low:${jar}:0`);
+  run("INSERT INTO shopping_checks (auto_key, checked_on) VALUES (?, '2026-10-01')", `low:${keepJar}:2`);
+  const counts = purgeSoftDeleted(db, t.dataDir);
+  expect(counts).toMatchObject({ shopping_items: 1, items: 1, suppliers: 1, herbs: 1, cabinet_sections: 1 });
+  expect(db.prepare('SELECT id FROM shopping_items ORDER BY id').all().map(r => r.id)).toEqual([linked, recent]);
+  expect(db.prepare('SELECT section_id, supplier_id, herb_id, item_id FROM shopping_items WHERE id = ?').get(linked))
+    .toEqual({ section_id: null, supplier_id: null, herb_id: null, item_id: null });
+  expect(db.prepare('SELECT auto_key FROM shopping_checks').all()).toEqual([{ auto_key: `low:${keepJar}:2` }]);
+});
+
+it('keeps a shopping item linked to a deleted section that still holds jars', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const sec = Number(db.prepare("INSERT INTO cabinet_sections (name) VALUES ('Old shelf')").run().lastInsertRowid);
+  db.prepare("INSERT INTO items (section_id, name, unit, amount) VALUES (?, 'Jar', 'g', 1)").run(sec);
+  db.prepare('UPDATE cabinet_sections SET deleted_at = ? WHERE id = ?').run(old, sec);
+  db.prepare('INSERT INTO shopping_items (name, section_id) VALUES (?, ?)').run('Wax', sec);
+  expect(purgeSoftDeleted(db, t.dataDir).cabinet_sections).toBe(0);
+  expect(db.prepare('SELECT section_id FROM shopping_items').get().section_id).toBe(sec);
+});

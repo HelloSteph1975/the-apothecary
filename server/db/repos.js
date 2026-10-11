@@ -45,6 +45,8 @@ export function repos(db) {
         { orderBy: 'name COLLATE NOCASE, id' }),
       gardenEntries: createRepo(db, 'garden_entries', ['entry_date', 'kind', 'plant_id', 'herb_id', 'plant_name', 'place', 'amount', 'unit',
         'weather', 'notes', 'item_id', 'sky_phase', 'sky_phase_group', 'sky_sign'], { orderBy: 'entry_date DESC, id DESC' }),
+      shoppingItems: createRepo(db, 'shopping_items', ['name', 'quantity', 'section_id', 'supplier_id', 'herb_id', 'item_id', 'notes', 'checked_on'],
+        { orderBy: 'name COLLATE NOCASE, id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);

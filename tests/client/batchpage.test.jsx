@@ -134,6 +134,11 @@ it('shows a Finished badge with the day and the finished panel', async () => {
   expect(screen.queryByRole('button', { name: 'Finish this batch' })).toBeNull();
 });
 
+it('links to the label maker for this batch', async () => {
+  open();
+  expect(await screen.findByRole('link', { name: 'Print a label' })).toHaveAttribute('href', '/labels?batches=5');
+});
+
 it('links to the record sheet', async () => {
   open();
   expect(await screen.findByRole('link', { name: 'Print record sheet' })).toHaveAttribute('href', '/batches/5/sheet');

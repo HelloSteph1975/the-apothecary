@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -36,6 +36,7 @@ beforeEach(() => {
     if (url.startsWith('/api/items/7?')) return json(item);
     if (url === '/api/suppliers') return json([{ id: 2, name: 'Mountain Rose' }]);
     if (url.startsWith('/api/expiry-suggestion')) return json({ expires_on: '2027-10-08' });
+    if (url === '/api/shopping/items' && method === 'POST') return json({ id: 4 }, 201);
     if (url === '/api/items/7/restock') return json({ ok: true }, 201);
     if (url === '/api/items/7' && method === 'PATCH') return json(item);
     if (url.startsWith('/api/purchases/') && method === 'PATCH') return json({ ok: true });
@@ -46,9 +47,9 @@ beforeEach(() => {
   });
 });
 
-const open = () => render(
+const open = (path = '/cabinet/items/7') => render(
   <ToastProvider><ConfirmProvider>
-    <RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/cabinet/items/7'] })} />
+    <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
   </ConfirmProvider></ToastProvider>,
 );
 const itemGets = () => calls.filter(c => c.method === 'GET' && c.url.startsWith('/api/items/7?')).length;
@@ -62,6 +63,11 @@ it('shows the jar, badges, source and purchases', async () => {
   expect(screen.getByText(/Reminds you at 20 g/)).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Mountain Rose' })).toHaveAttribute('href', '/cabinet/suppliers/2');
   expect(screen.getByText(/\(removed\)/)).toBeInTheDocument();
+});
+
+it('links to the label maker for this jar', async () => {
+  open();
+  expect(await screen.findByRole('link', { name: 'Print a label' })).toHaveAttribute('href', '/labels?items=7');
 });
 
 it('shows dates in a friendly format', async () => {
@@ -168,4 +174,46 @@ it('shows no grimoire line when the jar is not linked', async () => {
   open();
   await screen.findByRole('heading', { name: 'Nettle' });
   expect(screen.queryByText('Grimoire', { selector: 'dt' })).not.toBeInTheDocument();
+});
+
+it('adds the jar to the shopping list with a link to the list', async () => {
+  const user = userEvent.setup();
+  item = { ...baseItem, status: { low: false, expiring: false, expired: false }, section_id: 1 };
+  open();
+  await user.click(await screen.findByRole('button', { name: 'Add to shopping list' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/shopping/items')?.body).toEqual({ name: 'Nettle', section_id: 1, item_id: 7 }));
+  expect(await screen.findByText('Added to the shopping list')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'See the list' })).toBeInTheDocument();
+});
+
+it('sends the live herb along when the jar has one', async () => {
+  const user = userEvent.setup();
+  item = { ...baseItem, status: { low: false, expiring: false, expired: false }, section_id: 1, herb_id: 3, herb_slug: 'nettle', herb_name: 'Nettle' };
+  open();
+  await user.click(await screen.findByRole('button', { name: 'Add to shopping list' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/shopping/items')?.body).toEqual({ name: 'Nettle', section_id: 1, item_id: 7, herb_id: 3 }));
+});
+
+it('adds one shopping item for a double click', async () => {
+  item = { ...baseItem, status: { low: false, expiring: false, expired: false }, section_id: 1 };
+  open();
+  const button = await screen.findByRole('button', { name: 'Add to shopping list' });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await screen.findByText('Added to the shopping list');
+  expect(calls.filter(c => c.method === 'POST' && c.url === '/api/shopping/items')).toHaveLength(1);
+});
+
+it('hides Add to shopping list while the jar is already low', async () => {
+  item = { ...baseItem, status: { low: true, expiring: false, expired: false } };
+  open();
+  await screen.findByRole('heading', { name: 'Nettle' });
+  expect(screen.queryByRole('button', { name: 'Add to shopping list' })).not.toBeInTheDocument();
+});
+
+it('hides Add to shopping list for a used-up jar', async () => {
+  item = { ...baseItem, used_up_at: '2026-10-01', status: {} };
+  open();
+  await screen.findByRole('heading', { name: 'Nettle' });
+  expect(screen.queryByRole('button', { name: 'Add to shopping list' })).not.toBeInTheDocument();
 });

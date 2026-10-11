@@ -22,7 +22,9 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     files = db.prepare(`SELECT filename FROM photos WHERE ${photoMatch}`).all(cutoff).map(r => r.filename);
     const counts = {};
     counts.photos = db.prepare(`DELETE FROM photos WHERE ${photoMatch}`).run(cutoff).changes;
-    // Garden rows go first. Entries keep their name when their plant is purged; links to a purged entry mean nothing.
+    // Shopping list rows go first: old-deleted ones are purged, and what is left stops pointing at records about to go.
+    counts.shopping_items = db.prepare(`DELETE FROM shopping_items WHERE id IN (${old('shopping_items')})`).run().changes;
+    // Garden rows go next. Entries keep their name when their plant is purged; links to a purged entry mean nothing.
     db.prepare(`UPDATE garden_entries SET plant_id = NULL WHERE plant_id IN (${old('garden_plants')})`).run();
     const goneEntries = db.prepare(`SELECT id FROM garden_entries WHERE id IN (${old('garden_entries')})`).all().map(r => r.id);
     counts.garden_entries = db.prepare(`DELETE FROM garden_entries WHERE id IN (${old('garden_entries')})`).run().changes;
@@ -48,9 +50,13 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     db.prepare(`UPDATE batches SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     db.prepare(`UPDATE batch_ingredients SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     db.prepare(`UPDATE garden_entries SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
+    db.prepare(`UPDATE shopping_items SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     counts.items = db.prepare(`DELETE FROM items WHERE id IN (${old('items')})`).run().changes;
     db.prepare(`UPDATE purchases SET supplier_id = NULL WHERE supplier_id IN (${old('suppliers')})`).run();
+    db.prepare(`UPDATE shopping_items SET supplier_id = NULL WHERE supplier_id IN (${old('suppliers')})`).run();
     counts.suppliers = db.prepare(`DELETE FROM suppliers WHERE id IN (${old('suppliers')})`).run().changes;
+    db.prepare(`UPDATE shopping_items SET section_id = NULL WHERE section_id IN (${old('cabinet_sections')})
+      AND section_id NOT IN (SELECT section_id FROM items)`).run();
     counts.cabinet_sections = db.prepare(`DELETE FROM cabinet_sections WHERE id IN (${old('cabinet_sections')})
       AND id NOT IN (SELECT section_id FROM items)`).run().changes;
     db.prepare(`DELETE FROM recipe_ingredients WHERE id IN (${old('recipe_ingredients')}) OR recipe_id IN (${old('recipes')})`).run();
@@ -82,11 +88,17 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     db.prepare(`UPDATE garden_entries SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE recipe_ingredients SET herb_id = NULL, herb_gone = 1 WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE batch_ingredients SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
+    db.prepare(`UPDATE shopping_items SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     counts.herbs = db.prepare(`DELETE FROM herbs WHERE id IN (${old('herbs')})`).run().changes;
     // A dismissal key names its cause (step:<id>:..., restock:<id>:..., expiry:<id>:...). Keep it while the cause row still exists.
     const stepIds = new Set(db.prepare('SELECT id FROM batch_steps').all().map(r => r.id));
     const itemIds = new Set(db.prepare('SELECT id FROM items').all().map(r => r.id));
     const plantIds = new Set(db.prepare('SELECT id FROM garden_plants').all().map(r => r.id));
+    // A shopping check key is low:<jar id>:<restock count>. It goes when its jar is gone.
+    const dropCheck = db.prepare('DELETE FROM shopping_checks WHERE auto_key = ?');
+    for (const { auto_key } of db.prepare('SELECT auto_key FROM shopping_checks').all()) {
+      if (!itemIds.has(Number(auto_key.split(':')[1]))) dropCheck.run(auto_key);
+    }
     const dropKey = db.prepare('DELETE FROM task_dismissals WHERE auto_key = ?');
     for (const { auto_key } of db.prepare('SELECT auto_key FROM task_dismissals').all()) {
       const [source, id] = auto_key.split(':');

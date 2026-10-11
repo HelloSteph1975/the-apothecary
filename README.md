@@ -6,7 +6,7 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-This is Stage 7 of 8. It adds a garden log to the herb cabinet, the grimoire, the recipe book, the batch journal, the sky, the calendar, the to-do list, the journal and the photo gallery.
+Every drawer works: the herb cabinet, grimoire, recipe book, batch journal, the sky, calendar and to-do list, journal and photo gallery, garden log, shopping list and labels.
 
 - Today shows a greeting and the date, plus the sky: the moon's phase and sign, the day's ruling planet, the next new or full moon and the next festival.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
@@ -22,7 +22,8 @@ This is Stage 7 of 8. It adds a garden log to the herb cabinet, the grimoire, th
 - Journal keeps your own writing. Entry types are yours to manage, with 8 starters. An entry has a title, date and time, a mood, tags, links to herbs, recipes and batches, and photos. Each entry is stamped with the moon's phase and sign, the day's planet and any festival. View entries by type, tag or moon phase, search them, and see them on the calendar.
 - Garden log keeps what grows and what you gather. Add the plants you tend, with the herb they link to in the grimoire, where they grow, when you planted them and when you expect a harvest. Log sowing, planting, pruning, harvesting and foraging, and each entry is stamped with the moon's phase and sign. A harvest or foraging can go straight into the cabinet as a new jar. The garden page also lists good days for each kind of work over the next four weeks, taken from the folk timing rules and labelled as tradition. An expected harvest adds a to-do task and a calendar event, and the day pages show what tradition says about that day in the garden.
 - Photos is a gallery of every photo in the app. Filter it by kind and date, and each photo links back to its record.
-- The other drawers say so when they are not built yet.
+- Shopping list gathers what you need to buy. Jars that are running low appear by themselves, with the supplier you last bought from, and you can add items of your own with a quantity, section, supplier and notes. Group the list by section or by supplier, tick things off as you buy them, and clear what is ticked (with Undo). Restock a low jar from the list, or press Bought on one of your items to start a new jar with the details already filled in.
+- Labels makes labels for jars and batches. Pick what you want, choose a sheet size, and the app fills in the name, Latin name, ingredients, dates, moon phase and a caution line you can edit. Set the copies for each label and which label on the sheet to start at, so a part-used sheet is not wasted. Print it, or save a PDF into the `labels\` folder of your data folder, where the page lists your saved sheets.
 
 ![The herb cabinet](docs/screenshots/shelves.jpg)
 
@@ -39,6 +40,8 @@ The grimoire is for learning and record keeping, not medical advice. Ask a docto
 ![The journal](docs/screenshots/journal.jpg)
 
 ![The garden log](docs/screenshots/garden.jpg)
+
+![Labels](docs/screenshots/labels.jpg)
 
 ## Install on Windows
 

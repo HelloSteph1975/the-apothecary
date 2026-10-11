@@ -40,7 +40,7 @@ describe('migration 9', () => {
   it('creates the garden tables, indexes and the timing rule column', () => {
     t = makeTestContext();
     const db = t.ctx.db;
-    expect(migrations).toHaveLength(9);
+    expect(migrations.length).toBeGreaterThanOrEqual(9);
     expect(names(db, 'table')).toEqual(expect.arrayContaining(['garden_plants', 'garden_entries']));
     expect(names(db, 'index')).toEqual(expect.arrayContaining([
       'idx_garden_plants_herb', 'idx_garden_entries_date', 'idx_garden_entries_plant', 'idx_garden_entries_herb',
@@ -72,7 +72,7 @@ describe('migration 9', () => {
 
     migrate(db);
 
-    expect(db.prepare('PRAGMA user_version').get().user_version).toBe(9);
+    expect(db.prepare('PRAGMA user_version').get().user_version).toBe(migrations.length);
     expect(db.prepare('SELECT * FROM tasks ORDER BY id').all()).toEqual(tasksBefore);
     expect(db.prepare('SELECT * FROM journal_links ORDER BY id').all()).toEqual(linksBefore);
     expect(db.prepare('SELECT * FROM task_dismissals').all()).toHaveLength(1);

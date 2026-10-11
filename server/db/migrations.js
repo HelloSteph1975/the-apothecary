@@ -181,6 +181,14 @@ export const migrations = [
   CREATE UNIQUE INDEX idx_tasks_auto_key ON tasks(auto_key) WHERE auto_key IS NOT NULL AND deleted_at IS NULL;
   CREATE INDEX idx_tasks_due ON tasks(due_on) WHERE done_on IS NULL AND deleted_at IS NULL;
   `,
+  `
+  CREATE TABLE shopping_items (id INTEGER PRIMARY KEY, name TEXT NOT NULL, quantity TEXT,
+    section_id INTEGER REFERENCES cabinet_sections(id), supplier_id INTEGER REFERENCES suppliers(id),
+    herb_id INTEGER REFERENCES herbs(id), item_id INTEGER REFERENCES items(id),
+    notes TEXT, checked_on TEXT, ${TS});
+  CREATE INDEX idx_shopping_items_checked ON shopping_items(checked_on);
+  CREATE TABLE shopping_checks (auto_key TEXT PRIMARY KEY, checked_on TEXT NOT NULL);
+  `,
 ];
 
 export function migrate(db) {

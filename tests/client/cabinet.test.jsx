@@ -28,12 +28,6 @@ it('shows every drawer and marks the open one', async () => {
   expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
 });
 
-it('opens a drawer that is not built yet with a friendly note', async () => {
-  at('/labels');
-  expect(await screen.findByRole('heading', { level: 1, name: 'Labels' })).toBeInTheDocument();
-  expect(screen.getByText(/being built/i)).toBeInTheDocument();
-});
-
 it('shows a not-found page for unknown paths', async () => {
   at('/nowhere');
   expect(await screen.findByRole('heading', { level: 1, name: /lost in the stacks/i })).toBeInTheDocument();

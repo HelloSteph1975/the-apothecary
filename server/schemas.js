@@ -77,6 +77,9 @@ export const gardenEntrySchema = {
   entry_date: 'date!', kind: { type: GARDEN_KINDS, required: true }, plant_id: 'int', herb_id: 'int', plant_name: 'string', place: 'string',
   amount: { type: 'number', min: 0 }, unit: UNITS, weather: 'string', notes: 'string',
 };
+export const shoppingItemSchema = {
+  name: 'string!', quantity: 'string', section_id: 'int', supplier_id: 'int', herb_id: 'int', item_id: 'int', notes: 'string',
+};
 export const TIMING_KINDS = ['phase_group', 'phase', 'moon_element', 'moon_sign', 'day_ruler', 'festival'];
 // List fields (recipe_types, planets, elements, garden_tasks) are arrays of strings, checked by the timing service.
 export const timingRuleSchema = {

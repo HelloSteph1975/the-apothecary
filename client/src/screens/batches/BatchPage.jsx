@@ -179,6 +179,7 @@ export function BatchPage() {
           <>
             {!finished && <WaxSeal onClick={() => setFinishOpen(true)}>Finish this batch</WaxSeal>}
             <Button as={Link} variant="secondary" to={`/batches/${batch.id}/sheet`}>Print record sheet</Button>
+            <Button as={Link} variant="secondary" to={`/labels?batches=${batch.id}`}>Print a label</Button>
             <Button variant="secondary" onClick={startEdit} disabled={editing}>Edit</Button>
             <Button variant="danger" disabled={editing} onClick={async () => {
               if (await del({
