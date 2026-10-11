@@ -210,6 +210,12 @@ describe('saved files', () => {
     expect(res.body.subarray(0, 4).toString()).toBe('%PDF');
   });
 
+  it('answers 404 when a matching name is a directory', async () => {
+    t = makeTestContext();
+    fs.mkdirSync(path.join(t.dataDir, 'labels', 'labels-2026-10-11-090000.pdf'), { recursive: true });
+    expect((await t.http().get('/api/labels/files/labels-2026-10-11-090000.pdf')).status).toBe(404);
+  });
+
   it('answers 404 for a missing file, a bad name or a traversal', async () => {
     t = makeTestContext();
     fs.writeFileSync(path.join(t.dataDir, 'secret.pdf'), '%PDF');

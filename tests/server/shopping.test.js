@@ -41,7 +41,7 @@ describe('migration 10', () => {
 describe('the list', () => {
   it('is empty at first', async () => {
     const { list } = setup();
-    expect(await list()).toEqual({ group: 'section', groups: [], counts: { open: 0, checked: 0 } });
+    expect(await list()).toEqual({ group: 'section', groups: [], counts: { open: 0, checked: 0, checked_items: 0 } });
   });
 
   it('shows low jars with their last purchase, and leaves out jars that are not low', async () => {
@@ -54,7 +54,7 @@ describe('the list', () => {
     s.buy(low.id, { supplier_id: sup.id, price: 9, purchased_on: '2026-09-15', quantity: 100 });
     const res = await s.list();
     expect(res.group).toBe('section');
-    expect(res.counts).toEqual({ open: 1, checked: 0 });
+    expect(res.counts).toEqual({ open: 1, checked: 0, checked_items: 0 });
     const section = s.r.sections.get(1);
     expect(res.groups).toEqual([{
       key: 'section-1', name: section.name, rows: [{
@@ -112,7 +112,7 @@ describe('the list', () => {
     const res = await s.list();
     expect(rowNames(res)).toEqual([['Abe shelf', ['Ash', 'Bowl']], ['Zed shelf', ['Wax']], ['Other', ['Loose']]]);
     expect(res.groups.at(-1).key).toBe('other');
-    expect(res.counts).toEqual({ open: 3, checked: 1 });
+    expect(res.counts).toEqual({ open: 3, checked: 1, checked_items: 1 });
     await s.h().post('/api/shopping/check').send({ key: res.groups[0].rows[0].key, checked: true });
     await s.h().post('/api/shopping/check').send({ key: b.key, checked: false });
     expect(rowNames(await s.list())[0]).toEqual(['Abe shelf', ['Bowl', 'Ash']]);
@@ -179,7 +179,7 @@ describe('restocking a checked low jar', () => {
     await s.h().post('/api/shopping/check').send({ key: first.key, checked: true });
     const sup = s.supplier('Shop');
     await s.h().post(`/api/items/${jar.id}/restock`).send({ supplier_id: sup.id, purchased_on: '2026-10-11', quantity: 100 });
-    expect(await s.list()).toMatchObject({ groups: [], counts: { open: 0, checked: 0 } });
+    expect(await s.list()).toMatchObject({ groups: [], counts: { open: 0, checked: 0, checked_items: 0 } });
   });
 });
 
@@ -265,7 +265,7 @@ describe('checking', () => {
     const on = await s.h().post('/api/shopping/check').send({ key: a.key, checked: true });
     expect(on.status, JSON.stringify(on.body)).toBe(200);
     expect(s.checked(a.id)).toBe(localToday());
-    expect((await s.list()).counts).toEqual({ open: 0, checked: 1 });
+    expect((await s.list()).counts).toEqual({ open: 0, checked: 1, checked_items: 1 });
     await s.h().post('/api/shopping/check').send({ key: a.key, checked: false });
     expect(s.checked(a.id)).toBeNull();
   });
@@ -278,7 +278,7 @@ describe('checking', () => {
     expect(s.db.prepare('SELECT auto_key FROM shopping_checks').all()).toEqual([{ auto_key: key }]);
     await s.h().post('/api/shopping/check').send({ key, checked: true });
     expect(s.db.prepare('SELECT COUNT(*) n FROM shopping_checks').get().n).toBe(1);
-    expect((await s.list()).counts).toEqual({ open: 0, checked: 1 });
+    expect((await s.list()).counts).toEqual({ open: 0, checked: 1, checked_items: 0 });
     await s.h().post('/api/shopping/check').send({ key, checked: false });
     expect(s.db.prepare('SELECT COUNT(*) n FROM shopping_checks').get().n).toBe(0);
   });
@@ -294,6 +294,33 @@ describe('checking', () => {
     expect((await post({ checked: true })).status).toBe(400);
     expect((await post({ key: `low:${jar.id}:0` })).status).toBe(400);
     expect(s.db.prepare('SELECT COUNT(*) n FROM shopping_checks').get().n).toBe(0);
+  });
+});
+
+describe('shopping_item_id on a new jar', () => {
+  it('ignores values that are not a positive whole number', async () => {
+    const s = setup();
+    const a = (await s.add()).body;
+    for (const bad of [true, String(a.id), [a.id], 1.5, -1]) {
+      const res = await s.h().post('/api/items').send({ section_id: 1, name: 'Sage', unit: 'g', amount: 30, shopping_item_id: bad });
+      expect(res.status, JSON.stringify(res.body)).toBe(201);
+      expect(s.checked(a.id)).toBeNull();
+    }
+  });
+});
+
+describe('stale low checks', () => {
+  it('forgets a check once the jar is no longer low, so a later dip starts unchecked', async () => {
+    const s = setup();
+    const jar = await s.jar();
+    await s.h().post('/api/shopping/check').send({ key: `low:${jar.id}:0`, checked: true });
+    expect((await s.list()).counts.checked).toBe(1);
+    await s.h().patch(`/api/items/${jar.id}`).send({ amount: 50 });
+    expect((await s.list()).groups).toEqual([]);
+    await s.h().patch(`/api/items/${jar.id}`).send({ amount: 3 });
+    const res = await s.list();
+    expect(res.counts).toEqual({ open: 1, checked: 0, checked_items: 0 });
+    expect(res.groups[0].rows[0].checked).toBe(false);
   });
 });
 
@@ -315,10 +342,10 @@ describe('clearing', () => {
     const stamps = s.db.prepare('SELECT DISTINCT deleted_at FROM shopping_items WHERE deleted_at IS NOT NULL').all();
     expect(stamps).toEqual([{ deleted_at: res.body.stamp }]);
     expect(s.db.prepare('SELECT auto_key FROM shopping_checks').all()).toEqual([{ auto_key: `low:${jar.id}:0` }]);
-    expect((await s.list()).counts).toEqual({ open: 1, checked: 1 });
+    expect((await s.list()).counts).toEqual({ open: 1, checked: 1, checked_items: 0 });
     const undo = await s.h().post('/api/shopping/clear/undo').send({ stamp: res.body.stamp });
     expect(undo.status, JSON.stringify(undo.body)).toBe(200);
-    expect((await s.list()).counts).toEqual({ open: 1, checked: 3 });
+    expect((await s.list()).counts).toEqual({ open: 1, checked: 3, checked_items: 2 });
     expect((await s.h().post('/api/shopping/clear/undo').send({ stamp: res.body.stamp })).status).toBe(404);
     expect((await s.h().post('/api/shopping/clear/undo').send({})).status).toBe(400);
   });

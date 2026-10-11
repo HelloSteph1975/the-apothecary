@@ -102,7 +102,7 @@ export function createItem(db, body) {
     if (entry) r.gardenEntries.update(entry.id, { item_id: item.id });
     if (purchase) r.purchases.create({ ...purchase, item_id: item.id, unit: item.unit });
     // Bringing home something from the shopping list checks it off. A list item that is already gone is not a reason to refuse the jar.
-    const listId = Number(body?.shopping_item_id);
+    const listId = body?.shopping_item_id;
     if (Number.isInteger(listId) && listId > 0) {
       db.prepare("UPDATE shopping_items SET checked_on = ?, updated_at = datetime('now') WHERE id = ? AND deleted_at IS NULL")
         .run(item.acquired_on ?? localToday(), listId);

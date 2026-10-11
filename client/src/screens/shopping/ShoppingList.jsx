@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader.jsx';
@@ -59,6 +59,9 @@ export function ShoppingList() {
   const [dialog, setDialog] = useState({ open: false, item: null });
   const [restock, setRestock] = useState(null); // { item, open }; kept after closing so the dialog closes cleanly
 
+  const clearingRef = useRef(false);
+  const restockReq = useRef(0);
+
   const fail = err => toast.show({ message: err.message, duration: 6000 });
 
   async function check(row) {
@@ -69,9 +72,12 @@ export function ShoppingList() {
   }
 
   async function clearChecked() {
+    if (clearingRef.current) return;
+    clearingRef.current = true;
     try {
       const res = await api.post('/api/shopping/clear');
       list.reload();
+      if (!res.cleared) { toast.show({ message: 'Nothing of yours was checked' }); return; }
       toast.show({
         message: res.cleared === 1 ? 'Cleared 1 checked item' : `Cleared ${res.cleared} checked items`,
         duration: 8000,
@@ -86,15 +92,16 @@ export function ShoppingList() {
           },
         },
       });
-    } catch (err) { fail(err); }
+    } catch (err) { fail(err); } finally { clearingRef.current = false; }
   }
 
   // The restock form needs the jar's last supplier and form, which the list row doesn't carry.
   async function openRestock(row) {
+    const mine = ++restockReq.current;
     try {
       const item = await api.get(`/api/items/${row.item.id}?today=${todayString()}`);
-      setRestock({ item, open: true });
-    } catch (err) { fail(err); }
+      if (mine === restockReq.current) setRestock({ item, open: true });
+    } catch (err) { if (mine === restockReq.current) fail(err); }
   }
 
   const header = (
@@ -102,7 +109,7 @@ export function ShoppingList() {
       actions={(
         <>
           <WaxSeal onClick={() => setDialog({ open: true, item: null })}>Add an item</WaxSeal>
-          <Button variant="secondary" disabled={!list.data?.counts.checked} onClick={clearChecked}>Clear checked</Button>
+          <Button variant="secondary" disabled={!list.data?.counts.checked_items} onClick={clearChecked}>Clear checked</Button>
         </>
       )} />
   );

@@ -137,7 +137,7 @@ export function Labels() {
         start: startNum,
         labels: labels.map(l => ({
           name: l.name, latin_name: l.latin_name, made_on: l.made_on, expires_on: l.expires_on,
-          ingredients: l.ingredients, caution: l.caution, show_moon: l.show_moon, copies: Number(l.copiesText),
+          ingredients: l.ingredients, caution: l.caution, show_moon: l.show_moon, copies: copiesOf(l.copiesText),
         })),
       });
       toast.show({ message: `Saved ${res.file} in your labels folder.`, duration: 8000 });

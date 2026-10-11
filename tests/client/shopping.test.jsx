@@ -20,17 +20,24 @@ const mine = (extra = {}) => ({
 });
 const board = (rows, group = 'section') => ({
   group, groups: rows.length ? [{ key: group === 'section' ? 'section-1' : 'supplier-2', name: group === 'section' ? 'Herbs' : 'Moonvale Herbs', rows }] : [],
-  counts: { open: rows.filter(r => !r.checked).length, checked: rows.filter(r => r.checked).length },
+  counts: { open: rows.filter(r => !r.checked).length, checked: rows.filter(r => r.checked).length,
+    checked_items: rows.filter(r => r.kind === 'manual' && r.checked).length },
 });
 
 let calls;
 let rows;
 let listFails;
 let restockItem;
+let clearReply;
+let clearGate;
+let itemGets;
 beforeEach(() => {
   calls = [];
   rows = [low(), mine()];
   listFails = 0;
+  clearReply = { stamp: '2026-10-11T10:00:00.000Z', cleared: 2 };
+  itemGets = null;
+  clearGate = null;
   restockItem = { id: 7, name: 'Nettle', unit: 'g', form: 'dried leaf', last_supplier_id: 2, status: {}, purchases: [], photos: [] };
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
@@ -41,12 +48,13 @@ beforeEach(() => {
       return json(board(rows, new URL(url, 'http://x').searchParams.get('group')));
     }
     if (url === '/api/shopping/check') return json({ key: 'x', checked: true });
-    if (url === '/api/shopping/clear') return json({ stamp: '2026-10-11T10:00:00.000Z', cleared: 2 });
+    if (url === '/api/shopping/clear') { if (clearGate) await clearGate; return json(clearReply); }
     if (url === '/api/shopping/clear/undo') return json({ restored: 2 });
     if (url === '/api/shopping/items' && method === 'POST') return json({ id: 4 }, 201);
     if (url === '/api/shopping/items/3' && method === 'PATCH') return json(mine());
     if (url === '/api/shopping/items/3' && method === 'DELETE') return json({ ok: true, restore: '/api/shopping/items/3/restore' });
     if (url === '/api/shopping/items/3/restore') return json(mine());
+    if (itemGets && /^\/api\/items\/\d+\?/.test(url)) return itemGets(url, json);
     if (url.startsWith('/api/items/7?')) return json(restockItem);
     if (url === '/api/items/7/restock') return json({ ok: true }, 201);
     if (url === '/api/suppliers') return json([{ id: 2, name: 'Moonvale Herbs' }]);
@@ -186,6 +194,60 @@ it('disables Clear checked until something is checked', async () => {
   open();
   await screen.findByRole('checkbox', { name: 'Nettle' });
   expect(screen.getByRole('button', { name: 'Clear checked' })).toBeDisabled();
+});
+
+it('keeps Clear checked disabled when only a low jar is checked', async () => {
+  rows = [low({ checked: true }), mine()];
+  open();
+  await screen.findByRole('checkbox', { name: 'Nettle' });
+  expect(screen.getByRole('checkbox', { name: 'Nettle' })).toBeChecked();
+  expect(screen.getByRole('button', { name: 'Clear checked' })).toBeDisabled();
+});
+
+it('offers no Undo when a clear removes nothing', async () => {
+  const user = userEvent.setup();
+  rows = [low(), mine({ checked: true })];
+  clearReply = { stamp: '2026-10-11T10:00:00.000Z', cleared: 0 };
+  open();
+  await screen.findByRole('checkbox', { name: 'Nettle' });
+  await user.click(screen.getByRole('button', { name: 'Clear checked' }));
+  expect(await screen.findByText('Nothing of yours was checked')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+});
+
+it('sends one clear for a double click', async () => {
+  const user = userEvent.setup();
+  rows = [low(), mine({ checked: true })];
+  open();
+  await screen.findByRole('checkbox', { name: 'Nettle' });
+  let release;
+  clearGate = new Promise(res => { release = res; });
+  await user.dblClick(screen.getByRole('button', { name: 'Clear checked' }));
+  release();
+  await screen.findByRole('button', { name: 'Undo' });
+  expect(calls.filter(c => c.url === '/api/shopping/clear')).toHaveLength(1);
+});
+
+it('opens the restock dialog for the jar clicked last, even when an earlier one answers last', async () => {
+  const user = userEvent.setup();
+  rows = [low(), low({ key: 'low:8:0', name: 'Comfrey', item: { id: 8, name: 'Comfrey', live: true } })];
+  let releaseA;
+  itemGets = (url, json) => {
+    if (url.startsWith('/api/items/7?')) return new Promise(res => { releaseA = () => res(json({ ...restockItem, id: 7, name: 'Nettle' })); });
+    return json({ ...restockItem, id: 8, name: 'Comfrey' });
+  };
+  open();
+  await screen.findByRole('checkbox', { name: 'Nettle' });
+  const buttons = screen.getAllByRole('button', { name: 'Restock' });
+  await user.click(buttons[1]);
+  await user.click(buttons[0]);
+  await user.click(screen.getAllByRole('button', { name: 'Restock' })[1]);
+  await waitFor(() => expect(calls.some(c => c.url.startsWith('/api/items/8?'))).toBe(true));
+  await screen.findByRole('dialog');
+  releaseA();
+  await new Promise(r => setTimeout(r, 30));
+  expect(screen.getByRole('dialog')).toHaveTextContent('Comfrey');
+  expect(screen.getByRole('dialog')).not.toHaveTextContent('Nettle');
 });
 
 it('clears the checked rows and can undo it', async () => {

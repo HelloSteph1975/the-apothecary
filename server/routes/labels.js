@@ -35,9 +35,14 @@ export function labelsRouter(ctx) {
     const { name } = req.params;
     if (!LABEL_FILE.test(name)) throw notFound('No such file');
     const full = path.join(labelsDir(ctx.config.dataDir), name);
-    if (!fs.existsSync(full)) throw notFound('No such file');
+    let data;
+    try {
+      data = fs.readFileSync(full);
+    } catch {
+      throw notFound('No such file');
+    }
     res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${name}"` });
-    res.send(fs.readFileSync(full));
+    res.send(data);
   });
   return r;
 }

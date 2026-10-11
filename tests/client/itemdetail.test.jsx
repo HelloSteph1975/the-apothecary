@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routes } from '../../client/src/App.jsx';
@@ -184,6 +184,16 @@ it('adds the jar to the shopping list with a link to the list', async () => {
   await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/shopping/items')?.body).toEqual({ name: 'Nettle', section_id: 1, item_id: 7 }));
   expect(await screen.findByText('Added to the shopping list')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'See the list' })).toBeInTheDocument();
+});
+
+it('adds one shopping item for a double click', async () => {
+  item = { ...baseItem, status: { low: false, expiring: false, expired: false }, section_id: 1 };
+  open();
+  const button = await screen.findByRole('button', { name: 'Add to shopping list' });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await screen.findByText('Added to the shopping list');
+  expect(calls.filter(c => c.method === 'POST' && c.url === '/api/shopping/items')).toHaveLength(1);
 });
 
 it('hides Add to shopping list while the jar is already low', async () => {

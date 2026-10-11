@@ -86,11 +86,21 @@ function groupOf(row, group) {
 
 const fail = errors => { throw new HttpError(400, FIX, errors); };
 
+// A check belongs to one low spell. Once a jar is off the list its check goes too, so a later dip starts unchecked.
+function forgetStaleChecks(db, keys) {
+  const drop = db.prepare('DELETE FROM shopping_checks WHERE auto_key = ?');
+  for (const { auto_key } of db.prepare('SELECT auto_key FROM shopping_checks').all()) {
+    if (!keys.has(auto_key)) drop.run(auto_key);
+  }
+}
+
 export function getShoppingList(db, { group = 'section' } = {}) {
   if (!GROUPS.includes(group)) fail({ group: `Must be one of: ${GROUPS.join(', ')}` });
+  const low = lowJars(db);
+  forgetStaleChecks(db, new Set(low.map(lowKey)));
   const checks = new Set(db.prepare('SELECT auto_key FROM shopping_checks').all().map(r => r.auto_key));
   const rows = [
-    ...lowJars(db).map(i => shapeLow(db, i, checks)),
+    ...low.map(i => shapeLow(db, i, checks)),
     ...db.prepare(`${MANUAL_SELECT} WHERE w.deleted_at IS NULL`).all().map(w => shapeManual(db, w)),
   ];
   const groups = new Map();
@@ -106,7 +116,7 @@ export function getShoppingList(db, { group = 'section' } = {}) {
   const checked = rows.filter(r => r.checked).length;
   return {
     group, groups: sorted.map(({ key, name, rows: r }) => ({ key, name, rows: r })),
-    counts: { open: rows.length - checked, checked },
+    counts: { open: rows.length - checked, checked, checked_items: rows.filter(r => r.kind === 'manual' && r.checked).length },
   };
 }
 
@@ -177,11 +187,7 @@ export function clearChecked(db) {
   const stamp = new Date().toISOString();
   return transaction(db, () => {
     const cleared = db.prepare('UPDATE shopping_items SET deleted_at = ? WHERE checked_on IS NOT NULL AND deleted_at IS NULL').run(stamp).changes;
-    const keys = new Set(lowJars(db).map(lowKey));
-    const drop = db.prepare('DELETE FROM shopping_checks WHERE auto_key = ?');
-    for (const { auto_key } of db.prepare('SELECT auto_key FROM shopping_checks').all()) {
-      if (!keys.has(auto_key)) drop.run(auto_key);
-    }
+    forgetStaleChecks(db, new Set(lowJars(db).map(lowKey)));
     return { stamp, cleared };
   });
 }

@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '../../client/src/components/ToastProvider.jsx';
 import { ShoppingItemDialog } from '../../client/src/screens/shopping/ShoppingItemDialog.jsx';
@@ -112,4 +112,16 @@ it('shows a message with no field as an inline alert', async () => {
   await screen.findByLabelText(/^Name/);
   await user.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('That item is not on the shopping list.');
+});
+
+it('creates one item when Enter is pressed twice in one tick', async () => {
+  const user = userEvent.setup();
+  show();
+  const name = await screen.findByLabelText(/^Name/);
+  await user.type(name, 'Amber bottles');
+  const form = name.closest('form');
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/shopping/items')).toBe(true));
+  expect(calls.filter(c => c.method === 'POST' && c.url === '/api/shopping/items')).toHaveLength(1);
 });

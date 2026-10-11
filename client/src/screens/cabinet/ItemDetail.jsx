@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader.jsx';
 import { ParchmentCard } from '../../components/ParchmentCard.jsx';
@@ -23,6 +23,7 @@ export function ItemDetail() {
   const toast = useToast();
   const del = useDeleteWithUndo();
   const [restocking, setRestocking] = useState(false);
+  const addingRef = useRef(false);
   const { data: item, error, reload } = useApi(`/api/items/${id}?today=${todayString()}`);
 
   if (error) {
@@ -43,10 +44,12 @@ export function ItemDetail() {
   const source = sourceText(item);
 
   async function addToList() {
+    if (addingRef.current) return;
+    addingRef.current = true;
     try {
       await api.post('/api/shopping/items', { name: item.name, section_id: item.section_id, item_id: item.id });
       toast.show({ message: 'Added to the shopping list', duration: 6000, action: { label: 'See the list', onClick: () => navigate('/shopping') } });
-    } catch (e) { toast.show({ message: e.message, duration: 6000 }); }
+    } catch (e) { toast.show({ message: e.message, duration: 6000 }); } finally { addingRef.current = false; }
   }
 
   async function toggleUsedUp() {

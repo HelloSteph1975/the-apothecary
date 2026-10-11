@@ -6,7 +6,7 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-All eight drawers work: the herb cabinet, grimoire, recipe book, batch journal, the sky, calendar and to-do list, journal and photo gallery, garden log, shopping list and labels.
+Every drawer works: the herb cabinet, grimoire, recipe book, batch journal, the sky, calendar and to-do list, journal and photo gallery, garden log, shopping list and labels.
 
 - Today shows a greeting and the date, plus the sky: the moon's phase and sign, the day's ruling planet, the next new or full moon and the next festival.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.

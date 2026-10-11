@@ -236,6 +236,17 @@ it('saves the PDF with her edits and says where it went', async () => {
   expect(calls.filter(c => c.url === '/api/labels/files').length).toBeGreaterThanOrEqual(2);
 });
 
+it('sends 1 copy when the copies box is not a valid number, as the preview counts it', async () => {
+  const user = userEvent.setup();
+  await open('/labels?items=1');
+  const cal = await group('Calendula');
+  await user.clear(within(cal).getByLabelText('Copies'));
+  await user.type(within(cal).getByLabelText('Copies'), '0');
+  await user.click(screen.getByRole('button', { name: 'Save as PDF' }));
+  await screen.findByText(/Saved labels-/);
+  expect(pdfCalls()[0].body.labels[0].copies).toBe(1);
+});
+
 it('shows a 400 inline and keeps the edits', async () => {
   const user = userEvent.setup();
   pdfReply = () => new Response(JSON.stringify({ error: 'Please fix the highlighted fields.', details: { 'labels.0.name': 'Required', start: 'Must be a whole number from 1 to 12' } }), { status: 400 });

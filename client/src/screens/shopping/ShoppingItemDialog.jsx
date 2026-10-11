@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog } from '../../components/Dialog.jsx';
 import { Button } from '../../components/Button.jsx';
 import { Field, TextInput, TextArea, Select } from '../../components/Field.jsx';
@@ -37,6 +37,7 @@ export function ShoppingItemDialog({ open, item, onClose, onSaved }) {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
 
   // Start fresh each time the dialog opens.
@@ -47,13 +48,14 @@ export function ShoppingItemDialog({ open, item, onClose, onSaved }) {
 
   async function save(e) {
     e.preventDefault();
-    if (saving) return;
+    if (savingRef.current) return;
     setFormError('');
     if (!form.name.trim()) { setErrors({ name: 'Give the item a name.' }); return; }
     const body = {
       name: form.name.trim(), quantity: orNull(form.quantity), section_id: toNum(form.section_id), supplier_id: toNum(form.supplier_id),
       herb_id: toNum(form.herb_id), item_id: toNum(form.item_id), notes: orNull(form.notes),
     };
+    savingRef.current = true;
     setSaving(true);
     try {
       if (item) await api.patch(`/api/shopping/items/${item.id}`, body); else await api.post('/api/shopping/items', body);
@@ -64,7 +66,7 @@ export function ShoppingItemDialog({ open, item, onClose, onSaved }) {
       setErrors(details);
       if (Object.keys(details).length === 0) setFormError(ex.message);
       else toast.show({ message: ex.message, duration: 6000 });
-    } finally { setSaving(false); }
+    } finally { savingRef.current = false; setSaving(false); }
   }
 
   return (
