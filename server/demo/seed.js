@@ -137,7 +137,7 @@ function clearCabinet(db, dataDir) {
   for (const { filename } of db.prepare("SELECT filename FROM photos WHERE owner_type IN ('item', 'supplier')").all()) {
     trashPhotoFile(dataDir, filename);
   }
-  db.exec(`DELETE FROM purchases; DELETE FROM items; DELETE FROM suppliers;
+  db.exec(`DELETE FROM shopping_items; DELETE FROM shopping_checks; DELETE FROM purchases; DELETE FROM items; DELETE FROM suppliers;
     DELETE FROM photos WHERE owner_type IN ('item', 'supplier')`);
 }
 
