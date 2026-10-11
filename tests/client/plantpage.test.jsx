@@ -102,6 +102,13 @@ it('lists good harvest days for a flower, labelled as folk tradition', async () 
   expect(links[0]).toHaveTextContent('full moon in Leo');
 });
 
+it('shows the harvest days in date order', async () => {
+  suggestions.tasks[0].days = [day('2026-10-24'), day('2026-10-17', 2), day('2026-10-20')];
+  open();
+  const card = await screen.findByRole('region', { name: 'Good days to harvest' });
+  expect(within(card).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/calendar/2026-10-17', '/calendar/2026-10-20', '/calendar/2026-10-24']);
+});
+
 it('uses the root days for a root crop', async () => {
   plant = { ...base, garden_notes: { ...base.garden_notes, garden_harvest_part: 'root' } };
   open();
@@ -109,6 +116,13 @@ it('uses the root days for a root crop', async () => {
   const links = within(card).getAllByRole('link');
   expect(links).toHaveLength(1);
   expect(links[0]).toHaveAttribute('href', '/calendar/2026-10-25');
+});
+
+it('uses the root days when the herb part is written out, like "Roots and rhizome"', async () => {
+  plant = { ...base, garden_notes: { ...base.garden_notes, garden_harvest_part: 'Roots and rhizome' } };
+  open();
+  const card = await screen.findByRole('region', { name: 'Good days to harvest' });
+  expect(within(card).getByRole('link')).toHaveAttribute('href', '/calendar/2026-10-25');
 });
 
 it('hides the harvest days when suggestions are off', async () => {

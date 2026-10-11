@@ -25,7 +25,7 @@ function PlantCard({ plant, dueBy }) {
           {plant.place && <p className="muted">{plant.place}</p>}
         </div>
       </div>
-      <p>Planted {formatShortDay(plant.planted_on)}</p>
+      {plant.planted_on && <p>Planted {formatShortDay(plant.planted_on)}</p>}
       {plant.expected_harvest_on && (
         <p>
           Harvest around {formatShortDay(plant.expected_harvest_on)}

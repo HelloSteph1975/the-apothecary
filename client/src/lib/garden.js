@@ -32,11 +32,12 @@ export const taskLabel = task => GARDEN_TASKS.find(t => t.value === task)?.label
 // "Good for: Gather leaves and flowers, Weed and tend"; empty when there are no tasks.
 export const goodFor = tasks => ((tasks ?? []).length ? `Good for: ${tasks.map(taskLabel).join(', ')}` : '');
 
-// Same text as the server: "Harvested Calendula", the kind with a capital, then the plant name as stored.
+// Same text as the server (garden.js, journal.js, gallery.js build it too; all copies must match): "Harvested Calendula", the kind with a capital, then the plant name as stored.
 export const entryTitle = (kind, plantName) => `${kind.charAt(0).toUpperCase()}${kind.slice(1)} ${plantName}`;
 
 // Roots are dug in a shrinking moon; leaves, flowers and everything else are gathered in a full one.
-export const harvestTaskFor = part => (part === 'root' ? 'harvest-root' : 'harvest-above');
+// The herb's harvest part is free text, so a mention of root or bulb is enough.
+export const harvestTaskFor = part => (/root|bulb/i.test(part ?? '') ? 'harvest-root' : 'harvest-above');
 
 export const FORAGING_NOTE = 'Only gather a plant you can identify with complete certainty, and only where foraging is allowed.';
 

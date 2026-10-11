@@ -5,8 +5,6 @@ import { useApi } from '../../lib/useApi.js';
 import { taskLabel } from '../../lib/garden.js';
 import { phaseText } from '../../lib/calendar.js';
 
-const MAX_CHIPS = 5;
-
 // "Fri Oct 17", read as a local date so it never slips a day.
 function chipDay(iso) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -32,7 +30,7 @@ export function MoonGarden() {
             <li key={t.task}>
               <h3>{taskLabel(t.task)}</h3>
               <ul className="chip-row">
-                {t.days.slice(0, MAX_CHIPS).map(d => (
+                {[...t.days].sort((a, b) => a.day.localeCompare(b.day)).map(d => (
                   <li key={d.day}>
                     <Link className="chip" to={`/calendar/${d.day}`} title={d.reasons.join(' ')}>
                       {chipDay(d.day)}, {phaseText(d.sky.phase)} in {d.sky.sign}

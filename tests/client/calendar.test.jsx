@@ -305,8 +305,8 @@ it('shows a sprout mark labelled with the garden tasks of the day', async () => 
   gardenByDay = { '2026-10-13': ['harvest-above', 'weed'] };
   await open('/calendar?view=month&date=2026-10-09');
   const td = cell(/^Tuesday, October 13/).closest('td');
-  expect(within(td).getByRole('img', { name: 'Good for: Gather leaves and flowers, Weed and tend' })).toBeInTheDocument();
-  expect(within(cell(/^Wednesday, October 14/).closest('td')).queryByRole('img', { name: /Good for/ })).toBeNull();
+  expect(within(td).getByRole('img', { name: 'Folk tradition, good for: Gather leaves and flowers, Weed and tend' })).toBeInTheDocument();
+  expect(within(cell(/^Wednesday, October 14/).closest('td')).queryByRole('img', { name: /good for/ })).toBeNull();
 });
 
 it('hides the sprout marks with the Garden days toggle', async () => {
@@ -315,9 +315,9 @@ it('hides the sprout marks with the Garden days toggle', async () => {
   await open('/calendar?view=month&date=2026-10-09');
   await user.click(screen.getByRole('checkbox', { name: 'Garden days' }));
   expect(location().search).toContain('garden=off');
-  expect(screen.queryByRole('img', { name: /Good for/ })).toBeNull();
+  expect(screen.queryByRole('img', { name: /good for/ })).toBeNull();
   await user.click(screen.getByRole('checkbox', { name: 'Garden days' }));
-  expect(screen.getByRole('img', { name: 'Good for: Weed and tend' })).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Folk tradition, good for: Weed and tend' })).toBeInTheDocument();
 });
 
 it('shows garden log and harvest events and hides them with their filters', async () => {

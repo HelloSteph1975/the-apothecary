@@ -3,7 +3,7 @@ import { skyFacts } from '../lib/sky.js';
 import { getSettings } from './settings.js';
 import { localToday, daySuggestions } from './timing.js';
 import { syncAutoTasks } from './tasks.js';
-import { entryTitle, gardenDayTasks } from './garden.js';
+import { entryTitle, gardenDayTasks, loadGardenRules } from './garden.js';
 
 const MARKERS = ['new', 'full', 'first quarter', 'last quarter'];
 
@@ -11,13 +11,14 @@ const MARKERS = ['new', 'full', 'first quarter', 'last quarter'];
 export function calendarDays(db, from, to) {
   const settings = getSettings(db);
   const { hemisphere } = settings;
+  const rules = settings.sky_suggestions === 'off' ? [] : loadGardenRules(db);
   const out = [];
   for (let day = from; day <= to; day = addDays(day, 1)) {
     const f = skyFacts(day, { hemisphere });
     out.push({
       day, phase: f.phase.name, sign: f.moon.sign, ruler: f.ruler, festival: f.festival,
       marker: MARKERS.includes(f.phase.name) ? f.phase.name : null,
-      garden: gardenDayTasks(db, day, settings).map(t => t.task),
+      garden: gardenDayTasks(db, day, settings, rules).map(t => t.task),
     });
   }
   return out;

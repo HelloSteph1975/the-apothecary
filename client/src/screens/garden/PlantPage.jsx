@@ -16,7 +16,6 @@ import { formatAmount, formatShortDay } from '../../lib/cabinet.js';
 import { phaseText } from '../../lib/calendar.js';
 import { KIND_ICON, kindLabel, harvestTaskFor, taskLabel } from '../../lib/garden.js';
 
-const MAX_DAYS = 5;
 
 // "Fri Oct 17", read as a local date so it never slips a day.
 function chipDay(iso) {
@@ -101,7 +100,8 @@ export function PlantPage() {
     ['Sun', notes.garden_sun], ['Water', notes.garden_water], ['Grows well with', (notes.garden_companions ?? []).join(', ')],
   ].filter(([, v]) => v) : [];
   const task = harvestTaskFor(notes?.garden_harvest_part);
-  const days = sug.data?.tasks?.find(t => t.task === task)?.days?.slice(0, MAX_DAYS) ?? [];
+  // The server picks the best few days by score; they read better in date order.
+  const days = [...(sug.data?.tasks?.find(t => t.task === task)?.days ?? [])].sort((a, b) => a.day.localeCompare(b.day));
   const showDays = sug.data && !sug.data.off && !plant.ended_on;
   const subtitle = [plant.place, plant.planted_on && `Planted ${formatShortDay(plant.planted_on)}`].filter(Boolean).join(', ');
   const liveHerb = plant.herb?.live ? plant.herb : null;

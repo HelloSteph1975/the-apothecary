@@ -85,8 +85,8 @@ export function DayPage() {
           <p><span className="badge badge-brass">{FOLK_LABEL}</span></p>
         </ParchmentCard>
       )}
-      <ParchmentCard title="Due this day">
-        {events.length === 0 ? <p className="muted">Nothing due on this day.</p> : (
+      <ParchmentCard title="On this day">
+        {events.length === 0 ? <p className="muted">Nothing on this day.</p> : (
           <ul className="cal-events">
             {events.map(e => (
               <li key={`${e.kind}-${e.id}`} className={`cal-event cal-${e.kind}${e.done ? ' is-done' : ''}${e.overdue ? ' is-overdue' : ''}`}>

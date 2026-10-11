@@ -20,7 +20,7 @@ const DEFAULT_DAYS = 28;
 const STATUSES = ['growing', 'ended', 'all'];
 const DATE_RANGE = 'Pick a date between 1900 and 2100';
 
-// "Harvested Calendula": the kind with a capital, then the plant name as stored. The gallery builds the same text in SQL.
+// "Harvested Calendula": the kind with a capital, then the plant name as stored. The gallery and journal build the same text in SQL, and client/src/lib/garden.js has a copy; all of them must match.
 export const entryTitle = (kind, plantName) => `${kind.charAt(0).toUpperCase()}${kind.slice(1)} ${plantName}`;
 
 const isLive = (db, table, id) => Boolean(db.prepare(`SELECT 1 FROM ${table} WHERE id = ? AND deleted_at IS NULL`).get(id));
@@ -272,10 +272,13 @@ function dayTasks(rules, sky) {
 }
 
 // For the calendar and day page: [{ task, reasons }] for one day, empty when suggestions are off.
-export function gardenDayTasks(db, day, settings) {
+// Pass `rules` (from loadGardenRules) when asking for many days, so they load once.
+export function loadGardenRules(db) { return gardenRules(db); }
+
+export function gardenDayTasks(db, day, settings, rules = gardenRules(db)) {
   if (settings.sky_suggestions === 'off') return [];
   const sky = skyFacts(day, { hemisphere: settings.hemisphere });
-  return dayTasks(gardenRules(db), sky).map(({ task, reasons }) => ({ task, reasons }));
+  return dayTasks(rules, sky).map(({ task, reasons }) => ({ task, reasons }));
 }
 
 export function gardenSuggestions(db, { from, days = DEFAULT_DAYS } = {}, settings) {

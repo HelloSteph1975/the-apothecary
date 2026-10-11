@@ -107,7 +107,7 @@ it('hides folk timing when suggestions are off', async () => {
 
 it('lists what is due with links and a checkbox for tasks only', async () => {
   await open('/calendar/2026-10-31');
-  await screen.findByRole('heading', { level: 2, name: 'Due this day' });
+  await screen.findByRole('heading', { level: 2, name: 'On this day' });
   expect(screen.getByRole('link', { name: 'Light a candle' })).toHaveAttribute('href', '/todo/7');
   expect(screen.getByRole('link', { name: 'Strain: Oil' })).toHaveAttribute('href', '/batches/2');
   expect(screen.getByRole('link', { name: 'Use up Rose' })).toHaveAttribute('href', '/cabinet/items/9');
@@ -117,7 +117,7 @@ it('lists what is due with links and a checkbox for tasks only', async () => {
 it('says when nothing is due', async () => {
   payload.events = [];
   await open('/calendar/2026-10-31');
-  expect(await screen.findByText('Nothing due on this day.')).toBeInTheDocument();
+  expect(await screen.findByText('Nothing on this day.')).toBeInTheDocument();
 });
 
 it('completes a task from its checkbox and reloads the day', async () => {
@@ -197,7 +197,7 @@ it('lists the journal entries of the day apart from what is due, with an add but
   await open('/calendar/2026-10-31');
   const card = await screen.findByRole('region', { name: 'Journal entries' });
   expect(within(card).getByRole('link', { name: 'Samhain night' })).toHaveAttribute('href', '/journal/4');
-  expect(within(cardOf('Due this day')).queryByText('Samhain night')).toBeNull();
+  expect(within(cardOf('On this day')).queryByText('Samhain night')).toBeNull();
   expect(within(card).getByRole('link', { name: 'Add a journal entry' })).toHaveAttribute('href', '/journal/new?date=2026-10-31');
 });
 
@@ -236,7 +236,7 @@ it('lists garden and harvest events with what is due, with a Log garden work but
     ev('harvest', 'Harvest Mint', { link: '/garden/plants/5', id: 5 }),
   ];
   await open('/calendar/2026-10-31');
-  const card = await screen.findByRole('region', { name: 'Due this day' });
+  const card = await screen.findByRole('region', { name: 'On this day' });
   expect(within(card).getByRole('link', { name: 'Pruned Rose' })).toHaveAttribute('href', '/garden/entries/3');
   expect(within(card).getByRole('link', { name: 'Harvest Mint' })).toHaveAttribute('href', '/garden/plants/5');
   expect(screen.getByRole('link', { name: 'Log garden work' })).toHaveAttribute('href', '/garden/entries/new?date=2026-10-31');

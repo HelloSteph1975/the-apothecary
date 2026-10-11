@@ -50,7 +50,7 @@ export function MonthView({ gardenDays = true, days, eventsByDay, month, today, 
               const events = eventsByDay.get(d.day) ?? [];
               const outside = d.day.slice(0, 7) !== month;
               const text = badge(d);
-              const good = gardenDays ? goodFor(d.garden) : '';
+              const good = gardenDays && d.garden?.length ? `Folk tradition, ${goodFor(d.garden).replace(/^Good/, 'good')}` : '';
               return (
                 <td key={d.day} className={`cal-cell${outside ? ' is-outside' : ''}${d.day === today ? ' is-today' : ''}`}>
                   <Link
@@ -63,7 +63,7 @@ export function MonthView({ gardenDays = true, days, eventsByDay, month, today, 
                     <span className="cal-sign" aria-hidden="true">{d.sign}</span>
                     {text && <span className="cal-badge" aria-hidden="true">{text}</span>}
                   </Link>
-                  {good && <span className="cal-sprout" role="img" aria-label={good}><Sprout size={14} aria-hidden="true" /></span>}
+                  {good && <span className="cal-sprout" role="img" aria-label={good} title={good}><Sprout size={14} aria-hidden="true" /></span>}
                   {events.length > 0 && <EventList events={events} limit={MAX_SHOWN} dayTo={`/calendar/${d.day}`} />}
                 </td>
               );

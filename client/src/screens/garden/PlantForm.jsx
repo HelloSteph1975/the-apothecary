@@ -90,9 +90,9 @@ export function PlantForm() {
   }
 
   const heading = editing ? 'Edit plant' : 'Add a plant';
-  const loadError = (editing && plant.error) || herbs.error || places.error;
+  const loadError = (editing && plant.error) || herbs.error;
   if (loadError) {
-    const retry = () => [plant, herbs, places].forEach(a => { if (a.error) a.reload(); });
+    const retry = () => [plant, herbs].forEach(a => { if (a.error) a.reload(); });
     return (
       <>
         <PageHeader title={heading} />

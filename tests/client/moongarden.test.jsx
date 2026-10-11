@@ -50,13 +50,6 @@ it('lists days by task with links to the calendar and reasons in the title', asy
   expect(screen.getByRole('link', { name: 'Tue Oct 20, new moon in Pisces' })).toBeInTheDocument();
 });
 
-it('shows at most five chips per task', async () => {
-  suggestions = () => ok({ off: false, tasks: [{ task: 'prune', days: Array.from({ length: 7 }, (_, i) => day(`2026-10-${10 + i}`)) }] });
-  open();
-  await screen.findByText('Prune');
-  expect(screen.getAllByRole('link', { name: /moon in Aries$/ })).toHaveLength(5);
-});
-
 it('says so when suggestions are turned off', async () => {
   suggestions = () => ok({ off: true, tasks: [] });
   open();
@@ -71,4 +64,12 @@ it('shows an error with Try again', async () => {
   suggestions = () => ok({ off: false, tasks: [{ task: 'prune', days: [day('2026-10-16')] }] });
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByText('Prune')).toBeInTheDocument();
+});
+
+it('shows the days in date order whatever order the server sends them in', async () => {
+  suggestions = () => ok({ off: false, tasks: [{ task: 'weed', days: [day('2026-10-24'), day('2026-10-18'), day('2026-10-21')] }] });
+  open();
+  await screen.findByText('Weed and tend');
+  const hrefs = screen.getAllByRole('link').map(a => a.getAttribute('href')).filter(h => h.startsWith('/calendar/'));
+  expect(hrefs).toEqual(['/calendar/2026-10-18', '/calendar/2026-10-21', '/calendar/2026-10-24']);
 });

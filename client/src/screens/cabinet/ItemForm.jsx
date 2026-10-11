@@ -155,7 +155,9 @@ export function ItemForm() {
       navigate(`/cabinet/items/${result?.id ?? id}`);
     } catch (ex) {
       setErrors(ex.details ?? {});
+      // A harvest that was deleted or changed kind after the form loaded has no field to highlight, so the message goes at the top.
       if (Object.keys(ex.details ?? {}).length === 0) setFormError(ex.message);
+      else if (ex.details.garden_entry_id) setFormError(ex.details.garden_entry_id);
       toast.show({ message: ex.message, duration: 6000 });
     }
   }

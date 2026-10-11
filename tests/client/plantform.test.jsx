@@ -56,6 +56,17 @@ it('starts a new plant planted today with the places already used in a datalist'
   expect(screen.queryByLabelText('Ended')).toBeNull();
 });
 
+it('still opens the form, without place suggestions, when the places list fails to load', async () => {
+  const real = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => (url === '/api/garden/plants?status=all'
+    ? new Response(JSON.stringify({ error: 'No places today' }), { status: 500 })
+    : real(url, opts)));
+  open('/garden/plants/new');
+  expect(await screen.findByLabelText('Place')).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(document.querySelectorAll('datalist option')).toHaveLength(0);
+});
+
 it('fills an empty name from the herb that is picked, and leaves a typed name alone', async () => {
   open('/garden/plants/new');
   const name = await screen.findByLabelText('Name (required)');

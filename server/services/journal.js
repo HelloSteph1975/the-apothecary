@@ -14,7 +14,7 @@ const PAGE_SIZE = 30;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MOON_GROUPS = ['new', 'waxing', 'full', 'waning'];
 const LINK_TABLES = { herb: ['herbs', 'common_name'], recipe: ['recipes', 'name'], batch: ['batches', 'name'],
-  // A name expression, not just a column: the same text as the garden entry's title.
+  // A name expression, not just a column: the same text as the garden entry title. server/services/garden.js, gallery.js and client/src/lib/garden.js must match.
   garden_entry: ['garden_entries', "upper(substr(kind, 1, 1)) || substr(kind, 2) || ' ' || plant_name"],
 };
 const str = v => (typeof v === 'string' && v !== '' ? v : null);

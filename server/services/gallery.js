@@ -13,6 +13,7 @@ const OWNER_INFO = {
   task: { name: 'o.title', link: id => `/todo/${id}` },
   journal: { name: 'o.title', link: id => `/journal/${id}` },
   garden_plant: { name: 'o.name', link: id => `/garden/plants/${id}` },
+  // The garden_entry name is the same text as the garden entry title; server/services/garden.js, journal.js and client/src/lib/garden.js must match.
   garden_entry: { name: "upper(substr(o.kind, 1, 1)) || substr(o.kind, 2) || ' ' || o.plant_name", link: id => `/garden/entries/${id}` },
 };
 

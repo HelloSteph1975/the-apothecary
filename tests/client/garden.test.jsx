@@ -44,6 +44,8 @@ it('has the garden vocabulary', () => {
   expect(harvestTaskFor('root')).toBe('harvest-root');
   expect(harvestTaskFor('leaf')).toBe('harvest-above');
   expect(harvestTaskFor(null)).toBe('harvest-above');
+  for (const part of ['Roots', 'root and rhizome', 'bulb', 'Bulbs']) expect(harvestTaskFor(part)).toBe('harvest-root');
+  for (const part of ['leaf and flower', 'seed']) expect(harvestTaskFor(part)).toBe('harvest-above');
   expect(Object.keys(KIND_ICON)).toEqual(GARDEN_KINDS.map(k => k.value));
 });
 
@@ -114,4 +116,11 @@ it('shows an error with Try again for the plant list', async () => {
   plants = () => [plant(1, { name: 'Rosie' })];
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByRole('link', { name: 'Rosie' })).toBeInTheDocument();
+});
+
+it('leaves out the planting line for a plant with no planting day', async () => {
+  plants = () => [plant(1, { planted_on: null }), plant(2)];
+  open();
+  await screen.findByText('Plant 2');
+  expect(screen.getAllByText(/^Planted /)).toHaveLength(1);
 });

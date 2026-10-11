@@ -17,6 +17,7 @@ let herbsFail;
 let jar;
 let jarFail;
 let jarConflict;
+let jarGone;
 beforeEach(() => {
   calls = [];
   postFails = false;
@@ -24,6 +25,7 @@ beforeEach(() => {
   herbsFail = false;
   jarFail = false;
   jarConflict = false;
+  jarGone = false;
   jar = { name: 'Calendula', herb_id: 3, latin_name: 'Calendula officinalis', source_kind: 'grown', source_place: 'Back bed', acquired_on: '2026-10-05', amount: 30, unit: 'g', form: 'fresh', plant_part: 'flower' };
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
@@ -38,6 +40,7 @@ beforeEach(() => {
     if (url.startsWith('/api/expiry-suggestion')) return json(url.includes('form=fresh') ? null : { expires_on: '2027-10-08' });
     if (url === '/api/items' && method === 'POST') {
       if (jarConflict) return json({ error: 'That harvest is already in the cabinet.' }, 409);
+      if (jarGone) return json({ error: 'Please fix the highlighted fields.', details: { garden_entry_id: 'That harvest is no longer in the garden log.' } }, 400);
       if (postFails) return json({ error: 'Please fix the highlighted fields.', details: { name: 'Required' } }, 400);
       return json({ id: 9 }, 201);
     }
@@ -319,6 +322,16 @@ it('shows a 409 as a form error and stays on the form', async () => {
   await screen.findByText('From your garden log');
   await user.click(screen.getByRole('button', { name: 'Save' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('That harvest is already in the cabinet.');
+  expect(screen.getByText('From your garden log')).toBeInTheDocument();
+});
+
+it('shows a garden_entry_id error from the server as the form error', async () => {
+  const user = userEvent.setup();
+  jarGone = true;
+  open('/cabinet/new?garden_entry=5');
+  await screen.findByText('From your garden log');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('That harvest is no longer in the garden log.');
   expect(screen.getByText('From your garden log')).toBeInTheDocument();
 });
 

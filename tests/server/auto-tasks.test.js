@@ -186,7 +186,7 @@ it('a restock reminder is not hidden by an old dismissal after purchases are del
 // Garden harvest reminders ------------------------------------------------
 
 const addPlant = async body => (await t.http().post('/api/garden/plants').send({ name: 'Calendula', ...body })).body;
-const harvestKeys = () => keys().filter(k => k.startsWith('harvest:'));
+const harvestKeys = () => keys().filter(k => k?.startsWith('harvest:'));
 
 it('makes a harvest task 7 days before the expected date and not 8', async () => {
   t = makeTestContext();
@@ -254,4 +254,17 @@ it('a dismissed harvest task stays gone', async () => {
   expect(await today('upcoming')).toHaveLength(0);
   syncAutoTasks(t.ctx.db, TODAY);
   expect(harvestKeys()).toEqual([]);
+});
+
+it('renames an open harvest task when the plant is renamed, and leaves other tasks alone', async () => {
+  t = makeTestContext();
+  const p = await addPlant({ name: 'Calendula', expected_harvest_on: '2026-10-12' });
+  const manual = (await t.http().post('/api/tasks').send({ title: 'Harvest Calendula', due_on: TODAY })).body;
+  syncAutoTasks(t.ctx.db, TODAY);
+  await t.http().patch(`/api/garden/plants/${p.id}`).send({ name: 'Pot marigold' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  const titles = all().map(r => r.title);
+  expect(titles).toContain('Harvest Pot marigold');
+  expect(all().find(r => r.id === manual.id).title).toBe('Harvest Calendula');
+  expect(harvestKeys()).toHaveLength(1);
 });
