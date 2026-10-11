@@ -29,6 +29,8 @@ export const KIND_ICON = {
 
 export const kindLabel = kind => GARDEN_KINDS.find(k => k.value === kind)?.label ?? kind;
 export const taskLabel = task => GARDEN_TASKS.find(t => t.value === task)?.label ?? task;
+// "Good for: Gather leaves and flowers, Weed and tend"; empty when there are no tasks.
+export const goodFor = tasks => ((tasks ?? []).length ? `Good for: ${tasks.map(taskLabel).join(', ')}` : '');
 
 // Same text as the server: "Harvested Calendula", the kind with a capital, then the plant name as stored.
 export const entryTitle = (kind, plantName) => `${kind.charAt(0).toUpperCase()}${kind.slice(1)} ${plantName}`;

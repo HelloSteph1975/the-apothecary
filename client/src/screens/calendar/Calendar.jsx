@@ -21,6 +21,7 @@ export function Calendar() {
   const view = VIEWS.includes(params.get('view')) ? params.get('view') : 'month';
   const date = clampDay(isDay(params.get('date')) ? params.get('date') : today);
   const hidden = useMemo(() => new Set((params.get('hide') ?? '').split(',').filter(k => KINDS.some(x => x.kind === k))), [params]);
+  const gardenDays = params.get('garden') !== 'off';
   const pendingFocus = useRef(null);
   const { from, to, days: gridDays } = rangeFor(view, date);
   const { data, error, loading, reload } = useApi(`/api/calendar?from=${from}&to=${to}`);
@@ -55,7 +56,7 @@ export function Calendar() {
     // The month grid always keeps its whole layout; days the server does not know are blank cells.
     const known = new Map(sky.map(d => [d.day, d]));
     const cells = gridDays.map(d => known.get(d) ?? { day: d, blank: true });
-    if (view === 'month') body = <MonthView days={cells} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} pendingFocus={pendingFocus} onLeave={day => { pendingFocus.current = day; update({ date: day }); }} />;
+    if (view === 'month') body = <MonthView days={cells} gardenDays={gardenDays} eventsByDay={eventsByDay} month={monthStart(date).slice(0, 7)} today={today} startDay={date} pendingFocus={pendingFocus} onLeave={day => { pendingFocus.current = day; update({ date: day }); }} />;
     else if (view === 'week') body = <WeekView days={sky} eventsByDay={eventsByDay} today={today} />;
     else body = <AgendaView days={sky} eventsByDay={eventsByDay} />;
   }
@@ -79,6 +80,7 @@ export function Calendar() {
         <fieldset className="cal-filters">
           <legend className="visually-hidden">Show on the calendar</legend>
           {KINDS.map(k => <Checkbox key={k.kind} label={k.label} checked={!hidden.has(k.kind)} onChange={() => toggle(k.kind)} />)}
+          <Checkbox label="Garden days" checked={gardenDays} onChange={() => update({ garden: gardenDays ? 'off' : null })} />
         </fieldset>
         <h2 className="cal-title" aria-live="polite">{title}</h2>
         {body}

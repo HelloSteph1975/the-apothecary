@@ -6,6 +6,8 @@ export const KINDS = [
   { kind: 'task', label: 'Tasks' },
   { kind: 'expiry', label: 'Jars to use up' },
   { kind: 'journal', label: 'Journal entries' },
+  { kind: 'garden', label: 'Garden log' },
+  { kind: 'harvest', label: 'Harvests' },
 ];
 export const AGENDA_DAYS = 30;
 // The server only knows these years, so the grid never asks for days outside them.
@@ -69,8 +71,9 @@ export const markerText = marker => ({ full: 'Full moon', new: 'New moon', 'firs
 export const phaseText = phase => (phase === 'full' || phase === 'new' ? `${phase} moon` : phase);
 export const badge = day => day.festival || markerText(day.marker);
 
-// Journal entries are records of the day, not things to do.
-export const openCount = events => events.filter(e => !e.done && e.kind !== 'journal').length;
+// Journal and garden entries are records of the day, and an expected harvest is a hope, not a job.
+const NOT_DUE = new Set(['journal', 'garden', 'harvest']);
+export const openCount = events => events.filter(e => !e.done && !NOT_DUE.has(e.kind)).length;
 export const thingsDue = n => `${n} ${n === 1 ? 'thing' : 'things'} due`;
 
 // "Friday, October 9: waxing crescent in Scorpio, 2 things due"
@@ -78,7 +81,11 @@ export function cellName(day, events) {
   const n = openCount(events);
   const j = events.filter(e => e.kind === 'journal').length;
   const entries = j ? `, ${j} journal ${j === 1 ? 'entry' : 'entries'}` : '';
-  return `${dayLabel(day.day)}: ${phaseText(day.phase)} in ${day.sign}${day.festival ? `, ${day.festival}` : ''}${n ? `, ${thingsDue(n)}` : ''}${entries}`;
+  const g = events.filter(e => e.kind === 'garden').length;
+  const garden = g ? `, ${g} garden ${g === 1 ? 'entry' : 'entries'}` : '';
+  const h = events.filter(e => e.kind === 'harvest').length;
+  const harvests = h ? `, ${h} ${h === 1 ? 'harvest' : 'harvests'} expected` : '';
+  return `${dayLabel(day.day)}: ${phaseText(day.phase)} in ${day.sign}${day.festival ? `, ${day.festival}` : ''}${n ? `, ${thingsDue(n)}` : ''}${entries}${garden}${harvests}`;
 }
 
 export function byDay(events) {

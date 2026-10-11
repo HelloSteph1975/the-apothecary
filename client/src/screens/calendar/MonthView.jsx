@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { MoonGlyph } from '../../lib/moonGlyph.jsx';
 import { addDaysTo, WEEKDAYS } from '../../lib/tasks.js';
 import { MAX_SHOWN, badge, cellName } from '../../lib/calendar.js';
+import { Sprout } from 'lucide-react';
+import { goodFor } from '../../lib/garden.js';
 import { EventList } from './EventList.jsx';
 
 const MOVES = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
 
-export function MonthView({ days, eventsByDay, month, today, startDay, onLeave, pendingFocus }) {
+export function MonthView({ gardenDays = true, days, eventsByDay, month, today, startDay, onLeave, pendingFocus }) {
   const table = useRef(null);
   const [focusDay, setFocusDay] = useState(null);
   const inGrid = new Set(days.filter(d => !d.blank).map(d => d.day));
@@ -48,6 +50,7 @@ export function MonthView({ days, eventsByDay, month, today, startDay, onLeave, 
               const events = eventsByDay.get(d.day) ?? [];
               const outside = d.day.slice(0, 7) !== month;
               const text = badge(d);
+              const good = gardenDays ? goodFor(d.garden) : '';
               return (
                 <td key={d.day} className={`cal-cell${outside ? ' is-outside' : ''}${d.day === today ? ' is-today' : ''}`}>
                   <Link
@@ -60,6 +63,7 @@ export function MonthView({ days, eventsByDay, month, today, startDay, onLeave, 
                     <span className="cal-sign" aria-hidden="true">{d.sign}</span>
                     {text && <span className="cal-badge" aria-hidden="true">{text}</span>}
                   </Link>
+                  {good && <span className="cal-sprout" role="img" aria-label={good}><Sprout size={14} aria-hidden="true" /></span>}
                   {events.length > 0 && <EventList events={events} limit={MAX_SHOWN} dayTo={`/calendar/${d.day}`} />}
                 </td>
               );

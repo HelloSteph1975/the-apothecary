@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
+import { Sprout, ShoppingBasket } from 'lucide-react';
+
+// Garden and harvest events carry a small icon of their own; the title says the rest.
+const ICONS = { garden: Sprout, harvest: ShoppingBasket };
 
 // One line per event. Done and overdue are said in words as well as shown.
 export function EventLink({ event }) {
+  const Icon = ICONS[event.kind];
   return (
     <>
+      {Icon && <><Icon size={14} aria-hidden="true" className="cal-event-icon" />{' '}</>}
       <Link to={event.link} className="cal-event-link">{event.title}</Link>
       {event.done && <span className="visually-hidden"> (done)</span>}
       {event.overdue && <span className="cal-overdue"> Overdue</span>}

@@ -395,6 +395,9 @@ textarea.input { resize: vertical; }
 .cal-event.cal-task { border-left-color: var(--brass); }
 .cal-event.cal-expiry { border-left-color: var(--oxblood); }
 .cal-event.cal-journal { border-left-color: var(--ink-green); }
+.cal-event.cal-garden, .cal-event.cal-harvest { border-left-color: var(--leaf); }
+.cal-event-icon { vertical-align: -2px; color: var(--ink-green); }
+.cal-sprout { display: inline-flex; align-items: center; color: var(--ink-green); padding-left: 2px; }
 .cal-event.is-done .cal-event-link { text-decoration: line-through; color: var(--ink-soft); }
 .cal-event-link, .cal-more a { color: var(--ink-on-parchment); }
 .cal-overdue { color: var(--oxblood); font-weight: 600; font-size: .85rem; }

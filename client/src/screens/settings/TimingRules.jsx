@@ -10,10 +10,11 @@ import { useToast } from '../../components/ToastProvider.jsx';
 import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { useApi } from '../../lib/useApi.js';
 import { api } from '../../lib/api.js';
+import { GARDEN_TASKS } from '../../lib/garden.js';
 import { RULE_KINDS, WEIGHTS, PLANETS, ELEMENTS, valueOptions, ruleTitle, weightText, slugOf } from '../../lib/sky.js';
 
 const MAX_TEXT = 300;
-const blank = { kind: 'phase_group', value: 'waxing', text: '', weight: '2', recipe_types: [], planets: [], elements: [] };
+const blank = { kind: 'phase_group', value: 'waxing', text: '', weight: '2', recipe_types: [], planets: [], elements: [], garden_tasks: [] };
 const toggle = (list, v) => (list.includes(v) ? list.filter(x => x !== v) : [...list, v]);
 
 function CheckGroup({ legend, options, selected, onToggle }) {
@@ -31,7 +32,7 @@ function RuleForm({ rule, types, typesError, onRetryTypes, open, onClose, onSave
   const toast = useToast();
   const [form, setForm] = useState(() => (rule ? {
     kind: rule.kind, value: rule.value, text: rule.text, weight: String(rule.weight),
-    recipe_types: rule.recipe_types, planets: rule.planets, elements: rule.elements,
+    recipe_types: rule.recipe_types, planets: rule.planets, elements: rule.elements, garden_tasks: rule.garden_tasks ?? [],
   } : blank));
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
@@ -54,7 +55,7 @@ function RuleForm({ rule, types, typesError, onRetryTypes, open, onClose, onSave
     if (!text) { setErrors({ text: 'Write what the tradition says.' }); return; }
     const body = {
       kind: form.kind, value: form.value, text, weight: Number(form.weight),
-      recipe_types: form.recipe_types, planets: form.planets, elements: form.elements,
+      recipe_types: form.recipe_types, planets: form.planets, elements: form.elements, garden_tasks: form.garden_tasks,
     };
     setSaving(true);
     try {
@@ -97,6 +98,8 @@ function RuleForm({ rule, types, typesError, onRetryTypes, open, onClose, onSave
         {errors.planets && <small className="field-error" role="alert">{errors.planets}</small>}
         <CheckGroup legend="Favours herbs of the element" options={ELEMENTS.map(p => ({ value: p, label: p }))} selected={form.elements} onToggle={v => set('elements', toggle(form.elements, v))} />
         {errors.elements && <small className="field-error" role="alert">{errors.elements}</small>}
+        <CheckGroup legend="Garden work" options={GARDEN_TASKS} selected={form.garden_tasks} onToggle={v => set('garden_tasks', toggle(form.garden_tasks, v))} />
+        {errors.garden_tasks && <small className="field-error" role="alert">{errors.garden_tasks}</small>}
       </form>
     </Dialog>
   );
@@ -119,7 +122,12 @@ export function TimingRules() {
     setEditing(r); setFormKey(key); setFormOpen(true);
   };
   const closeForm = key => { if (activeForm.current === key) { activeForm.current = null; setFormOpen(false); } };
-  const list = rules.data || [];
+  const [show, setShow] = useState('all'); // 'all', 'making' or 'garden'
+  const all = rules.data || [];
+  const hasGarden = r => (r.garden_tasks ?? []).length > 0;
+  // A rule with only garden tasks belongs to the garden; any other rule also works for making.
+  const gardenOnly = r => hasGarden(r) && !r.recipe_types.length && !r.planets.length && !r.elements.length;
+  const list = show === 'garden' ? all.filter(hasGarden) : show === 'making' ? all.filter(r => !gardenOnly(r)) : all;
   const [moving, setMoving] = useState(false);
 
   const typeName = slug => types.find(t => slugOf(t) === slug)?.name ?? slug;
@@ -181,12 +189,19 @@ export function TimingRules() {
       <p><Button onClick={() => openForm('new')}>Add a rule</Button></p>
       <p className="visually-hidden" role="status" aria-live="polite">{announcement}</p>
       <ParchmentCard title="Your rules" subtitle="the strongest matches show on Today">
-        {list.length === 0 && <p className="muted">No rules yet. Add one to get folk timing on Today.</p>}
+        <div className="cal-switch" role="group" aria-label="Show rules">
+          {[['all', 'All'], ['making', 'Making'], ['garden', 'Garden']].map(([v, label]) => (
+            <Button key={v} variant={v === show ? 'primary' : 'secondary'} size="sm" aria-pressed={v === show} onClick={() => setShow(v)}>{label}</Button>
+          ))}
+        </div>
+        {all.length === 0 && <p className="muted">No rules yet. Add one to get folk timing on Today.</p>}
+        {all.length > 0 && list.length === 0 && <p className="muted">No {show} rules yet.</p>}
         <ul className="type-list" ref={listRef}>
           {list.map((r, i) => (
             <li key={r.id} className="type-row">
               <div className="type-main">
                 <strong>{ruleTitle(r)}</strong> <span className="badge badge-brass">{weightText(r.weight)}</span>
+                {hasGarden(r) && <> <span className="badge badge-brass">Garden</span></>}
                 <p>{r.text}</p>
                 {favours(r) && <p className="muted">{favours(r)}</p>}
               </div>

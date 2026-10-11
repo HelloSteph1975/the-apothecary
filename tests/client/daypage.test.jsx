@@ -37,6 +37,7 @@ beforeEach(() => {
   payload = {
     sky: sky(),
     suggestions: [{ id: 5, text: 'A good night for ancestor work.' }],
+    garden: [],
     events: [
       ev('task', 'Light a candle', { link: '/todo/7', id: 7 }),
       ev('step', 'Strain: Oil', { link: '/batches/2', id: 2 }),
@@ -205,4 +206,38 @@ it('offers to add a journal entry when the day has none', async () => {
   const card = await screen.findByRole('region', { name: 'Journal entries' });
   expect(within(card).getByText('No journal entries for this day.')).toBeInTheDocument();
   expect(within(card).getByRole('link', { name: 'Add a journal entry' })).toBeInTheDocument();
+});
+
+it('shows an In the garden card with each task, its reasons and the folk label', async () => {
+  payload.garden = [
+    { task: 'harvest-above', reasons: ['Gather while the moon is full.'] },
+    { task: 'weed', reasons: ['Weed in a waning moon.', 'Fire signs favour tending.'] },
+  ];
+  await open('/calendar/2026-10-31');
+  const card = await screen.findByRole('region', { name: 'In the garden' });
+  expect(within(card).getByText('Gather leaves and flowers')).toBeInTheDocument();
+  expect(within(card).getByText('Gather while the moon is full.')).toBeInTheDocument();
+  expect(within(card).getByText('Weed and tend')).toBeInTheDocument();
+  expect(within(card).getByText('Fire signs favour tending.')).toBeInTheDocument();
+  expect(within(card).getByText('Folk tradition')).toBeInTheDocument();
+  const order = [...document.querySelectorAll('section.panel h2')].map(h => h.textContent);
+  expect(order.indexOf('In the garden')).toBe(order.indexOf('Folk timing') + 1);
+});
+
+it('hides the In the garden card when there is nothing for the garden', async () => {
+  await open('/calendar/2026-10-31');
+  await screen.findByRole('heading', { level: 2, name: 'Folk timing' });
+  expect(screen.queryByRole('heading', { name: 'In the garden' })).toBeNull();
+});
+
+it('lists garden and harvest events with what is due, with a Log garden work button', async () => {
+  payload.events = [
+    ev('garden', 'Pruned Rose', { link: '/garden/entries/3', id: 3 }),
+    ev('harvest', 'Harvest Mint', { link: '/garden/plants/5', id: 5 }),
+  ];
+  await open('/calendar/2026-10-31');
+  const card = await screen.findByRole('region', { name: 'Due this day' });
+  expect(within(card).getByRole('link', { name: 'Pruned Rose' })).toHaveAttribute('href', '/garden/entries/3');
+  expect(within(card).getByRole('link', { name: 'Harvest Mint' })).toHaveAttribute('href', '/garden/plants/5');
+  expect(screen.getByRole('link', { name: 'Log garden work' })).toHaveAttribute('href', '/garden/entries/new?date=2026-10-31');
 });
