@@ -14,10 +14,11 @@ import { nextDue } from '../lib/repeat.js';
 import { seedJournalTypes } from '../services/journalTypes.js';
 import { createEntry } from '../services/journal.js';
 import { principalPhases } from '../lib/sky.js';
+import { createShoppingItem } from '../services/shopping.js';
 import { createPlant, createEntry as createGardenEntry } from '../services/garden.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
-const SEED_VERSION = '8';
+const SEED_VERSION = '9';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
@@ -128,6 +129,15 @@ function stockTasks(db, today) {
   createTask(db, {
     title: 'Label the new tinctures', due_on: addDays(today, 2), priority: 'high', today,
     ...(batch ? { related_type: 'batch', related_id: batch } : {}),
+  });
+}
+
+// Adds two of her shopping items. The low jars (Calendula, Beeswax pastilles) show on the list by themselves.
+function stockShopping(db) {
+  const supplier = db.prepare("SELECT id FROM suppliers WHERE name = 'Moonvale Botanicals' AND deleted_at IS NULL").get()?.id;
+  createShoppingItem(db, { name: 'Amber dropper bottles, 30 ml', quantity: '6', section_id: ensureSection(db, 'Containers') });
+  createShoppingItem(db, {
+    name: 'Shea butter', quantity: '250 g', section_id: ensureSection(db, 'Oils and butters'), ...(supplier ? { supplier_id: supplier } : {}),
   });
 }
 
@@ -294,6 +304,7 @@ export function seedDemo(ctx, { reset = false } = {}) {
       if (!db.prepare('SELECT 1 FROM tasks').get()) stockTasks(db, localToday());
       if (!db.prepare('SELECT 1 FROM journal_entries').get()) stockJournal(db, localToday());
       if (!db.prepare('SELECT 1 FROM garden_plants').get() && !db.prepare('SELECT 1 FROM garden_entries').get()) stockGarden(db, localToday(), { withJar: hasDemoJars });
+      if (!db.prepare('SELECT 1 FROM shopping_items').get()) stockShopping(db);
       db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
     });
     return !stocked;
@@ -312,6 +323,7 @@ export function seedDemo(ctx, { reset = false } = {}) {
     stockTasks(db, localToday());
     stockJournal(db, localToday());
     stockGarden(db, localToday());
+    stockShopping(db);
     db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });
   return true;

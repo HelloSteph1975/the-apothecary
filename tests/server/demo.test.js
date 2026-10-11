@@ -65,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -184,7 +184,7 @@ it('gives an existing v3 demo folder the recipes once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '3' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
   t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM recipe_ingredients; DELETE FROM recipes');
   seedDemo(t.ctx);
   expect(recipeNames(t.ctx.db)).toEqual([]);
@@ -249,7 +249,7 @@ it('gives an existing v4 demo folder the batches once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
   clearBatchRows(t.ctx.db);
   seedDemo(t.ctx);
   expect(batchNames(t.ctx.db)).toEqual([]);
@@ -343,7 +343,7 @@ it('gives an existing v5 demo folder the tasks once, only when it has none', () 
   t.ctx.db.prepare("UPDATE settings SET value = '5' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(taskTitles(t.ctx.db)).toEqual(DEMO_TASKS);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
   t.ctx.db.exec('DELETE FROM tasks');
   seedDemo(t.ctx);
   expect(taskTitles(t.ctx.db)).toEqual([]);
@@ -406,7 +406,7 @@ it('gives an existing v6 demo folder the journal entries once, only when it has 
   t.ctx.db.prepare("UPDATE settings SET value = '6' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(entryTitles(t.ctx.db)).toEqual(DEMO_ENTRIES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
   t.ctx.db.exec('DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM journal_entries');
   seedDemo(t.ctx);
   expect(entryTitles(t.ctx.db)).toEqual([]);
@@ -484,7 +484,7 @@ it('gives an existing v7 demo folder the garden once, only when it has none', ()
   expect(seedDemo(t.ctx)).toBe(false);
   expect(plantRows(t.ctx.db)).toHaveLength(2);
   expect(gardenEntryRows(t.ctx.db)).toHaveLength(3);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
   clear();
   seedDemo(t.ctx);
   expect(plantRows(t.ctx.db)).toHaveLength(0);
@@ -520,4 +520,44 @@ it('reset clears the garden, its photos and the jar link, and does not double up
   expect(db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type IN ('garden_plant', 'garden_entry')").get().n).toBe(0);
   expect(db.prepare("SELECT COUNT(*) AS n FROM items WHERE name = 'Lavender flowers'").get().n).toBe(1);
   for (const f of files) expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', f))).toBe(true);
+});
+
+const shoppingRows = db => db.prepare('SELECT * FROM shopping_items WHERE deleted_at IS NULL ORDER BY name').all();
+
+it('adds two of her shopping items and shows the low jars on the list', async () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const rows = shoppingRows(t.ctx.db);
+  expect(rows.map(r => [r.name, r.quantity])).toEqual([['Amber dropper bottles, 30 ml', '6'], ['Shea butter', '250 g']]);
+  const section = id => t.ctx.db.prepare('SELECT name FROM cabinet_sections WHERE id = ?').get(id).name;
+  expect(rows.map(r => section(r.section_id))).toEqual(['Containers', 'Oils and butters']);
+  expect(t.ctx.db.prepare('SELECT name FROM suppliers WHERE id = ?').get(rows[1].supplier_id).name).toBe('Moonvale Botanicals');
+  const names = (await t.http().get('/api/shopping')).body.groups.flatMap(g => g.rows.map(r => r.name));
+  expect(names).toEqual(expect.arrayContaining(['Calendula', 'Beeswax pastilles', 'Shea butter']));
+});
+
+it('gives an existing v8 demo folder her shopping items once, only when it has none', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec('DELETE FROM shopping_items');
+  t.ctx.db.prepare("UPDATE settings SET value = '8' WHERE key = 'demo_seeded'").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(shoppingRows(t.ctx.db)).toHaveLength(2);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('9');
+  t.ctx.db.exec('DELETE FROM shopping_items');
+  seedDemo(t.ctx);
+  expect(shoppingRows(t.ctx.db)).toHaveLength(0);
+});
+
+it('reset clears shopping items and checks and does not double up', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const db = t.ctx.db;
+  db.prepare("INSERT INTO shopping_checks (auto_key, checked_on) VALUES ('low-1', '2026-01-01')").run();
+  db.prepare("INSERT INTO shopping_items (name) VALUES ('Mine')").run();
+  seedDemo(t.ctx, { reset: true });
+  seedDemo(t.ctx, { reset: true });
+  expect(shoppingRows(db).map(r => r.name)).toEqual(['Amber dropper bottles, 30 ml', 'Shea butter']);
+  expect(db.prepare('SELECT COUNT(*) AS n FROM shopping_items').get().n).toBe(2);
+  expect(db.prepare('SELECT COUNT(*) AS n FROM shopping_checks').get().n).toBe(0);
 });
