@@ -18,6 +18,8 @@ let jar;
 let jarFail;
 let jarConflict;
 let jarGone;
+let shopFail;
+let shopJar;
 beforeEach(() => {
   calls = [];
   postFails = false;
@@ -26,12 +28,15 @@ beforeEach(() => {
   jarFail = false;
   jarConflict = false;
   jarGone = false;
+  shopFail = false;
+  shopJar = { name: 'Beeswax pellets', section_id: 2, source_kind: 'bought', purchase: { supplier_id: 2, price: 9.5 } };
   jar = { name: 'Calendula', herb_id: 3, latin_name: 'Calendula officinalis', source_kind: 'grown', source_place: 'Back bed', acquired_on: '2026-10-05', amount: 30, unit: 'g', form: 'fresh', plant_part: 'flower' };
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     calls.push({ method, url, body: opts.body ? JSON.parse(opts.body) : undefined });
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
     if (url === '/api/garden/entries/5/jar') return jarFail ? (jarFail = false, json({ error: 'The harvest would not load.' }, 500)) : json(jar);
+    if (url === '/api/shopping/items/3/jar') return shopFail ? (shopFail = false, json({ error: 'The list item would not load.' }, 500)) : json(shopJar);
     if (url === '/api/sections') return json([{ id: 1, name: 'Herbs', kind: 'herb' }, { id: 2, name: 'Containers', kind: 'supply' }]);
     if (url === '/api/suppliers' && method === 'GET') return json([{ id: 2, name: 'Mountain Rose' }]);
     if (url === '/api/storage-spots') return json(['Pantry shelf']);
@@ -353,4 +358,55 @@ it('does not send garden_entry_id on an ordinary jar', async () => {
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/items')).toBe(true));
   expect(calls.find(c => c.method === 'POST' && c.url === '/api/items').body).not.toHaveProperty('garden_entry_id');
+});
+
+it('fills the form from a shopping list item with the purchase fields and says where it came from', async () => {
+  open('/cabinet/new?shopping=3');
+  expect(await screen.findByText('From your shopping list')).toBeInTheDocument();
+  expect(screen.getByLabelText(/^Section/)).toHaveValue('2');
+  expect(screen.getByLabelText(/^Name/)).toHaveValue('Beeswax pellets');
+  expect(screen.getByLabelText('Source')).toHaveValue('bought');
+  expect(screen.getByLabelText('Supplier')).toHaveValue('2');
+  expect(screen.getByLabelText('Price')).toHaveValue(9.5);
+});
+
+it('links the herb from a shopping list item on an herb shelf', async () => {
+  shopJar = { name: 'Calendula', latin_name: 'Calendula officinalis', herb_id: 3, section_id: 1, source_kind: 'bought' };
+  open('/cabinet/new?shopping=3');
+  expect(await screen.findByText('From your shopping list')).toBeInTheDocument();
+  expect(screen.getByLabelText(/^Section/)).toHaveValue('1');
+  expect(screen.getByLabelText('Grimoire herb')).toHaveValue('3');
+  expect(screen.getByLabelText('Latin name')).toHaveValue('Calendula officinalis');
+});
+
+it('sends shopping_item_id and the purchase with the save', async () => {
+  const user = userEvent.setup();
+  const router = createMemoryRouter(routes, { initialEntries: ['/cabinet/new?shopping=3'] });
+  render(<ToastProvider><ConfirmProvider><RouterProvider router={router} /></ConfirmProvider></ToastProvider>);
+  await screen.findByText('From your shopping list');
+  await user.type(screen.getByLabelText('Amount (required)'), '1');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/items')).toBe(true));
+  expect(calls.find(c => c.method === 'POST' && c.url === '/api/items').body)
+    .toMatchObject({ shopping_item_id: 3, name: 'Beeswax pellets', source_kind: 'bought', purchase: { supplier_id: 2, price: 9.5 } });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/cabinet/items/9'));
+});
+
+it('shows a failed shopping item load with Try again', async () => {
+  const user = userEvent.setup();
+  shopFail = true;
+  open('/cabinet/new?shopping=3');
+  expect(await screen.findByRole('alert')).toHaveTextContent('The list item would not load.');
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByText('From your shopping list')).toBeInTheDocument();
+});
+
+it('does not send shopping_item_id on an ordinary jar', async () => {
+  const user = userEvent.setup();
+  open('/cabinet/new?section=2');
+  await user.type(await screen.findByLabelText(/^Name/), 'Tin');
+  await user.type(screen.getByLabelText('Amount (required)'), '1');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/items')).toBe(true));
+  expect(calls.find(c => c.method === 'POST' && c.url === '/api/items').body).not.toHaveProperty('shopping_item_id');
 });

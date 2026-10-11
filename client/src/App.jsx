@@ -40,6 +40,7 @@ import { PlantForm } from './screens/garden/PlantForm.jsx';
 import { GardenLog } from './screens/garden/GardenLog.jsx';
 import { GardenEntryPage } from './screens/garden/EntryPage.jsx';
 import { GardenEntryForm } from './screens/garden/EntryForm.jsx';
+import { ShoppingList } from './screens/shopping/ShoppingList.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -126,7 +127,7 @@ function PlantFormRoute() {
   return <PlantForm key={id ?? 'new'} />;
 }
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar' && d.to !== '/journal' && d.to !== '/garden').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar' && d.to !== '/journal' && d.to !== '/garden' && d.to !== '/shopping').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -172,6 +173,7 @@ export const routes = [
       { path: 'garden/entries/new', element: <GardenEntryFormRoute /> },
       { path: 'garden/entries/:id/edit', element: <GardenEntryFormRoute /> },
       { path: 'garden/entries/:id', element: <GardenEntryPageRoute /> },
+      { path: 'shopping', element: <ShoppingList /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },

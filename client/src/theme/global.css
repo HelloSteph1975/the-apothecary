@@ -447,3 +447,16 @@ ul.chip-row { list-style: none; padding: 0; }
 .moon-garden h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .moon-garden .chip { display: inline-block; text-decoration: none; }
 .moon-garden-card { margin-top: 24px; }
+
+/* Shopping list */
+.shopping-rows { list-style: none; margin: 0; padding: 0; }
+.shopping-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.shopping-row:last-child { border-bottom: 0; }
+.shopping-box { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--ink-green); }
+.shopping-box:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.shopping-main { flex: 1 1 200px; min-width: 0; }
+.shopping-main p { margin: 2px 0 0; }
+.shopping-name { font-weight: 600; }
+.shopping-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.shopping-checked .shopping-name { text-decoration: line-through; }
+.shopping-checked .shopping-name, .shopping-checked .muted { color: var(--ink-soft); }

@@ -57,6 +57,9 @@ export function ItemForm() {
   // A jar made from a garden harvest starts from what the log knows about it.
   const gardenEntry = !editing && /^\d+$/.test(params.get('garden_entry') ?? '') ? Number(params.get('garden_entry')) : null;
   const jar = useApi(gardenEntry ? `/api/garden/entries/${gardenEntry}/jar` : null);
+  // A jar bought from the shopping list starts from what the list knows about it.
+  const shopping = !editing && !gardenEntry && /^\d+$/.test(params.get('shopping') ?? '') ? Number(params.get('shopping')) : null;
+  const shopJar = useApi(shopping ? `/api/shopping/items/${shopping}/jar` : null);
 
   const [form, setForm] = useState(null);
   const [initial, setInitial] = useState('');
@@ -72,6 +75,7 @@ export function ItemForm() {
     if (form || !sections.data || (editing && !item.data)) return;
     if (!editing && wantedHerb && !herbsApi.data) return;
     if (gardenEntry && !(jar.data && herbsApi.data)) return;
+    if (shopping && !(shopJar.data && herbsApi.data)) return;
     const wantedSection = sections.data.find(x => String(x.id) === params.get('section'));
     const start = editing ? fromItem(item.data) : { ...fromItem({}), section_id: wantedSection ? String(wantedSection.id) : '' };
     const linked = !editing && herbList.find(h => String(h.id) === wantedHerb);
@@ -93,11 +97,22 @@ export function ItemForm() {
       const herbShelf = herb && (wantedSection?.kind === 'herb' ? wantedSection : sections.data.find(x => x.kind === 'herb'));
       if (herbShelf) start.section_id = String(herbShelf.id);
     }
+    if (shopping) {
+      const j = shopJar.data;
+      const herb = herbList.find(h => h.id === j.herb_id);
+      const shelf = sections.data.find(x => x.id === j.section_id) ?? (herb && sections.data.find(x => x.kind === 'herb'));
+      Object.assign(start, {
+        name: s(j.name), latin_name: s(j.latin_name ?? herb?.latin_name), herb_id: herb ? String(herb.id) : '',
+        source_kind: s(j.source_kind), acquired_on: j.source_kind === 'bought' ? todayString() : '',
+        supplier_id: s(j.purchase?.supplier_id), price: s(j.purchase?.price),
+      });
+      if (shelf) start.section_id = String(shelf.id);
+    }
     setForm(start);
     setInitial(JSON.stringify(start));
     typedExpiry.current = Boolean(start.expires_on);
     initialKey.current = editing ? `${start.form}|${start.acquired_on}` : '';
-  }, [form, sections.data, item.data, editing, params, wantedHerb, herbsApi.data, herbsApi.error, herbList, gardenEntry, jar.data]);
+  }, [form, sections.data, item.data, editing, params, wantedHerb, herbsApi.data, herbsApi.error, herbList, gardenEntry, jar.data, shopping, shopJar.data]);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
   const err = k => errors[k] ?? errors[`purchase.${k}`];
@@ -147,6 +162,7 @@ export function ItemForm() {
       body.purchase = { supplier_id: toNum(form.supplier_id), purchased_on: orNull(form.acquired_on), price: toNum(form.price), order_note: orNull(form.order_note) };
     }
     if (gardenEntry) body.garden_entry_id = gardenEntry;
+    if (shopping) body.shopping_item_id = shopping;
     setFormError('');
     try {
       const result = editing ? await api.patch(`/api/items/${id}`, body) : await api.post('/api/items', body);
@@ -158,6 +174,7 @@ export function ItemForm() {
       // A harvest that was deleted or changed kind after the form loaded has no field to highlight, so the message goes at the top.
       if (Object.keys(ex.details ?? {}).length === 0) setFormError(ex.message);
       else if (ex.details.garden_entry_id) setFormError(ex.details.garden_entry_id);
+      else if (ex.details.shopping_item_id) setFormError(ex.details.shopping_item_id);
       toast.show({ message: ex.message, duration: 6000 });
     }
   }
@@ -181,7 +198,16 @@ export function ItemForm() {
       </>
     );
   }
-  if (!loadError && gardenEntry && herbsApi.error) {
+  if (!loadError && shopping && shopJar.error) {
+    return (
+      <>
+        <PageHeader title="Add to the cabinet" />
+        <p role="alert">{shopJar.error.message}</p>
+        <Button onClick={shopJar.reload}>Try again</Button>
+      </>
+    );
+  }
+  if (!loadError && (gardenEntry || shopping) && herbsApi.error) {
     return (
       <>
         <PageHeader title="Add to the cabinet" />
@@ -199,6 +225,7 @@ export function ItemForm() {
     <>
       <PageHeader title={editing ? `Edit ${item.data.name}` : 'Add to the cabinet'} />
       {gardenEntry && <p className="muted">From your garden log</p>}
+      {shopping && <p className="muted">From your shopping list</p>}
       {formError && <p role="alert" className="field-error">{formError}</p>}
       <form onSubmit={save} noValidate>
         <div className="card-grid">

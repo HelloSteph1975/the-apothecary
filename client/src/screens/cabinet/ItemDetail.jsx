@@ -42,6 +42,13 @@ export function ItemDetail() {
   if (usedUp) badges.push({ key: 'used_up', label: 'Used up', tone: 'brass' });
   const source = sourceText(item);
 
+  async function addToList() {
+    try {
+      await api.post('/api/shopping/items', { name: item.name, section_id: item.section_id, item_id: item.id });
+      toast.show({ message: 'Added to the shopping list', duration: 6000, action: { label: 'See the list', onClick: () => navigate('/shopping') } });
+    } catch (e) { toast.show({ message: e.message, duration: 6000 }); }
+  }
+
   async function toggleUsedUp() {
     try {
       await api.patch(`/api/items/${item.id}`, { used_up: !usedUp });
@@ -56,6 +63,7 @@ export function ItemDetail() {
           <>
             <WaxSeal onClick={() => setRestocking(true)}>Restock</WaxSeal>
             <Button as={Link} variant="secondary" to={`/cabinet/items/${item.id}/edit`}>Edit</Button>
+            {!usedUp && !item.status?.low && <Button variant="secondary" onClick={addToList}>Add to shopping list</Button>}
             <Button variant="secondary" onClick={toggleUsedUp}>{usedUp ? 'Put back' : 'Mark used up'}</Button>
             <Button variant="danger" onClick={async () => {
               if (await del({ url: `/api/items/${item.id}`, label: item.name, onUndo: () => navigate(`/cabinet/items/${item.id}`) })) navigate('/cabinet');
