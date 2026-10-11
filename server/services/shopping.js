@@ -203,7 +203,12 @@ export function undoClear(db, stamp) {
 export function jarPrefill(db, id) {
   const w = getRow(db, id);
   const last = lastFor(db, w);
-  const herb = w.herb_id != null && w.herb_deleted == null ? repos(db).herbs.get(w.herb_id) : null;
+  let herb = w.herb_id != null && w.herb_deleted == null ? repos(db).herbs.get(w.herb_id) : null;
+  if (!herb && w.item_id != null && w.item_deleted == null) {
+    // No herb of its own: borrow the live herb of the jar it points at.
+    const viaJar = db.prepare('SELECT i.herb_id FROM items i JOIN herbs h ON h.id = i.herb_id AND h.deleted_at IS NULL WHERE i.id = ?').get(w.item_id);
+    if (viaJar) herb = repos(db).herbs.get(viaJar.herb_id);
+  }
   const purchase = Object.fromEntries(Object.entries({
     supplier_id: w.supplier_id != null && w.supplier_deleted == null ? w.supplier_id : last?.supplier?.id, price: last?.price,
   }).filter(([, v]) => v != null));

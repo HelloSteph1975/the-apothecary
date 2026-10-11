@@ -9,13 +9,16 @@ HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open')
 
 let calls;
 let saveError;
+let failing;
 beforeEach(() => {
   calls = [];
   saveError = null;
+  failing = new Set();
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     calls.push({ method, url, body: opts.body ? JSON.parse(opts.body) : undefined });
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
+    if (failing.has(url)) return json({ error: 'The shelves are not answering.' }, 500);
     if (url === '/api/sections') return json([{ id: 1, name: 'Herbs', kind: 'herb' }, { id: 2, name: 'Containers', kind: 'supply' }]);
     if (url === '/api/suppliers') return json([{ id: 2, name: 'Moonvale Herbs' }]);
     if (url === '/api/herbs') return json([{ id: 3, common_name: 'Calendula', latin_name: 'Calendula officinalis' }]);
@@ -124,4 +127,19 @@ it('creates one item when Enter is pressed twice in one tick', async () => {
   fireEvent.submit(form);
   await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/shopping/items')).toBe(true));
   expect(calls.filter(c => c.method === 'POST' && c.url === '/api/shopping/items')).toHaveLength(1);
+});
+
+it('says so when the choices fail to load, keeps Name usable, and retries only on Try again', async () => {
+  const user = userEvent.setup();
+  failing.add('/api/suppliers');
+  show();
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load the choices.");
+  await user.type(screen.getByLabelText(/^Name/), 'Amber bottles');
+  expect(screen.getByLabelText(/^Name/)).toHaveValue('Amber bottles');
+  failing.clear();
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByRole('option', { name: 'Moonvale Herbs' })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  expect(calls.filter(c => c.url === '/api/suppliers')).toHaveLength(2);
+  expect(calls.filter(c => c.url === '/api/sections')).toHaveLength(1);
 });

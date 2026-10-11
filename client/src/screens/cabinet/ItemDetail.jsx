@@ -47,7 +47,10 @@ export function ItemDetail() {
     if (addingRef.current) return;
     addingRef.current = true;
     try {
-      await api.post('/api/shopping/items', { name: item.name, section_id: item.section_id, item_id: item.id });
+      // herb_name only comes back for a live herb, so a deleted herb is not linked.
+      const body = { name: item.name, section_id: item.section_id, item_id: item.id };
+      if (item.herb_id != null && item.herb_name) body.herb_id = item.herb_id;
+      await api.post('/api/shopping/items', body);
       toast.show({ message: 'Added to the shopping list', duration: 6000, action: { label: 'See the list', onClick: () => navigate('/shopping') } });
     } catch (e) { toast.show({ message: e.message, duration: 6000 }); } finally { addingRef.current = false; }
   }

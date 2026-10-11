@@ -46,6 +46,9 @@ export function ShoppingItemDialog({ open, item, onClose, onSaved }) {
     // Only on opening, so a refetch never wipes what she typed.
   }, [open]);
 
+  const failed = [sections, suppliers, herbs, jars].filter(x => x.error);
+  const retryLoads = () => failed.forEach(x => x.reload());
+
   async function save(e) {
     e.preventDefault();
     if (savingRef.current) return;
@@ -74,6 +77,12 @@ export function ShoppingItemDialog({ open, item, onClose, onSaved }) {
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" form="shopping-item-form" disabled={saving}>Save</Button></>}>
       <form id="shopping-item-form" onSubmit={save} noValidate>
         {formError && <p role="alert" className="field-error">{formError}</p>}
+        {failed.length > 0 && (
+          <div role="alert" className="field-error">
+            <p>Couldn't load the choices.</p>
+            <Button variant="secondary" onClick={retryLoads}>Try again</Button>
+          </div>
+        )}
         <Field label="Name (required)" error={errors.name}>
           <TextInput data-autofocus required aria-required="true" value={form.name} onChange={e => set('name', e.target.value)} />
         </Field>

@@ -186,6 +186,14 @@ it('adds the jar to the shopping list with a link to the list', async () => {
   expect(screen.getByRole('button', { name: 'See the list' })).toBeInTheDocument();
 });
 
+it('sends the live herb along when the jar has one', async () => {
+  const user = userEvent.setup();
+  item = { ...baseItem, status: { low: false, expiring: false, expired: false }, section_id: 1, herb_id: 3, herb_slug: 'nettle', herb_name: 'Nettle' };
+  open();
+  await user.click(await screen.findByRole('button', { name: 'Add to shopping list' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/shopping/items')?.body).toEqual({ name: 'Nettle', section_id: 1, item_id: 7, herb_id: 3 }));
+});
+
 it('adds one shopping item for a double click', async () => {
   item = { ...baseItem, status: { low: false, expiring: false, expired: false }, section_id: 1 };
   open();

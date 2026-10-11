@@ -110,6 +110,33 @@ test('keeps a shopping list and makes labels', async ({ page, request }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Labels' })).toBeVisible();
   await page.screenshot({ path: 'test-results/labels.png' });
 
+  // 5. In print, each sheet is exactly one letter page: no screen margin, flex or gap, and labels sit at their slot.
+  await page.emulateMedia({ media: 'print' });
+  const geometry = await page.evaluate(() => {
+    const rect = el => el.getBoundingClientRect();
+    const pages = [...document.querySelectorAll('[data-testid="label-page"]')];
+    const sheets = document.querySelector('.label-sheets');
+    return {
+      display: getComputedStyle(sheets).display,
+      gap: getComputedStyle(sheets).rowGap,
+      previewMargin: getComputedStyle(document.querySelector('.label-preview')).marginTop,
+      pages: pages.map(p => ({ top: rect(p).top, left: rect(p).left, width: rect(p).width, height: rect(p).height })),
+      cards: pages.map(p => { const c = p.querySelector('[data-testid="label-card"]'); const r = rect(c); const o = rect(p); return { left: r.left - o.left, top: r.top - o.top }; }),
+    };
+  });
+  expect(geometry.display).toBe('block');
+  expect(geometry.gap).toBe('normal');
+  expect(geometry.previewMargin).toBe('0px');
+  expect(geometry.pages).toHaveLength(2);
+  expect(geometry.pages[0].width).toBeCloseTo(816, 0);
+  // Sheet 2 starts one sheet height below sheet 1 (a new page), and its first label is 0.5in in from the corner.
+  expect(geometry.pages[1].top - geometry.pages[0].top).toBeCloseTo(geometry.pages[0].height, 0);
+  expect(geometry.cards[1].left).toBeCloseTo(48, 0);
+  expect(geometry.cards[1].top).toBeCloseTo(48, 0);
+  const pdf = await page.pdf({ preferCSSPageSize: true });
+  expect(pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g)).toHaveLength(2);
+  await page.emulateMedia({ media: 'screen' });
+
   // Tidy up the jar this run made.
   await request.delete(`/api/items/${jarId}`);
 });

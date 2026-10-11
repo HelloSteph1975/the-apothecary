@@ -373,12 +373,17 @@ textarea.input { resize: vertical; }
 .label-save-error p { margin: 6px 0 0; }
 .label-files { list-style: none; margin: 0; padding: 0; }
 .label-files li { padding: 3px 0; }
-.label-preview { margin: 24px 0; }
-.label-sheets { display: flex; flex-wrap: wrap; gap: 20px; }
+/* Screen-only layout. It sits in @media screen so it can never override the print rules above. */
+@media screen {
+  .label-preview { margin: 24px 0; }
+  .label-sheets { display: flex; flex-wrap: wrap; gap: 20px; }
+}
 .label-page-title { margin: 0 0 4px; font-style: italic; color: var(--ink-soft); }
 /* Each sheet is built at full size in inches and shown at half size on screen. */
-.label-page-frame { width: 4.25in; max-width: 100%; }
-.label-page-frame .label-page { zoom: .5; }
+@media screen {
+  .label-page-frame { width: 4.25in; max-width: 100%; }
+  .label-page-frame .label-page { zoom: .5; }
+}
 .label-page { position: relative; width: 8.5in; height: 11in; background: #fffdf7; box-shadow: 0 1px 6px rgba(46, 29, 18, .35); overflow: hidden; }
 .label-card, .label-slot-empty { position: absolute; box-sizing: border-box; }
 .label-card {

@@ -404,6 +404,17 @@ describe('jar prefill', () => {
     expect((await s.h().get(`/api/shopping/items/${plain.id}/jar`)).body).toEqual({ name: 'Wax', source_kind: 'bought' });
   });
 
+  it('borrows the herb and Latin name from the linked live jar when the item has no herb', async () => {
+    const s = setup();
+    const herb = s.herb('Sage');
+    const jar = await s.jar({ herb_id: herb.id });
+    const a = (await s.add({ name: 'Sage refill', item_id: jar.id })).body;
+    const out = (await s.h().get(`/api/shopping/items/${a.id}/jar`)).body;
+    expect(out).toMatchObject({ name: 'Sage refill', herb_id: herb.id, latin_name: 'Sage latinus' });
+    s.r.herbs.remove(herb.id);
+    expect((await s.h().get(`/api/shopping/items/${a.id}/jar`)).body).toEqual({ name: 'Sage refill', source_kind: 'bought' });
+  });
+
   it('keeps a live supplier without a price', async () => {
     const s = setup();
     const sup = s.supplier('Shop');
