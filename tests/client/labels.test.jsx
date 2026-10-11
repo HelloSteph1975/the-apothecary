@@ -44,7 +44,8 @@ beforeEach(() => {
       if (dataFail) return json({ error: 'Could not load the labels.' }, 500);
       const q = new URLSearchParams(url.split('?')[1]);
       const ids = k => (q.get(k) ? q.get(k).split(',') : []);
-      return json([...ids('items').map(i => DATA[`item:${i}`]), ...ids('batches').map(i => DATA[`batch:${i}`])].filter(Boolean));
+      const made = i => DATA[`item:${i}`] ?? (Number(i) >= 10 ? { ...DATA['item:2'], source: { kind: 'item', id: Number(i) }, name: `Jar ${i}` } : undefined);
+      return json([...ids('items').map(made), ...ids('batches').map(i => DATA[`batch:${i}`])].filter(Boolean));
     }
     if (url === '/api/labels/pdf' && method === 'POST') {
       const out = pdfReply();
@@ -320,4 +321,77 @@ it('leaves quietly when nothing was edited', async () => {
   await group('Calendula');
   await user.click(screen.getByRole('link', { name: 'Shopping list' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/shopping'));
+});
+
+it('waits for the new data after a pick change and never prints a label that was unpicked', async () => {
+  const user = userEvent.setup();
+  await open('/labels?items=1,2');
+  await group('Calendula');
+  await group('Lavender');
+  let release;
+  const slow = new Promise(r => { release = r; });
+  const base = global.fetch;
+  global.fetch = vi.fn(async (url, opts) => {
+    if (url === '/api/labels/data?items=2') await slow;
+    return base(url, opts);
+  });
+  await user.click(screen.getByRole('checkbox', { name: 'Calendula' }));
+  expect(await screen.findByText('Opening the labels…')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save as PDF' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Print' })).toBeDisabled();
+  expect(screen.getAllByTestId('label-card')).toHaveLength(1);
+  release();
+  await group('Lavender');
+  await user.click(screen.getByRole('button', { name: 'Save as PDF' }));
+  await screen.findByText(/Saved labels-.* in your labels folder/);
+  expect(pdfCalls()[0].body.labels.map(l => l.name)).toEqual(['Lavender']);
+});
+
+it('clamps a start beyond the sheet, shows it and sends the same number', async () => {
+  const user = userEvent.setup();
+  await open('/labels?items=1&size=medium-rect');
+  await group('Calendula');
+  await user.clear(screen.getByLabelText('Start at label'));
+  await user.type(screen.getByLabelText('Start at label'), '9');
+  await user.selectOptions(screen.getByLabelText('Size'), 'large-rect');
+  expect(screen.getByText('Using label 6, the closest this size has (1 to 6).')).toBeInTheDocument();
+  expect(screen.getAllByTestId('label-slot-empty')).toHaveLength(5);
+  await user.click(screen.getByRole('button', { name: 'Save as PDF' }));
+  await screen.findByText(/Saved labels-/);
+  expect(pdfCalls()[0].body.start).toBe(6);
+});
+
+it('drops a label\'s edits when it is unpicked, so the leave prompt follows what is picked', async () => {
+  const user = userEvent.setup();
+  await open('/labels?items=1,2');
+  const cal = await group('Calendula');
+  await user.type(within(cal).getByLabelText('Name'), 'x');
+  await user.click(screen.getByRole('checkbox', { name: 'Calendula' }));
+  await group('Lavender');
+  await user.click(screen.getByRole('link', { name: 'Shopping list' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/shopping'));
+  expect(screen.queryByText('Leave without saving?')).toBeNull();
+});
+
+it('limits the text fields to what the PDF accepts', async () => {
+  await open('/labels?items=1');
+  const cal = await group('Calendula');
+  expect(within(cal).getByLabelText('Name')).toHaveAttribute('maxlength', '300');
+  expect(within(cal).getByLabelText('Latin name')).toHaveAttribute('maxlength', '300');
+  expect(within(cal).getByLabelText('Ingredients')).toHaveAttribute('maxlength', '2000');
+  expect(within(cal).getByLabelText('Caution')).toHaveAttribute('maxlength', '2000');
+});
+
+it('stops at 500 printed labels with a message instead of drawing them', async () => {
+  const user = userEvent.setup();
+  await open('/labels?items=10,11,12,13,14,15');
+  for (const n of [10, 11, 12, 13, 14, 15]) {
+    const g = await group(`Jar ${n}`);
+    await user.clear(within(g).getByLabelText('Copies'));
+    await user.type(within(g).getByLabelText('Copies'), '99');
+  }
+  expect(screen.getByText('At most 500 printed labels at a time. You have 594. Lower some of the copies.')).toHaveAttribute('role', 'alert');
+  expect(screen.queryAllByTestId('label-card')).toHaveLength(0);
+  expect(screen.getByRole('button', { name: 'Save as PDF' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Print' })).toBeDisabled();
 });

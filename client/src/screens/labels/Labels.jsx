@@ -14,6 +14,7 @@ import { startSlot } from '../../lib/labels.js';
 import { LabelSheet } from './LabelSheet.jsx';
 
 const MAX_PICKED = 60;
+const MAX_PRINTED = 500;
 const DEFAULT_SIZE = 'medium-rect';
 
 const ids = raw => [...new Set((raw || '').split(',').filter(p => /^\d+$/.test(p.trim()) && Number(p) > 0).map(Number))];
@@ -45,10 +46,10 @@ function LabelSetup({ label, index, errors, onEdit, onReset }) {
         <Button variant="secondary" size="sm" onClick={onReset}>Reset</Button>
       </div>
       <div className="label-setup-grid">
-        <Field label="Name" error={err('name')}><TextInput value={label.name} onChange={e => onEdit({ name: e.target.value })} /></Field>
-        <Field label="Latin name" error={err('latin_name')}><TextInput value={label.latin_name} onChange={e => onEdit({ latin_name: e.target.value })} /></Field>
-        <Field label="Ingredients" error={err('ingredients')}><TextArea rows={2} value={label.ingredients} onChange={e => onEdit({ ingredients: e.target.value })} /></Field>
-        <Field label="Caution" error={err('caution')}><TextArea rows={2} value={label.caution} onChange={e => onEdit({ caution: e.target.value })} /></Field>
+        <Field label="Name" error={err('name')}><TextInput maxLength={300} value={label.name} onChange={e => onEdit({ name: e.target.value })} /></Field>
+        <Field label="Latin name" error={err('latin_name')}><TextInput maxLength={300} value={label.latin_name} onChange={e => onEdit({ latin_name: e.target.value })} /></Field>
+        <Field label="Ingredients" error={err('ingredients')}><TextArea rows={2} maxLength={2000} value={label.ingredients} onChange={e => onEdit({ ingredients: e.target.value })} /></Field>
+        <Field label="Caution" error={err('caution')}><TextArea rows={2} maxLength={2000} value={label.caution} onChange={e => onEdit({ caution: e.target.value })} /></Field>
         <Field label="Copies" error={err('copies')}>
           <NumberInput min={1} max={99} step={1} value={label.copiesText} onChange={e => onEdit({ copies: e.target.value })} />
         </Field>
@@ -87,7 +88,11 @@ export function Labels() {
   const sizeKey = params.get('size');
   const size = sizes.data ? (sizes.data.find(s => s.key === sizeKey) ?? sizes.data.find(s => s.key === DEFAULT_SIZE) ?? sizes.data[0]) : null;
 
-  const labels = useMemo(() => (picked && data.data ? data.data : []).map(d => {
+  const startNum = size ? startSlot(size, start) + 1 : 1;
+  const startClamped = size && String(startNum) !== String(start).trim();
+
+  // With keepPrevious the old reply lingers while the new one loads, so only labels that are still picked count.
+  const labels = useMemo(() => (picked && data.data ? data.data : []).filter(d => (d.source.kind === 'item' ? itemIds : batchIds).includes(d.source.id)).map(d => {
     const e = edits[keyOf(d.source)] ?? {};
     const text = f => e[f] ?? d[f] ?? '';
     const copiesText = e.copies ?? '1';
@@ -96,9 +101,13 @@ export function Labels() {
       caution: text('caution'), made_on: d.made_on, expires_on: d.expires_on, phase: d.phase,
       copiesText, copies: copiesOf(copiesText), show_moon: e.show_moon ?? true,
     };
-  }), [picked, data.data, edits]);
+  }), [picked, data.data, edits, itemIds, batchIds]);
 
-  const dirty = labels.some(l => edits[l.key]);
+  const dirty = Object.keys(edits).length > 0;
+  const printed = labels.reduce((n, l) => n + l.copies, 0);
+  const tooMany = printed > MAX_PRINTED;
+  const waiting = data.loading;
+  const canUse = labels.length > 0 && !waiting && !tooMany;
   useLeaveGuard(dirty, { sameScreenFree: true });
 
   const setParam = useCallback((key, value) => {
@@ -110,20 +119,22 @@ export function Labels() {
   }, [setParams]);
   const toggle = (param, current, id) => {
     const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
+    // Edits belong to a label only while it is picked.
+    if (current.includes(id)) reset(`${param === 'items' ? 'item' : 'batch'}:${id}`);
     setParam(param, next.join(','));
   };
   const edit = (key, patch) => setEdits(all => ({ ...all, [key]: { ...all[key], ...patch } }));
   const reset = key => setEdits(all => { const { [key]: _gone, ...rest } = all; return rest; });
 
   async function savePdf() {
-    if (savingRef.current || labels.length === 0) return;
+    if (savingRef.current || !canUse) return;
     savingRef.current = true;
     setSaving(true);
     setSaveError(null);
     try {
       const res = await api.post('/api/labels/pdf', {
         size: size.key,
-        start: Number(start),
+        start: startNum,
         labels: labels.map(l => ({
           name: l.name, latin_name: l.latin_name, made_on: l.made_on, expires_on: l.expires_on,
           ingredients: l.ingredients, caution: l.caution, show_moon: l.show_moon, copies: Number(l.copiesText),
@@ -154,7 +165,6 @@ export function Labels() {
   const details = saveError?.details ?? {};
   const loose = Object.entries(details).filter(([k]) => k !== 'start' && !/^labels\.\d+\.(name|latin_name|ingredients|caution|copies)$/.test(k));
   const perSheet = size.perSheet;
-  const startNum = startSlot(size, start) + 1;
 
   const jarList = (jars.data || []).filter(j => j.name.toLowerCase().includes(jarFilter.trim().toLowerCase()));
   const jarSections = [];
@@ -223,17 +233,19 @@ export function Labels() {
                   options={sizes.data.map(s => ({ value: s.key, label: `${s.name}, ${s.perSheet} per sheet` }))} />
               </Field>
               <Field label="Start at label" error={details.start}
-                hint={`A number from 1 to ${perSheet}. Skips labels already used on a sheet.`}>
+                hint={startClamped ? `Using label ${startNum}, the closest this size has (1 to ${perSheet}).` : `A number from 1 to ${perSheet}. Skips labels already used on a sheet.`}>
                 <NumberInput min={1} max={perSheet} step={1} value={start} onChange={e => setStart(e.target.value)} />
               </Field>
             </div>
-            {!data.data ? <p role="status">Opening the labels…</p> : labels.map((l, i) => (
+            {(!data.data || waiting) && <p role="status">Opening the labels…</p>}
+            {labels.map((l, i) => (
               <LabelSetup key={l.key} label={l} index={i} errors={details} onEdit={patch => edit(l.key, patch)} onReset={() => reset(l.key)} />
             ))}
             <div className="label-actions">
-              <Button onClick={() => window.print()} disabled={labels.length === 0}>Print</Button>
-              <Button variant="secondary" onClick={savePdf} disabled={labels.length === 0 || saving}>Save as PDF</Button>
+              <Button onClick={() => window.print()} disabled={!canUse}>Print</Button>
+              <Button variant="secondary" onClick={savePdf} disabled={!canUse || saving}>Save as PDF</Button>
             </div>
+            {tooMany && <p role="alert">At most {MAX_PRINTED} printed labels at a time. You have {printed}. Lower some of the copies.</p>}
             {saveError && (
               <div className="label-save-error">
                 <p role="alert">{saveError.message}</p>
@@ -244,7 +256,7 @@ export function Labels() {
         </div>
       )}
 
-      {labels.length > 0 && (
+      {labels.length > 0 && !tooMany && (
         <section className="label-preview" aria-label="Preview">
           <h2 className="no-print">Preview</h2>
           <p className="muted no-print">Sheets are drawn smaller here. Your labels print at full size on letter paper, starting at label {startNum}.</p>
