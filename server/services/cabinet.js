@@ -1,4 +1,4 @@
-import { notFound } from '../http.js';
+import { HttpError, notFound } from '../http.js';
 import { check } from '../validate.js';
 import { transaction } from '../db/connection.js';
 import { repos } from '../db/repos.js';
@@ -78,6 +78,16 @@ function itemData(input, { partial }) {
   return data;
 }
 
+// A jar made from a garden harvest or foraging: the entry must be live, one of those kinds, and not already in a live jar.
+function harvestToLink(db, id) {
+  const entry = Number.isInteger(id) ? repos(db).gardenEntries.get(id) : null;
+  if (!entry || (entry.kind !== 'harvested' && entry.kind !== 'foraged')) {
+    throw new HttpError(400, 'Please fix the highlighted fields.', { garden_entry_id: "That harvest isn't in the garden log" });
+  }
+  if (entry.item_id != null && repos(db).items.get(entry.item_id)) throw new HttpError(409, 'That harvest is already in the cabinet.');
+  return entry;
+}
+
 export function createItem(db, body) {
   const data = itemData(body, { partial: false });
   assertLive(db, 'cabinet_sections', data.section_id, 'section_id', 'section');
@@ -86,7 +96,9 @@ export function createItem(db, body) {
   if (purchase) assertLive(db, 'suppliers', purchase.supplier_id, 'supplier_id', 'supplier');
   return transaction(db, () => {
     const r = repos(db);
+    const entry = body?.garden_entry_id == null ? null : harvestToLink(db, body.garden_entry_id);
     const item = r.items.create(data);
+    if (entry) r.gardenEntries.update(entry.id, { item_id: item.id });
     if (purchase) r.purchases.create({ ...purchase, item_id: item.id, unit: item.unit });
     return item;
   });

@@ -3,6 +3,8 @@ process.env.TZ = 'America/Mexico_City';
 import { it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { makeTestContext } from './helpers.js';
 import { skyFacts } from '../../server/lib/sky.js';
+import { repos } from '../../server/db/repos.js';
+import { seedTimingRules } from '../../server/services/timing.js';
 
 let t;
 // Only Date is faked, so the sync and the overdue flags see the same day the test uses.
@@ -21,7 +23,7 @@ it('returns a day per date with the sky and a marker on principal phases', async
   expect(res.body.days).toHaveLength(31);
   const d = res.body.days[0];
   const f = skyFacts('2026-10-01');
-  expect(d).toEqual({ day: '2026-10-01', phase: f.phase.name, sign: f.moon.sign, ruler: f.ruler, festival: f.festival, marker: null });
+  expect(d).toEqual({ day: '2026-10-01', phase: f.phase.name, sign: f.moon.sign, ruler: f.ruler, festival: f.festival, marker: null, garden: expect.any(Array) });
   const markerOf = day => res.body.days.find(x => x.day === day).marker;
   expect(markerOf('2026-10-03')).toBe('last quarter');
   expect(markerOf('2026-10-10')).toBe('new');
@@ -137,6 +139,55 @@ it('returns no suggestions when sky suggestions are off, and the sky still shows
   const res = await day('2026-10-31');
   expect(res.body.suggestions).toEqual([]);
   expect(res.body.sky.festival).toBe('Samhain');
+});
+
+it('shows garden entries and expected harvests, with no duplicate harvest task event', async () => {
+  t = makeTestContext();
+  const p = (await t.http().post('/api/garden/plants').send({ name: 'Calendula', expected_harvest_on: '2026-10-14' })).body;
+  const ended = (await t.http().post('/api/garden/plants').send({ name: 'Basil', expected_harvest_on: '2026-10-15', ended_on: '2026-10-01' })).body;
+  const e = (await t.http().post('/api/garden/entries').send({ plant_id: p.id, kind: 'pruned', entry_date: '2026-10-12' })).body;
+  const gone = (await t.http().post('/api/garden/entries').send({ plant_id: p.id, kind: 'pruned', entry_date: '2026-10-13' })).body;
+  await t.http().delete(`/api/garden/entries/${gone.id}`);
+  const res = await get('from=2026-10-01&to=2026-10-31');
+  const ev = res.body.events;
+  expect(ev.filter(x => x.kind === 'garden')).toEqual([{
+    kind: 'garden', day: '2026-10-12', title: 'Pruned Calendula', link: `/garden/entries/${e.id}`, done: false, overdue: false, id: e.id,
+  }]);
+  expect(ev.filter(x => x.kind === 'harvest')).toEqual([
+    { kind: 'harvest', day: '2026-10-14', title: 'Harvest Calendula', link: `/garden/plants/${p.id}`, done: false, overdue: false, id: p.id },
+  ]);
+  expect(ev.some(x => x.id === ended.id && x.kind === 'harvest')).toBe(false);
+  const keys = t.ctx.db.prepare('SELECT auto_key FROM tasks').all().map(r => r.auto_key);
+  expect(keys).toContain(`harvest:${p.id}:2026-10-14`);
+  expect(ev.filter(x => x.title === 'Harvest Calendula')).toHaveLength(1);
+});
+
+it('orders events step, task, expiry, harvest, garden, journal on one day', async () => {
+  t = makeTestContext();
+  const p = (await t.http().post('/api/garden/plants').send({ name: 'Calendula', expected_harvest_on: '2026-10-12' })).body;
+  await t.http().post('/api/garden/entries').send({ plant_id: p.id, kind: 'observed', entry_date: '2026-10-12' });
+  await t.http().post('/api/tasks').send({ title: 'Task', due_on: '2026-10-12', today: TODAY });
+  await addItem({ name: 'Rose', expires_on: '2026-10-12' });
+  await addBatch([{ title: 'Strain', due_on: '2026-10-12' }]);
+  const jt = repos(t.ctx.db).journalTypes.create({ name: 'Note', icon: 'pen', sort_order: 0 });
+  await t.http().post('/api/journal').send({ type_id: jt.id, title: 'Note', entry_date: '2026-10-12' });
+  const res = await day('2026-10-12');
+  expect(res.body.events.map(x => x.kind)).toEqual(['step', 'task', 'expiry', 'harvest', 'garden', 'journal']);
+});
+
+it('adds the garden task keys to each day and the reasons to the day page', async () => {
+  t = makeTestContext();
+  seedTimingRules(t.ctx.db);
+  const res = await get('from=2026-10-24&to=2026-10-26');
+  const full = res.body.days.find(x => x.day === '2026-10-25');
+  expect(full.garden).toContain('harvest-above');
+  expect(res.body.days.every(x => Array.isArray(x.garden))).toBe(true);
+  const d = (await day('2026-10-25')).body;
+  const above = d.garden.find(x => x.task === 'harvest-above');
+  expect(above.reasons.length).toBeGreaterThan(0);
+  await t.http().put('/api/settings').send({ sky_suggestions: 'off' });
+  expect((await day('2026-10-25')).body.garden).toEqual([]);
+  expect((await get('from=2026-10-24&to=2026-10-26')).body.days.every(x => x.garden.length === 0)).toBe(true);
 });
 
 it('runs the auto task sync and flags overdue for a past day', async () => {

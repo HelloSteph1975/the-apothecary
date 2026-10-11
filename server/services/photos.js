@@ -55,7 +55,8 @@ export function cascadeRestorePhotos(ctx, ownerType, ownerId, stamp) {
 }
 
 // Kinds of record a photo can belong to, and their tables. Later stages add more.
-export const PHOTO_OWNERS = { item: 'items', supplier: 'suppliers', herb: 'herbs', recipe: 'recipes', batch: 'batches', task: 'tasks', journal: 'journal_entries' };
+export const PHOTO_OWNERS = { item: 'items', supplier: 'suppliers', herb: 'herbs', recipe: 'recipes', batch: 'batches', task: 'tasks', journal: 'journal_entries',
+  garden_plant: 'garden_plants', garden_entry: 'garden_entries' };
 
 export function setCover(db, photo) {
   db.prepare('UPDATE photos SET is_cover = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE owner_type = ? AND owner_id = ? AND deleted_at IS NULL')

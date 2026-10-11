@@ -22,8 +22,10 @@ let calls;
 let location;
 let events;
 let hold;
+let gardenByDay;
 beforeEach(() => {
   calls = [];
+  gardenByDay = {};
   events = EVENTS;
   hold = null;
   global.fetch = vi.fn(async url => {
@@ -39,7 +41,7 @@ beforeEach(() => {
         const full = d === '2026-10-26';
         days.push({
           day: d, phase: full ? 'full' : 'waxing crescent', sign: 'Scorpio', ruler: 'Venus',
-          festival: d === '2026-10-31' ? 'Samhain' : null, marker: full ? 'full' : null,
+          festival: d === '2026-10-31' ? 'Samhain' : null, marker: full ? 'full' : null, garden: gardenByDay[d] ?? [],
         });
       }
       return json({ days, events: events.filter(e => e.day >= m[1] && e.day <= m[2]) });
@@ -297,4 +299,63 @@ it('names a month cell with only a journal entry without saying something is due
   const name = cell(/^Tuesday, October 13/).getAttribute('aria-label');
   expect(name).toContain('1 journal entry');
   expect(name).not.toContain('due');
+});
+
+it('shows a sprout mark labelled with the garden tasks of the day', async () => {
+  gardenByDay = { '2026-10-13': ['harvest-above', 'weed'] };
+  await open('/calendar?view=month&date=2026-10-09');
+  const td = cell(/^Tuesday, October 13/).closest('td');
+  expect(within(td).getByRole('img', { name: 'Folk tradition, good for: Gather leaves and flowers, Weed and tend' })).toBeInTheDocument();
+  expect(within(cell(/^Wednesday, October 14/).closest('td')).queryByRole('img', { name: /good for/ })).toBeNull();
+});
+
+it('hides the sprout marks with the Garden days toggle', async () => {
+  const user = userEvent.setup();
+  gardenByDay = { '2026-10-13': ['weed'] };
+  await open('/calendar?view=month&date=2026-10-09');
+  await user.click(screen.getByRole('checkbox', { name: 'Garden days' }));
+  expect(location().search).toContain('garden=off');
+  expect(screen.queryByRole('img', { name: /good for/ })).toBeNull();
+  await user.click(screen.getByRole('checkbox', { name: 'Garden days' }));
+  expect(screen.getByRole('img', { name: 'Folk tradition, good for: Weed and tend' })).toBeInTheDocument();
+});
+
+it('shows garden log and harvest events and hides them with their filters', async () => {
+  const user = userEvent.setup();
+  events = [
+    ev('garden', '2026-10-09', 'Pruned Rose', { link: '/garden/entries/3', id: 3 }),
+    ev('harvest', '2026-10-09', 'Harvest Mint', { link: '/garden/plants/5', id: 5 }),
+  ];
+  await open('/calendar?view=month&date=2026-10-09');
+  const td = cell(/^Friday, October 9/).closest('td');
+  expect(within(td).getByRole('link', { name: 'Pruned Rose' })).toHaveAttribute('href', '/garden/entries/3');
+  expect(within(td).getByRole('link', { name: 'Harvest Mint' })).toHaveAttribute('href', '/garden/plants/5');
+  expect(td.querySelectorAll('li svg[aria-hidden="true"]').length).toBe(2);
+  await user.click(screen.getByRole('checkbox', { name: 'Garden log' }));
+  expect(td).not.toHaveTextContent('Pruned Rose');
+  expect(td).toHaveTextContent('Harvest Mint');
+  await user.click(screen.getByRole('checkbox', { name: 'Harvests' }));
+  expect(location().search).toContain('hide=garden%2Charvest');
+  expect(td).not.toHaveTextContent('Harvest Mint');
+});
+
+it('shows garden and harvest events in the week and agenda views', async () => {
+  events = [
+    ev('garden', '2026-10-13', 'Pruned Rose', { link: '/garden/entries/3', id: 3 }),
+    ev('harvest', '2026-10-13', 'Harvest Mint', { link: '/garden/plants/5', id: 5 }),
+  ];
+  await open('/calendar?view=week&date=2026-10-11');
+  const col = within(screen.getByRole('region', { name: /Tuesday, October 13/ }));
+  expect(col.getByRole('link', { name: 'Pruned Rose' })).toHaveAttribute('href', '/garden/entries/3');
+  expect(col.getByRole('link', { name: 'Harvest Mint' })).toHaveAttribute('href', '/garden/plants/5');
+});
+
+it('shows garden and harvest events in the agenda view', async () => {
+  events = [
+    ev('garden', '2026-10-13', 'Pruned Rose', { link: '/garden/entries/3', id: 3 }),
+    ev('harvest', '2026-10-13', 'Harvest Mint', { link: '/garden/plants/5', id: 5 }),
+  ];
+  await open('/calendar?view=agenda&date=2026-10-09');
+  expect(screen.getByRole('link', { name: 'Pruned Rose' })).toHaveAttribute('href', '/garden/entries/3');
+  expect(screen.getByRole('link', { name: 'Harvest Mint' })).toHaveAttribute('href', '/garden/plants/5');
 });

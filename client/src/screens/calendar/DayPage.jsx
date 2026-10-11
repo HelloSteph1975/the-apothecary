@@ -6,6 +6,7 @@ import { useSettings } from '../../components/SettingsProvider.jsx';
 import { useApi } from '../../lib/useApi.js';
 import { isDay } from '../../lib/calendar.js';
 import { addDaysTo } from '../../lib/tasks.js';
+import { taskLabel } from '../../lib/garden.js';
 import { FOLK_LABEL, clockTime, phaseText, skyLine } from '../../lib/sky.js';
 import { useTaskActions } from '../todo/Todo.jsx';
 import { TaskCheck } from '../todo/TaskCheck.jsx';
@@ -46,6 +47,7 @@ export function DayPage() {
   if (!data) return <>{header}<p role="status">Opening the day…</p>{back}</>;
 
   const { sky, suggestions } = data;
+  const garden = data.garden ?? [];
   const events = data.events.filter(e => e.kind !== 'journal');
   const entries = data.events.filter(e => e.kind === 'journal');
   const festival = festivalLine(sky);
@@ -70,8 +72,21 @@ export function DayPage() {
           <p><Link to="/settings/timing-rules">Timing rules</Link></p>
         </ParchmentCard>
       )}
-      <ParchmentCard title="Due this day">
-        {events.length === 0 ? <p className="muted">Nothing due on this day.</p> : (
+      {garden.length > 0 && (
+        <ParchmentCard title="In the garden" subtitle="what tradition says about this day">
+          <ul className="today-list">
+            {garden.map(g => (
+              <li key={g.task}>
+                <strong>{taskLabel(g.task)}</strong>
+                <ul>{g.reasons.map(r => <li key={r}>{r}</li>)}</ul>
+              </li>
+            ))}
+          </ul>
+          <p><span className="badge badge-brass">{FOLK_LABEL}</span></p>
+        </ParchmentCard>
+      )}
+      <ParchmentCard title="On this day">
+        {events.length === 0 ? <p className="muted">Nothing on this day.</p> : (
           <ul className="cal-events">
             {events.map(e => (
               <li key={`${e.kind}-${e.id}`} className={`cal-event cal-${e.kind}${e.done ? ' is-done' : ''}${e.overdue ? ' is-overdue' : ''}`}>
@@ -84,6 +99,7 @@ export function DayPage() {
         <p className="page-actions">
           <Button as={Link} to={`/todo?due=${day}`}>Add a task for this day</Button>
           <Button as={Link} variant="secondary" to={`/batches/new?start=${day}`}>Start a batch on this day</Button>
+          <Button as={Link} variant="secondary" to={`/garden/entries/new?date=${day}`}>Log garden work</Button>
         </p>
       </ParchmentCard>
       <ParchmentCard title="Journal entries">

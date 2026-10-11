@@ -304,3 +304,71 @@ it('purges old journal entries, children, photos and unused types, and links to 
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '3-cccccccc.jpg'))).toBe(false);
   expect(db.prepare('SELECT COUNT(*) n FROM herbs WHERE id = ?').get(herb).n).toBe(0);
 });
+
+it('purges old garden plants and entries, their photos, journal links, and clears references to them', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const run = (sql, ...a) => db.prepare(sql).run(...a);
+  const id = r => Number(r.lastInsertRowid);
+  const plantGone = id(run("INSERT INTO garden_plants (name) VALUES ('Gone plant')"));
+  const plantLive = id(run("INSERT INTO garden_plants (name) VALUES ('Live plant')"));
+  run('UPDATE garden_plants SET deleted_at = ? WHERE id = ?', old, plantGone);
+  const entry = (plant, name) => id(run("INSERT INTO garden_entries (entry_date, kind, plant_id, plant_name) VALUES ('2026-10-01', 'observed', ?, ?)", plant, name));
+  const eOfGonePlant = entry(plantGone, 'Entry of gone plant');
+  const eGone = entry(plantLive, 'Gone entry');
+  const eKeep = entry(plantLive, 'Kept entry');
+  run('UPDATE garden_entries SET deleted_at = ? WHERE id = ?', old, eGone);
+  run("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('garden_plant', ?, '4-dddddddd.jpg'), ('garden_entry', ?, '5-eeeeeeee.jpg'), ('garden_entry', ?, '6-ffffffff.jpg')", plantGone, eGone, eKeep);
+  for (const f of ['4-dddddddd.jpg', '5-eeeeeeee.jpg', '6-ffffffff.jpg']) fs.writeFileSync(path.join(t.dataDir, 'photos', f), 'x');
+  const type = id(run("INSERT INTO journal_types (name) VALUES ('Ritual')"));
+  const journal = id(run("INSERT INTO journal_entries (type_id, title, entry_date) VALUES (?, 'Day', '2026-10-01')", type));
+  run("INSERT INTO journal_links (entry_id, link_type, link_id) VALUES (?, 'garden_entry', ?), (?, 'garden_entry', ?)", journal, eGone, journal, eKeep);
+  // tasks that point at a purged plant, a kept plant and a recent deleted plant
+  const plantRecent = id(run("INSERT INTO garden_plants (name, deleted_at) VALUES ('Recent', ?)", new Date().toISOString()));
+  const task = (title, plant) => id(run("INSERT INTO tasks (title, related_type, related_id) VALUES (?, 'garden_plant', ?)", title, plant));
+  const tGone = task('Water gone', plantGone);
+  const tLive = task('Water live', plantLive);
+  const tRecent = task('Water recent', plantRecent);
+  // references from entries and plants to a purged item and a purged herb
+  const item = id(run("INSERT INTO items (section_id, name, amount, unit) VALUES (1, 'Old jar', 1, 'g')"));
+  const herb = id(run("INSERT INTO herbs (common_name) VALUES ('Old herb')"));
+  run('UPDATE items SET deleted_at = ? WHERE id = ?', old, item);
+  run('UPDATE herbs SET deleted_at = ? WHERE id = ?', old, herb);
+  run('UPDATE garden_entries SET item_id = ?, herb_id = ? WHERE id = ?', item, herb, eKeep);
+  run('UPDATE garden_plants SET herb_id = ? WHERE id = ?', herb, plantLive);
+
+  const counts = purgeSoftDeleted(db, t.dataDir);
+
+  expect(counts.garden_plants).toBe(1);
+  expect(counts.garden_entries).toBe(1);
+  expect(db.prepare('SELECT name FROM garden_plants ORDER BY id').all().map(r => r.name)).toEqual(['Live plant', 'Recent']);
+  const entries = db.prepare('SELECT id, plant_id, item_id, herb_id FROM garden_entries ORDER BY id').all();
+  expect(entries).toEqual([
+    { id: eOfGonePlant, plant_id: null, item_id: null, herb_id: null },
+    { id: eKeep, plant_id: plantLive, item_id: null, herb_id: null },
+  ]);
+  expect(db.prepare('SELECT herb_id FROM garden_plants WHERE id = ?').get(plantLive).herb_id).toBeNull();
+  expect(db.prepare('SELECT link_id FROM journal_links').all()).toEqual([{ link_id: eKeep }]);
+  expect(db.prepare('SELECT owner_type, filename FROM photos').all()).toEqual([{ owner_type: 'garden_entry', filename: '6-ffffffff.jpg' }]);
+  for (const f of ['4-dddddddd.jpg', '5-eeeeeeee.jpg']) expect(fs.existsSync(path.join(t.dataDir, 'photos', f))).toBe(false);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '6-ffffffff.jpg'))).toBe(true);
+  const related = n => db.prepare('SELECT related_type, related_id FROM tasks WHERE id = ?').get(n);
+  expect(related(tGone)).toEqual({ related_type: null, related_id: null });
+  expect(related(tLive)).toEqual({ related_type: 'garden_plant', related_id: plantLive });
+  expect(related(tRecent)).toEqual({ related_type: 'garden_plant', related_id: plantRecent });
+  expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+});
+
+it('drops harvest dismissals once their plant is purged and keeps those of a live plant', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const gone = Number(db.prepare("INSERT INTO garden_plants (name, deleted_at) VALUES ('Old', ?)").run(old).lastInsertRowid);
+  const live = Number(db.prepare("INSERT INTO garden_plants (name) VALUES ('Live')").run().lastInsertRowid);
+  const add = db.prepare("INSERT INTO task_dismissals (auto_key, dismissed_on) VALUES (?, '2026-10-10')");
+  add.run(`harvest:${gone}:2026-10-12`);
+  add.run(`harvest:${live}:2026-10-12`);
+  purgeSoftDeleted(db, t.dataDir);
+  expect(db.prepare('SELECT auto_key FROM task_dismissals').all().map(r => r.auto_key)).toEqual([`harvest:${live}:2026-10-12`]);
+});

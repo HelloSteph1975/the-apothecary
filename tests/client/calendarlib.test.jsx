@@ -1,6 +1,7 @@
 import { it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { rangeFor, cellName, phaseText } from '../../client/src/lib/calendar.js';
+import { rangeFor, cellName, phaseText, KINDS, openCount } from '../../client/src/lib/calendar.js';
+import { goodFor } from '../../client/src/lib/garden.js';
 import { MoonGlyph } from '../../client/src/lib/moonGlyph.jsx';
 
 const span = r => ({ from: r.from, to: r.to, n: r.days.length });
@@ -76,4 +77,24 @@ it('does not count journal entries as things due', () => {
   expect(cellName(day, [entry])).toBe('Friday, October 9: waxing crescent in Scorpio, 1 journal entry');
   expect(cellName(day, [entry, { ...entry }])).toBe('Friday, October 9: waxing crescent in Scorpio, 2 journal entries');
   expect(cellName(day, [entry, task])).toBe('Friday, October 9: waxing crescent in Scorpio, 1 thing due, 1 journal entry');
+});
+
+it('offers Garden log and Harvests as filters', () => {
+  expect(KINDS).toEqual(expect.arrayContaining([{ kind: 'garden', label: 'Garden log' }, { kind: 'harvest', label: 'Harvests' }]));
+});
+
+it('does not count garden entries or expected harvests as things due', () => {
+  const day = { day: '2026-10-09', phase: 'waxing crescent', sign: 'Scorpio', festival: null, marker: null };
+  const entry = { kind: 'garden', day: '2026-10-09', title: 'Pruned Rose', done: false };
+  const harvest = { kind: 'harvest', day: '2026-10-09', title: 'Harvest Mint', done: false };
+  expect(openCount([entry, harvest])).toBe(0);
+  const name = cellName(day, [entry, harvest]);
+  expect(name).not.toContain('due');
+  expect(name).toContain('1 garden entry');
+  expect(name).toContain('1 harvest expected');
+});
+
+it('lists garden tasks as "Good for"', () => {
+  expect(goodFor(['harvest-above', 'weed'])).toBe('Good for: Gather leaves and flowers, Weed and tend');
+  expect(goodFor([])).toBe('');
 });

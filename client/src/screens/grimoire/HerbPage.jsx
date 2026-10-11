@@ -8,7 +8,7 @@ import { WaxSealLink } from '../../components/WaxSeal.jsx';
 import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { useApi } from '../../lib/useApi.js';
 import { todayString } from '../../lib/today.js';
-import { formatAmount, formatDay, statusBadges, safeUrl } from '../../lib/cabinet.js';
+import { formatAmount, formatDay, formatShortDay, statusBadges, safeUrl } from '../../lib/cabinet.js';
 import { AHPA_LABELS, CAUTION_FIELDS } from '../../lib/grimoire.js';
 
 const cap = v => (v ? v.charAt(0).toUpperCase() + v.slice(1) : v);
@@ -51,7 +51,10 @@ export function HerbPage() {
   const associations = list(herb.associations);
   const hasCorr = herb.planet || herb.element || herb.gender || zodiac.length > 0 || associations.length > 0;
   const companions = list(herb.garden_companions);
-  const hasGarden = herb.garden_harvest_part || herb.garden_harvest_timing || herb.garden_sun || herb.garden_water || companions.length > 0;
+  const gardenPlants = list(herb.garden_plants);
+  const gardenEntries = list(herb.garden_entries);
+  const hasGarden = herb.garden_harvest_part || herb.garden_harvest_timing || herb.garden_sun || herb.garden_water || companions.length > 0
+    || gardenPlants.length > 0 || gardenEntries.length > 0;
   const jars = list(herb.jars);
   const sources = list(herb.sources);
   const recipes = list(herb.recipes);
@@ -111,8 +114,38 @@ export function HerbPage() {
               ['Part harvested', herb.garden_harvest_part], ['Harvest timing', herb.garden_harvest_timing],
               ['Sun', herb.garden_sun], ['Water', herb.garden_water], ['Grows well with', companions.join(', ')],
             ]} />
+            {gardenPlants.length > 0 && (
+              <>
+                <h3>Growing here</h3>
+                <ul aria-label="Growing here">
+                  {gardenPlants.map(p => (
+                    <li key={p.id}>
+                      <Link to={`/garden/plants/${p.id}`}>{p.name}</Link>
+                      {p.place && <span className="muted">, {p.place}</span>}
+                      {p.ended_on && <> <span className="badge badge-brass">Ended</span></>}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {gardenEntries.length > 0 && (
+              <>
+                <h3>Garden log</h3>
+                <ul aria-label="Garden log">
+                  {gardenEntries.map(e => (
+                    <li key={e.id}>
+                      <Link to={`/garden/entries/${e.id}`}>{e.title}</Link>
+                      <span className="muted">, {formatShortDay(e.entry_date)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <p><Link to={`/garden/plants/new?herb=${herb.id}`}>Plant this</Link></p>
           </ParchmentCard>
         )}
+
+        {!hasGarden && <p><Link to={`/garden/plants/new?herb=${herb.id}`}>Plant this</Link></p>}
 
         <ParchmentCard title="In your cabinet">
           {jars.length > 0 ? (

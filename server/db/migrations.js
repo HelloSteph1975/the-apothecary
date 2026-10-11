@@ -139,6 +139,48 @@ export const migrations = [
   CREATE INDEX idx_journal_tags_entry ON journal_tags(entry_id);
   CREATE INDEX idx_journal_tags_tag ON journal_tags(tag);
   `,
+  // 9: the garden log. Plants and dated entries; timing rules gain garden tasks; journal links may point at garden
+  // entries and tasks at garden plants. The two rebuilds (no table references tasks or journal_links) copy every row and id.
+  `
+  CREATE TABLE garden_plants (id INTEGER PRIMARY KEY, name TEXT NOT NULL, herb_id INTEGER REFERENCES herbs(id),
+    place TEXT, planted_on TEXT, expected_harvest_on TEXT, ended_on TEXT, notes TEXT, ${TS});
+  CREATE INDEX idx_garden_plants_herb ON garden_plants(herb_id);
+  CREATE TABLE garden_entries (id INTEGER PRIMARY KEY, entry_date TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('planted','sowed','transplanted','pruned','harvested','foraged','observed')),
+    plant_id INTEGER REFERENCES garden_plants(id), herb_id INTEGER REFERENCES herbs(id), plant_name TEXT NOT NULL,
+    place TEXT, amount REAL CHECK (amount IS NULL OR amount >= 0),
+    unit TEXT CHECK (unit IS NULL OR unit IN ('g','kg','oz','lb','ml','l','fl oz','count')),
+    weather TEXT, notes TEXT, item_id INTEGER REFERENCES items(id),
+    sky_phase TEXT, sky_phase_group TEXT, sky_sign TEXT, ${TS});
+  CREATE INDEX idx_garden_entries_date ON garden_entries(entry_date);
+  CREATE INDEX idx_garden_entries_plant ON garden_entries(plant_id);
+  CREATE INDEX idx_garden_entries_herb ON garden_entries(herb_id);
+  ALTER TABLE timing_rules ADD COLUMN garden_tasks TEXT NOT NULL DEFAULT '[]';
+
+  CREATE TABLE journal_links_new (id INTEGER PRIMARY KEY, entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
+    link_type TEXT NOT NULL CHECK (link_type IN ('herb','recipe','batch','garden_entry')), link_id INTEGER NOT NULL, ${TS});
+  INSERT INTO journal_links_new SELECT id, entry_id, link_type, link_id, created_at, updated_at, deleted_at FROM journal_links;
+  DROP TABLE journal_links;
+  ALTER TABLE journal_links_new RENAME TO journal_links;
+  CREATE INDEX idx_journal_links_entry ON journal_links(entry_id);
+  CREATE INDEX idx_journal_links_target ON journal_links(link_type, link_id);
+
+  CREATE TABLE tasks_new (id INTEGER PRIMARY KEY, title TEXT NOT NULL, notes TEXT, due_on TEXT,
+    repeat_kind TEXT NOT NULL DEFAULT 'none' CHECK (repeat_kind IN ('none','daily','weekly','monthly','new_moon','full_moon','festival')),
+    repeat_days TEXT NOT NULL DEFAULT '[]', repeat_anchor_day INTEGER CHECK (repeat_anchor_day IS NULL OR repeat_anchor_day BETWEEN 1 AND 31),
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high')),
+    related_type TEXT CHECK (related_type IS NULL OR related_type IN ('item','recipe','batch','herb','garden_plant')), related_id INTEGER,
+    kind TEXT NOT NULL DEFAULT 'manual' CHECK (kind IN ('manual','auto')), auto_key TEXT,
+    snoozed_until TEXT, done_on TEXT, spawned_id INTEGER, ${TS});
+  INSERT INTO tasks_new (id, title, notes, due_on, repeat_kind, repeat_days, repeat_anchor_day, priority, related_type, related_id,
+    kind, auto_key, snoozed_until, done_on, spawned_id, created_at, updated_at, deleted_at)
+    SELECT id, title, notes, due_on, repeat_kind, repeat_days, repeat_anchor_day, priority, related_type, related_id,
+    kind, auto_key, snoozed_until, done_on, spawned_id, created_at, updated_at, deleted_at FROM tasks;
+  DROP TABLE tasks;
+  ALTER TABLE tasks_new RENAME TO tasks;
+  CREATE UNIQUE INDEX idx_tasks_auto_key ON tasks(auto_key) WHERE auto_key IS NOT NULL AND deleted_at IS NULL;
+  CREATE INDEX idx_tasks_due ON tasks(due_on) WHERE done_on IS NULL AND deleted_at IS NULL;
+  `,
 ];
 
 export function migrate(db) {

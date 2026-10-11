@@ -5,18 +5,18 @@ import { transaction } from '../db/connection.js';
 import { repos } from '../db/repos.js';
 import { HttpError, notFound } from '../http.js';
 import { validate } from '../validate.js';
-import { timingRuleSchema, PLANETS, ELEMENTS } from '../schemas.js';
+import { timingRuleSchema, PLANETS, ELEMENTS, GARDEN_TASKS } from '../schemas.js';
 import { addDays } from '../lib/dates.js';
 import { reorderGroups } from './groups.js';
 import { skyForDay, skyFacts, SIGNS, PHASE_NAMES, PHASE_GROUPS, FESTIVALS } from '../lib/sky.js';
 
 // Bump when timing-rules.json gains entries that existing installs should receive.
-// A future bump must seed only slugs that are new since the last version, so it never re-adds a starter rule she deleted.
-export const TIMING_RULES_SEED_VERSION = 1;
+// A bump seeds only entries marked with the new `since` version (and only if their slug is absent), so it never re-adds a starter rule she deleted.
+export const TIMING_RULES_SEED_VERSION = 2;
 
 const DATA_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data', 'timing-rules.json');
 const SEED_KEY = 'timing_rules_seed_version';
-const LIST_FIELDS = ['recipe_types', 'planets', 'elements'];
+const LIST_FIELDS = ['recipe_types', 'planets', 'elements', 'garden_tasks'];
 const MAX_TEXT = 300;
 const MAX_LIST = 20;
 const MAX_SLUG = 40;
@@ -40,16 +40,20 @@ export function loadStarterRules(file = DATA_FILE) {
 // Adds each starter rule whose slug isn't there yet (live or deleted), so her edits and deletions stand.
 export function seedTimingRules(db, entries = loadStarterRules()) {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(SEED_KEY);
-  if (row && Number(row.value) >= TIMING_RULES_SEED_VERSION) return { added: 0 };
+  const stored = row ? Number(row.value) : 0;
+  if (row && stored >= TIMING_RULES_SEED_VERSION) return { added: 0 };
   const rules = repos(db).timingRules;
   return transaction(db, () => {
     let added = 0;
     const exists = db.prepare('SELECT 1 FROM timing_rules WHERE slug = ?');
     entries.forEach((e, i) => {
+      // With no stored version everything seeds; otherwise only entries added after the stored version.
+      if (row && (e.since ?? 1) <= stored) return;
       if (exists.get(e.slug)) return;
       rules.create({
         slug: e.slug, kind: e.kind, value: e.value, text: e.text, weight: e.weight ?? 1, sort_order: i, is_starter: 1,
         recipe_types: JSON.stringify(e.recipe_types ?? []), planets: JSON.stringify(e.planets ?? []), elements: JSON.stringify(e.elements ?? []),
+        garden_tasks: JSON.stringify(e.garden_tasks ?? []),
       });
       added++;
     });
@@ -70,7 +74,8 @@ function parseList(text) {
 
 export function parseRule(row) {
   if (!row) return row;
-  return { ...row, recipe_types: parseList(row.recipe_types), planets: parseList(row.planets), elements: parseList(row.elements) };
+  return { ...row, recipe_types: parseList(row.recipe_types), planets: parseList(row.planets), elements: parseList(row.elements),
+    garden_tasks: parseList(row.garden_tasks) };
 }
 
 export function listTimingRules(db) {
@@ -109,7 +114,7 @@ function parseRuleBody(body, { partial, existing }) {
   if (!errors.kind && !errors.value && kind && value && !VALUES[kind].includes(value)) {
     errors.value = `That isn't a ${kind.replace('_', ' ')}. Choose from: ${VALUES[kind].join(', ')}`;
   }
-  const lists = { recipe_types: null, planets: PLANETS, elements: ELEMENTS };
+  const lists = { recipe_types: null, planets: PLANETS, elements: ELEMENTS, garden_tasks: GARDEN_TASKS };
   for (const name of LIST_FIELDS) {
     if (!Object.hasOwn(src, name)) continue;
     const list = checkList(name, src[name], lists[name], errors);
@@ -165,11 +170,14 @@ const dayValue = {
   festival: sky => sky.festival,
 };
 
-const matches = (rule, sky) => dayValue[rule.kind](sky) === rule.value;
+export const matches = (rule, sky) => dayValue[rule.kind](sky) === rule.value;
 
 export function rulesForDay(db, sky) {
   return listTimingRules(db).filter(rule => matches(rule, sky));
 }
+
+// A rule that only advises the garden: it never shows as a sky suggestion or scores a recipe start date.
+export const isGardenOnly = rule => rule.garden_tasks.length > 0 && !rule.recipe_types.length && !rule.planets.length && !rule.elements.length;
 
 const byWeight = (a, b) => b.weight - a.weight || a.sort_order - b.sort_order || a.id - b.id;
 
@@ -177,7 +185,7 @@ const byWeight = (a, b) => b.weight - a.weight || a.sort_order - b.sort_order ||
 export function daySuggestions(db, day, settings, now) {
   const sky = skyForDay(day, { hemisphere: settings.hemisphere, now });
   if (settings.sky_suggestions === 'off') return { sky, suggestions: [] };
-  const suggestions = rulesForDay(db, sky).sort(byWeight).slice(0, TOP_SUGGESTIONS).map(({ id, text }) => ({ id, text }));
+  const suggestions = rulesForDay(db, sky).filter(rule => !isGardenOnly(rule)).sort(byWeight).slice(0, TOP_SUGGESTIONS).map(({ id, text }) => ({ id, text }));
   return { sky, suggestions };
 }
 
@@ -215,7 +223,7 @@ const favours = (rule, traits) => (traits.slug != null && rule.recipe_types.incl
 export function startDates(db, recipeId, { from, days = 28 } = {}, settings) {
   const traits = recipeTraits(db, recipeId);
   if (settings.sky_suggestions === 'off') return [];
-  const rules = listTimingRules(db).filter(rule => favours(rule, traits)).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+  const rules = listTimingRules(db).filter(rule => !isGardenOnly(rule) && favours(rule, traits)).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   if (!rules.length) return [];
   const start = from ?? localToday();
   const scored = [];

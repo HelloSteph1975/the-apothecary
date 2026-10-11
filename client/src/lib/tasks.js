@@ -59,7 +59,7 @@ export function priorityText(priority) {
   return { high: 'High priority', low: 'Low priority' }[priority] ?? 'Normal priority';
 }
 
-const ROUTES = { item: '/cabinet/items', recipe: '/recipes', batch: '/batches', herb: '/grimoire' };
+const ROUTES = { item: '/cabinet/items', recipe: '/recipes', batch: '/batches', herb: '/grimoire', garden_plant: '/garden/plants' };
 export const relatedLink = related => (related && ROUTES[related.type] ? `${ROUTES[related.type]}/${related.id}` : null);
 
 export const AREAS = [
@@ -67,6 +67,7 @@ export const AREAS = [
   { key: 'recipe', label: 'Recipes' },
   { key: 'batch', label: 'Batches' },
   { key: 'herb', label: 'Herbs' },
+  { key: 'garden_plant', label: 'Garden' },
   { key: 'none', label: 'Other' },
 ];
 

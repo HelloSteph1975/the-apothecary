@@ -11,7 +11,7 @@ describe('nextDue', () => {
   it('exports the allowed values', () => {
     expect(REPEAT_KINDS).toEqual(['none', 'daily', 'weekly', 'monthly', 'new_moon', 'full_moon', 'festival']);
     expect(PRIORITIES).toEqual(['low', 'normal', 'high']);
-    expect(RELATED_TYPES).toEqual(['item', 'recipe', 'batch', 'herb']);
+    expect(RELATED_TYPES).toEqual(['item', 'recipe', 'batch', 'herb', 'garden_plant']);
   });
   it('none gives null and daily adds a day', () => {
     expect(nextDue(t('none'), '2026-10-10')).toBeNull();

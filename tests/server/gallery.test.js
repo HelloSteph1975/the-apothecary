@@ -23,6 +23,8 @@ function setup() {
     batch: r.batches.create({ name: 'Autumn oil', start_date: '2026-10-01' }),
     task: r.tasks.create({ title: 'Water sage' }),
     journal: r.journalEntries.create({ type_id: jt.id, title: 'Full moon', entry_date: '2026-10-25' }),
+    garden_plant: r.gardenPlants.create({ name: 'Calendula bed' }),
+    garden_entry: r.gardenEntries.create({ entry_date: '2026-10-10', kind: 'harvested', plant_name: 'calendula' }),
   };
   let n = 0;
   const add = (kind, created_at, extra = {}) => {
@@ -39,7 +41,7 @@ it('lists every kind with the owner name and link, newest first', async () => {
   kinds.forEach((k, i) => add(k, `2026-10-0${i + 1} 18:00:00`));
   const res = await h().get('/api/gallery');
   expect(res.status).toBe(200);
-  expect(res.body).toMatchObject({ total: 7, page: 1 });
+  expect(res.body).toMatchObject({ total: 9, page: 1 });
   expect(res.body.photos.map(p => p.owner.kind)).toEqual([...kinds].reverse());
   const by = Object.fromEntries(res.body.photos.map(p => [p.owner.kind, p.owner]));
   expect(by.item).toEqual({ kind: 'item', id: owners.item.id, name: 'Lavender jar', link: `/cabinet/items/${owners.item.id}` });
@@ -49,6 +51,8 @@ it('lists every kind with the owner name and link, newest first', async () => {
   expect(by.batch).toMatchObject({ name: 'Autumn oil', link: `/batches/${owners.batch.id}` });
   expect(by.task).toMatchObject({ name: 'Water sage', link: `/todo/${owners.task.id}` });
   expect(by.journal).toMatchObject({ name: 'Full moon', link: `/journal/${owners.journal.id}` });
+  expect(by.garden_plant).toMatchObject({ name: 'Calendula bed', link: `/garden/plants/${owners.garden_plant.id}` });
+  expect(by.garden_entry).toMatchObject({ name: 'Harvested calendula', link: `/garden/entries/${owners.garden_entry.id}` });
   expect(Object.keys(res.body.photos[0]).sort()).toEqual(['caption', 'created_at', 'filename', 'id', 'owner']);
 });
 

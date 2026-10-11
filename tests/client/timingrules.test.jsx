@@ -9,12 +9,15 @@ import { ConfirmProvider } from '../../client/src/components/ConfirmProvider.jsx
 HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open', ''); };
 HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
 
-const rule = (id, extra) => ({ id, slug: `r${id}`, kind: 'phase_group', value: 'waxing', text: 'A growing moon.', weight: 2, sort_order: id * 10, recipe_types: [], planets: [], elements: [], ...extra });
+const rule = (id, extra) => ({ id, slug: `r${id}`, kind: 'phase_group', value: 'waxing', text: 'A growing moon.', weight: 2, sort_order: id * 10, recipe_types: [], planets: [], elements: [], garden_tasks: [], ...extra });
 const RULES = [
   rule(1, { text: 'Waxing text.', recipe_types: ['tincture'] }),
   rule(2, { kind: 'moon_element', value: 'Water', text: 'Water text.', weight: 3, elements: ['Water'], planets: ['Moon'] }),
   rule(3, { kind: 'moon_sign', value: 'Taurus', text: 'Taurus text.', weight: 1 }),
 ];
+const GARDEN_RULE = rule(4, { text: 'Gather in the full moon.', garden_tasks: ['harvest-above'] });
+const GARDEN_RULE_2 = rule(5, { kind: 'moon_sign', value: 'Cancer', text: 'Weed in Cancer.', garden_tasks: ['weed'] });
+let withGarden;
 const TYPES = [
   { id: 1, slug: 'tincture', name: 'Tincture' },
   { id: 2, slug: 'tea-blend', name: 'Tea blend' },
@@ -23,6 +26,7 @@ const TYPES = [
 let calls;
 beforeEach(() => {
   calls = [];
+  withGarden = false;
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method || 'GET';
     calls.push({ url, method, body: opts.body ? JSON.parse(opts.body) : undefined });
@@ -37,7 +41,7 @@ beforeEach(() => {
     }
     if (method === 'PUT' && url === '/api/timing-rules/order') return json(RULES);
     if (method === 'PATCH') return json({ ok: true });
-    if (url === '/api/timing-rules') return json(RULES);
+    if (url === '/api/timing-rules') return json(withGarden ? [...RULES, GARDEN_RULE, GARDEN_RULE_2] : RULES);
     return json({});
   });
 });
@@ -95,7 +99,7 @@ it('adds a rule with the right body and counts the text', async () => {
   await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/timing-rules')).toBeTruthy());
   expect(calls.find(c => c.method === 'POST').body).toEqual({
     kind: 'moon_sign', value: 'Cancer', text: 'Good for soups', weight: 3,
-    recipe_types: ['tea-blend', 'type-3'], planets: ['Venus'], elements: ['Water'],
+    recipe_types: ['tea-blend', 'type-3'], planets: ['Venus'], elements: ['Water'], garden_tasks: [],
   });
 });
 
@@ -283,4 +287,76 @@ it('shows a retryable error in the recipe types group when the types fail to loa
   expect(await within(dialog).findByLabelText('Bath salts')).toBeInTheDocument();
   expect(within(dialog).queryByText(/Couldn't load your recipe types/)).not.toBeInTheDocument();
   expect(within(dialog).getByLabelText('Text')).toHaveValue('Still typing');
+});
+
+it('offers the seven garden tasks in a Garden work group and sends the ticked ones', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(screen.getByRole('button', { name: 'Add a rule' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Add a timing rule' });
+  const group = within(within(dialog).getByRole('group', { name: 'Garden work' }));
+  expect(group.getAllByRole('checkbox').map(c => c.closest('label').textContent.trim())).toEqual([
+    'Sow leafy and flowering plants', 'Sow roots and bulbs', 'Transplant', 'Prune', 'Weed and tend', 'Gather leaves and flowers', 'Dig roots',
+  ]);
+  await user.click(group.getByLabelText('Prune'));
+  await user.click(group.getByLabelText('Dig roots'));
+  await user.type(within(dialog).getByLabelText('Text'), 'Dig when it wanes');
+  await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url === '/api/timing-rules')).toBeTruthy());
+  expect(calls.find(c => c.method === 'POST').body.garden_tasks).toEqual(['prune', 'harvest-root']);
+});
+
+it('fills the Garden work boxes when editing a rule', async () => {
+  withGarden = true;
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Gather in the full moon.');
+  await user.click(screen.getAllByRole('button', { name: /^Edit / })[3]);
+  const dialog = await screen.findByRole('dialog', { name: 'Edit rule' });
+  expect(within(dialog).getByLabelText('Gather leaves and flowers')).toBeChecked();
+  expect(within(dialog).getByLabelText('Prune')).not.toBeChecked();
+});
+
+it('shows a Garden badge only on rules with garden tasks', async () => {
+  withGarden = true;
+  open();
+  const garden = (await screen.findByText('Gather in the full moon.')).closest('li');
+  expect(within(garden).getByText('Garden')).toHaveClass('badge');
+  expect(within(screen.getByText('Waxing text.').closest('li')).queryByText('Garden')).toBeNull();
+});
+
+it('filters the list to Making or Garden rules, all by default', async () => {
+  withGarden = true;
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  const filter = within(screen.getByRole('group', { name: 'Show rules' }));
+  expect(filter.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByText('Gather in the full moon.')).toBeInTheDocument();
+  await user.click(filter.getByRole('button', { name: 'Garden' }));
+  expect(screen.getByText('Gather in the full moon.')).toBeInTheDocument();
+  expect(screen.queryByText('Waxing text.')).toBeNull();
+  await user.click(filter.getByRole('button', { name: 'Making' }));
+  expect(screen.getByText('Waxing text.')).toBeInTheDocument();
+  expect(screen.queryByText('Gather in the full moon.')).toBeNull();
+});
+
+it('moves a rule on the Garden filter by swapping with its visible neighbour and sending the full list', async () => {
+  const user = userEvent.setup();
+  withGarden = true;
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(within(screen.getByRole('group', { name: 'Show rules' })).getByRole('button', { name: 'Garden' }));
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'PUT')).toBeTruthy());
+  expect(calls.find(c => c.method === 'PUT').body).toEqual({ ids: [1, 2, 3, 5, 4] });
+});
+
+it('says when no rule matches the filter', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(within(screen.getByRole('group', { name: 'Show rules' })).getByRole('button', { name: 'Garden' }));
+  expect(screen.getByText('No rules match this filter.')).toBeInTheDocument();
 });

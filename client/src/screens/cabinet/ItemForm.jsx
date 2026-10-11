@@ -54,10 +54,14 @@ export function ItemForm() {
   const herbList = useMemo(() => (Array.isArray(herbsApi.data) ? herbsApi.data : []), [herbsApi.data]);
   const wantedHerb = params.get('herb');
   const item = useApi(editing ? `/api/items/${id}?today=${todayString()}` : null);
+  // A jar made from a garden harvest starts from what the log knows about it.
+  const gardenEntry = !editing && /^\d+$/.test(params.get('garden_entry') ?? '') ? Number(params.get('garden_entry')) : null;
+  const jar = useApi(gardenEntry ? `/api/garden/entries/${gardenEntry}/jar` : null);
 
   const [form, setForm] = useState(null);
   const [initial, setInitial] = useState('');
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
   const [extraSuppliers, setExtraSuppliers] = useState([]);
   const [suggested, setSuggested] = useState(false);
   const typedExpiry = useRef(false);
@@ -67,6 +71,7 @@ export function ItemForm() {
   useEffect(() => {
     if (form || !sections.data || (editing && !item.data)) return;
     if (!editing && wantedHerb && !herbsApi.data) return;
+    if (gardenEntry && !(jar.data && herbsApi.data)) return;
     const wantedSection = sections.data.find(x => String(x.id) === params.get('section'));
     const start = editing ? fromItem(item.data) : { ...fromItem({}), section_id: wantedSection ? String(wantedSection.id) : '' };
     const linked = !editing && herbList.find(h => String(h.id) === wantedHerb);
@@ -76,11 +81,23 @@ export function ItemForm() {
       const herbShelf = wantedSection?.kind === 'herb' ? wantedSection : sections.data.find(x => x.kind === 'herb');
       if (herbShelf) start.section_id = String(herbShelf.id);
     }
+    if (gardenEntry) {
+      const j = jar.data;
+      const herb = herbList.find(h => h.id === j.herb_id);
+      Object.assign(start, {
+        name: s(j.name), latin_name: s(j.latin_name ?? herb?.latin_name), herb_id: herb ? String(herb.id) : '', source_kind: s(j.source_kind),
+        source_place: s(j.source_place), acquired_on: s(j.acquired_on), amount: s(j.amount), unit: j.unit || 'g',
+        form: s(j.form), plant_part: s(j.plant_part),
+      });
+      // A jar of a grimoire herb belongs on an herb shelf.
+      const herbShelf = herb && (wantedSection?.kind === 'herb' ? wantedSection : sections.data.find(x => x.kind === 'herb'));
+      if (herbShelf) start.section_id = String(herbShelf.id);
+    }
     setForm(start);
     setInitial(JSON.stringify(start));
     typedExpiry.current = Boolean(start.expires_on);
     initialKey.current = editing ? `${start.form}|${start.acquired_on}` : '';
-  }, [form, sections.data, item.data, editing, params, wantedHerb, herbsApi.data, herbsApi.error, herbList]);
+  }, [form, sections.data, item.data, editing, params, wantedHerb, herbsApi.data, herbsApi.error, herbList, gardenEntry, jar.data]);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined })); };
   const err = k => errors[k] ?? errors[`purchase.${k}`];
@@ -129,6 +146,8 @@ export function ItemForm() {
     if (!editing && form.source_kind === 'bought') {
       body.purchase = { supplier_id: toNum(form.supplier_id), purchased_on: orNull(form.acquired_on), price: toNum(form.price), order_note: orNull(form.order_note) };
     }
+    if (gardenEntry) body.garden_entry_id = gardenEntry;
+    setFormError('');
     try {
       const result = editing ? await api.patch(`/api/items/${id}`, body) : await api.post('/api/items', body);
       markSaved();
@@ -136,12 +155,33 @@ export function ItemForm() {
       navigate(`/cabinet/items/${result?.id ?? id}`);
     } catch (ex) {
       setErrors(ex.details ?? {});
+      // A harvest that was deleted or changed kind after the form loaded has no field to highlight, so the message goes at the top.
+      if (Object.keys(ex.details ?? {}).length === 0) setFormError(ex.message);
+      else if (ex.details.garden_entry_id) setFormError(ex.details.garden_entry_id);
       toast.show({ message: ex.message, duration: 6000 });
     }
   }
 
   const loadError = sections.error || item.error;
   if (!loadError && !editing && wantedHerb && herbsApi.error) {
+    return (
+      <>
+        <PageHeader title="Add to the cabinet" />
+        <p role="alert">The herb list couldn't load, so this jar can't be linked to its herb yet.</p>
+        <Button onClick={herbsApi.reload}>Try again</Button>
+      </>
+    );
+  }
+  if (!loadError && gardenEntry && jar.error) {
+    return (
+      <>
+        <PageHeader title="Add to the cabinet" />
+        <p role="alert">{jar.error.message}</p>
+        <Button onClick={jar.reload}>Try again</Button>
+      </>
+    );
+  }
+  if (!loadError && gardenEntry && herbsApi.error) {
     return (
       <>
         <PageHeader title="Add to the cabinet" />
@@ -158,6 +198,8 @@ export function ItemForm() {
   return (
     <>
       <PageHeader title={editing ? `Edit ${item.data.name}` : 'Add to the cabinet'} />
+      {gardenEntry && <p className="muted">From your garden log</p>}
+      {formError && <p role="alert" className="field-error">{formError}</p>}
       <form onSubmit={save} noValidate>
         <div className="card-grid">
           <ParchmentCard title="What it is">

@@ -6,6 +6,7 @@ import { repos } from '../db/repos.js';
 import { HttpError, notFound } from '../http.js';
 import { validate } from '../validate.js';
 import { itemStatus } from './cabinet.js';
+import { entryTitle } from './garden.js';
 import { herbSchema, herbSourceSchema, HERB_PARTS, RECIPE_TYPES, SOURCE_COVERS } from '../schemas.js';
 import { GRIMOIRE_SEED_VERSION, STARTER_ORDER } from '../data/grimoire/index.js';
 
@@ -151,7 +152,11 @@ export function getHerbDetail(db, id, today = new Date().toISOString().slice(0, 
     JOIN recipe_types t ON t.id = r.type_id
     JOIN recipe_ingredients ri ON ri.recipe_id = r.id AND ri.deleted_at IS NULL
     WHERE ri.herb_id = ? AND r.deleted_at IS NULL ORDER BY r.name COLLATE NOCASE, r.id`).all(id);
-  return { ...herb, sources, photos: r.photos.list({ owner_type: 'herb', owner_id: id }), jars, recipes };
+  const garden_plants = db.prepare(`SELECT id, name, place, ended_on FROM garden_plants WHERE herb_id = ? AND deleted_at IS NULL
+    ORDER BY name COLLATE NOCASE, id`).all(id);
+  const garden_entries = db.prepare(`SELECT id, entry_date, kind, plant_name FROM garden_entries WHERE herb_id = ? AND deleted_at IS NULL
+    ORDER BY entry_date DESC, id DESC LIMIT 10`).all(id).map(({ plant_name, ...e }) => ({ ...e, title: entryTitle(e.kind, plant_name) }));
+  return { ...herb, sources, photos: r.photos.list({ owner_type: 'herb', owner_id: id }), jars, recipes, garden_plants, garden_entries };
 }
 
 export function herbOfTheDay(db, today) {

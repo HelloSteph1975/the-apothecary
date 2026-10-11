@@ -6,7 +6,7 @@ A home apothecary keeper for your herbs, remedies and notes. It runs on your own
 
 ## What works so far
 
-This is Stage 6 of 8. It adds a journal and a photo gallery to the herb cabinet, the grimoire, the recipe book, the batch journal, the sky, the calendar and the to-do list.
+This is Stage 7 of 8. It adds a garden log to the herb cabinet, the grimoire, the recipe book, the batch journal, the sky, the calendar, the to-do list, the journal and the photo gallery.
 
 - Today shows a greeting and the date, plus the sky: the moon's phase and sign, the day's ruling planet, the next new or full moon and the next festival.
 - Settings holds your name, location, hemisphere and units, plus backups and restore.
@@ -20,6 +20,7 @@ This is Stage 6 of 8. It adds a journal and a photo gallery to the herb cabinet,
 - To-do keeps tasks with due dates, repeats (every day, week or month, every new moon, full moon or festival), a priority, a linked jar, recipe, batch or herb, and photos. The app also makes tasks of its own for batch steps, restocks and jars nearing their use-by date, which you can snooze or dismiss. Views are today, upcoming, by area and done, and Today lists what is due.
 - Calendar shows month, week and agenda views with each day's moon and sign, festivals and new and full moons marked, plus batch steps, tasks and use-by dates. Filters let you hide any of them, and each day has a page where you can add a task or start a batch on that day. Everything stays inside the app, with no syncing and no notifications outside it.
 - Journal keeps your own writing. Entry types are yours to manage, with 8 starters. An entry has a title, date and time, a mood, tags, links to herbs, recipes and batches, and photos. Each entry is stamped with the moon's phase and sign, the day's planet and any festival. View entries by type, tag or moon phase, search them, and see them on the calendar.
+- Garden log keeps what grows and what you gather. Add the plants you tend, with the herb they link to in the grimoire, where they grow, when you planted them and when you expect a harvest. Log sowing, planting, pruning, harvesting and foraging, and each entry is stamped with the moon's phase and sign. A harvest or foraging can go straight into the cabinet as a new jar. The garden page also lists good days for each kind of work over the next four weeks, taken from the folk timing rules and labelled as tradition. An expected harvest adds a to-do task and a calendar event, and the day pages show what tradition says about that day in the garden.
 - Photos is a gallery of every photo in the app. Filter it by kind and date, and each photo links back to its record.
 - The other drawers say so when they are not built yet.
 
@@ -36,6 +37,8 @@ The grimoire is for learning and record keeping, not medical advice. Ask a docto
 ![The calendar](docs/screenshots/calendar.jpg)
 
 ![The journal](docs/screenshots/journal.jpg)
+
+![The garden log](docs/screenshots/garden.jpg)
 
 ## Install on Windows
 

@@ -3,7 +3,7 @@ import { principalPhases, localDayBounds, nextFestival } from './sky.js';
 
 export const REPEAT_KINDS = ['none', 'daily', 'weekly', 'monthly', 'new_moon', 'full_moon', 'festival'];
 export const PRIORITIES = ['low', 'normal', 'high'];
-export const RELATED_TYPES = ['item', 'recipe', 'batch', 'herb'];
+export const RELATED_TYPES = ['item', 'recipe', 'batch', 'herb', 'garden_plant'];
 
 const parse = s => { const [y, m, d] = s.split('-').map(Number); return { y, m, d }; };
 const pad = n => String(n).padStart(2, '0');

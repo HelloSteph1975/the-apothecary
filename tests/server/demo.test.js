@@ -65,7 +65,7 @@ it('stocks the cabinet of an older demo folder that has none, once', async () =>
   const count = async () => (await t.http().get(`/api/items?today=${localToday()}`)).body.length;
   const stocked = await count();
   expect(stocked).toBeGreaterThanOrEqual(12);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
   expect(seedDemo(t.ctx)).toBe(false);
   expect(await count()).toBe(stocked);
   expect((await t.http().get('/api/suppliers')).body).toHaveLength(2);
@@ -117,7 +117,7 @@ it('reset moves demo photo files to the trash', async () => {
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM photos').get().n).toBe(0);
 });
 
-const DEMO_HERBS = ['Calendula', 'Chamomile', 'Lavender', 'Mugwort', 'Rose petals'];
+const DEMO_HERBS = ['Calendula', 'Chamomile', 'Lavender', 'Lavender flowers', 'Mugwort', 'Rose petals'];
 const linked = db => db.prepare("SELECT name FROM items WHERE herb_id IS NOT NULL AND deleted_at IS NULL ORDER BY name").all().map(r => r.name);
 
 it('links the demo herbs to the grimoire on a fresh demo, and after a reset', () => {
@@ -184,7 +184,7 @@ it('gives an existing v3 demo folder the recipes once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '3' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(recipeNames(t.ctx.db)).toEqual(DEMO_RECIPES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
   t.ctx.db.exec('DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM recipe_ingredients; DELETE FROM recipes');
   seedDemo(t.ctx);
   expect(recipeNames(t.ctx.db)).toEqual([]);
@@ -249,7 +249,7 @@ it('gives an existing v4 demo folder the batches once', () => {
   t.ctx.db.prepare("UPDATE settings SET value = '4' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(batchNames(t.ctx.db)).toEqual(DEMO_BATCHES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
   clearBatchRows(t.ctx.db);
   seedDemo(t.ctx);
   expect(batchNames(t.ctx.db)).toEqual([]);
@@ -343,7 +343,7 @@ it('gives an existing v5 demo folder the tasks once, only when it has none', () 
   t.ctx.db.prepare("UPDATE settings SET value = '5' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(taskTitles(t.ctx.db)).toEqual(DEMO_TASKS);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
   t.ctx.db.exec('DELETE FROM tasks');
   seedDemo(t.ctx);
   expect(taskTitles(t.ctx.db)).toEqual([]);
@@ -406,7 +406,7 @@ it('gives an existing v6 demo folder the journal entries once, only when it has 
   t.ctx.db.prepare("UPDATE settings SET value = '6' WHERE key = 'demo_seeded'").run();
   expect(seedDemo(t.ctx)).toBe(false);
   expect(entryTitles(t.ctx.db)).toEqual(DEMO_ENTRIES);
-  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('7');
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
   t.ctx.db.exec('DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM journal_entries');
   seedDemo(t.ctx);
   expect(entryTitles(t.ctx.db)).toEqual([]);
@@ -439,4 +439,85 @@ it('reset clears entries, links, tags and photos, keeps the types and does not d
   expect(t.ctx.db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type = 'journal'").get().n).toBe(0);
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_types').get().n).toBe(types);
   expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', filename))).toBe(true);
+});
+
+const plantRows = db => db.prepare('SELECT * FROM garden_plants WHERE deleted_at IS NULL ORDER BY name').all();
+const gardenEntryRows = db => db.prepare('SELECT * FROM garden_entries WHERE deleted_at IS NULL ORDER BY entry_date').all();
+const daysAgo = n => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  const pad = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+it('adds two demo plants and three garden entries with the sky stamped and the harvest in a jar', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const db = t.ctx.db;
+  const plants = plantRows(db);
+  expect(plants.map(p => [p.name, p.place])).toEqual([['Calendula', 'the raised bed'], ['Lavender', 'by the front path']]);
+  const calendula = plants[0];
+  expect(calendula.planted_on).toBe(daysAgo(42));
+  expect(calendula.expected_harvest_on).toBe(daysAgo(-5));
+  expect(calendula.herb_id).toBe(db.prepare("SELECT id FROM herbs WHERE slug = 'calendula'").get().id);
+  expect(plants[1].planted_on < daysAgo(180)).toBe(true);
+  const entries = gardenEntryRows(db);
+  expect(entries.map(e => [e.kind, e.plant_name, e.entry_date])).toEqual([
+    ['sowed', 'Calendula', daysAgo(42)], ['foraged', 'Elderflower', daysAgo(21)], ['harvested', 'Lavender', daysAgo(10)],
+  ]);
+  expect(entries.every(e => e.sky_phase && e.sky_sign)).toBe(true);
+  expect(entries[0].plant_id).toBe(calendula.id);
+  expect(entries[1].plant_id).toBeNull();
+  expect(entries[1].place).toBe('the lane hedge');
+  const harvest = entries[2];
+  expect([harvest.amount, harvest.unit, harvest.plant_id]).toEqual([40, 'g', plants[1].id]);
+  const jar = db.prepare('SELECT * FROM items WHERE id = ?').get(harvest.item_id);
+  expect([jar.amount, jar.unit, jar.form, jar.source_kind]).toEqual([40, 'g', 'dried flower', 'grown']);
+});
+
+it('gives an existing v7 demo folder the garden once, only when it has none', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const clear = () => t.ctx.db.exec('UPDATE garden_entries SET item_id = NULL; DELETE FROM garden_entries; DELETE FROM garden_plants');
+  clear();
+  t.ctx.db.prepare("UPDATE settings SET value = '7' WHERE key = 'demo_seeded'").run();
+  expect(seedDemo(t.ctx)).toBe(false);
+  expect(plantRows(t.ctx.db)).toHaveLength(2);
+  expect(gardenEntryRows(t.ctx.db)).toHaveLength(3);
+  expect(t.ctx.db.prepare("SELECT value FROM settings WHERE key = 'demo_seeded'").get().value).toBe('8');
+  clear();
+  seedDemo(t.ctx);
+  expect(plantRows(t.ctx.db)).toHaveLength(0);
+});
+
+it('leaves a v7 demo folder alone when it already has a plant', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  t.ctx.db.exec("UPDATE garden_entries SET item_id = NULL; DELETE FROM garden_entries; DELETE FROM garden_plants WHERE name != 'Lavender'");
+  t.ctx.db.prepare("UPDATE settings SET value = '7' WHERE key = 'demo_seeded'").run();
+  seedDemo(t.ctx);
+  expect(plantRows(t.ctx.db).map(p => p.name)).toEqual(['Lavender']);
+  expect(gardenEntryRows(t.ctx.db)).toHaveLength(0);
+});
+
+it('reset clears the garden, its photos and the jar link, and does not double up', () => {
+  t = makeTestContext();
+  seedDemo(t.ctx);
+  const db = t.ctx.db;
+  const plant = db.prepare("SELECT id FROM garden_plants WHERE name = 'Calendula'").get();
+  const entry = db.prepare("SELECT id FROM garden_entries WHERE kind = 'sowed'").get();
+  const files = ['1700000000005-abcdef12.jpg', '1700000000006-abcdef12.jpg'];
+  fs.mkdirSync(path.join(t.dataDir, 'photos', '_trash'), { recursive: true });
+  for (const f of files) fs.writeFileSync(path.join(t.dataDir, 'photos', f), 'x');
+  db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('garden_plant', ?, ?)").run(plant.id, files[0]);
+  db.prepare("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('garden_entry', ?, ?)").run(entry.id, files[1]);
+  seedDemo(t.ctx, { reset: true });
+  seedDemo(t.ctx, { reset: true });
+  expect(plantRows(db)).toHaveLength(2);
+  expect(gardenEntryRows(db)).toHaveLength(3);
+  expect(db.prepare('SELECT COUNT(*) AS n FROM garden_plants').get().n).toBe(2);
+  expect(db.prepare('SELECT COUNT(*) AS n FROM garden_entries').get().n).toBe(3);
+  expect(db.prepare("SELECT COUNT(*) AS n FROM photos WHERE owner_type IN ('garden_plant', 'garden_entry')").get().n).toBe(0);
+  expect(db.prepare("SELECT COUNT(*) AS n FROM items WHERE name = 'Lavender flowers'").get().n).toBe(1);
+  for (const f of files) expect(fs.existsSync(path.join(t.dataDir, 'photos', '_trash', f))).toBe(true);
 });

@@ -45,6 +45,20 @@ it('changes the stamped sign inside a day when the moon crosses a sign', () => {
   expect(stampSky(day, '00:01').sky_sign).not.toBe(stampSky(day, '23:59').sky_sign);
 });
 
+it('links a garden entry, names the link after it, and mutes it when the entry is deleted', async () => {
+  const s = setup();
+  const g = s.r.gardenEntries.create({ entry_date: '2026-10-10', kind: 'harvested', plant_name: 'Calendula' });
+  const res = await post(s.h, { type_id: s.ritual.id, title: 'Harvest day', entry_date: '2026-10-10', links: [{ type: 'garden_entry', id: g.id }] });
+  expect(res.status, JSON.stringify(res.body)).toBe(201);
+  expect(res.body.links).toEqual([{ type: 'garden_entry', id: g.id, name: 'Harvested Calendula', live: true }]);
+  await s.h().delete(`/api/garden/entries/${g.id}`);
+  const after = (await s.h().get(`/api/journal/${res.body.id}`)).body;
+  expect(after.links).toEqual([{ type: 'garden_entry', id: g.id, name: 'Harvested Calendula', live: false }]);
+  const bad = await post(s.h, { type_id: s.ritual.id, title: 'x', entry_date: '2026-10-10', links: [{ type: 'garden_entry', id: g.id }] });
+  expect(bad.status).toBe(400);
+  expect(bad.body.details['links.0']).toBeTruthy();
+});
+
 it('creates an entry with a stamp, links and tags', async () => {
   const { h, ritual, herb, recipe } = setup();
   const res = await post(h, {

@@ -14,9 +14,10 @@ import { nextDue } from '../lib/repeat.js';
 import { seedJournalTypes } from '../services/journalTypes.js';
 import { createEntry } from '../services/journal.js';
 import { principalPhases } from '../lib/sky.js';
+import { createPlant, createEntry as createGardenEntry } from '../services/garden.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
-const SEED_VERSION = '7';
+const SEED_VERSION = '8';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
@@ -39,6 +40,38 @@ function clearJournal(db, dataDir) {
     trashPhotoFile(dataDir, filename);
   }
   db.exec("DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM photos WHERE owner_type = 'journal'; DELETE FROM journal_entries");
+}
+
+// Clears the demo garden, entries first, and trashes their photo files. The jar a harvest made is cleared with the cabinet.
+function clearGarden(db, dataDir) {
+  for (const { filename } of db.prepare("SELECT filename FROM photos WHERE owner_type IN ('garden_plant', 'garden_entry')").all()) {
+    trashPhotoFile(dataDir, filename);
+  }
+  db.exec("DELETE FROM photos WHERE owner_type IN ('garden_plant', 'garden_entry'); DELETE FROM garden_entries; DELETE FROM garden_plants");
+}
+
+// Adds two plants and three entries. The harvested lavender goes into the cabinet as a jar, linked back to its entry.
+function stockGarden(db, today, { withJar = true } = {}) {
+  seedGrimoire(db);
+  const herb = slug => db.prepare('SELECT id FROM herbs WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id;
+  const calendula = createPlant(db, {
+    name: 'Calendula', herb_id: herb('calendula'), place: 'the raised bed', planted_on: addDays(today, -42), expected_harvest_on: addDays(today, 5),
+  });
+  const lavender = createPlant(db, { name: 'Lavender', herb_id: herb('lavender'), place: 'by the front path', planted_on: addDays(today, -190) });
+  createGardenEntry(db, { entry_date: addDays(today, -42), kind: 'sowed', plant_id: calendula, notes: 'Pressed the seeds in and watered them well.' });
+  createGardenEntry(db, {
+    entry_date: addDays(today, -21), kind: 'foraged', plant_name: 'Elderflower', herb_id: herb('elderflower'), place: 'the lane hedge',
+    notes: 'Picked a few heads from the sunny side of the hedge.',
+  });
+  const harvest = createGardenEntry(db, {
+    entry_date: addDays(today, -10), kind: 'harvested', plant_id: lavender, amount: 40, unit: 'g', notes: 'Cut the stems in the morning and hung them to dry.',
+  });
+  if (!withJar) return;
+  createItem(db, {
+    section_id: ensureSection(db, 'Herbs'), name: 'Lavender flowers', herb_id: herb('lavender'), latin_name: 'Lavandula angustifolia', form: 'dried flower',
+    plant_part: 'flower', amount: 40, unit: 'g', storage_spot: 'Top shelf', source_kind: 'grown', source_place: 'by the front path',
+    acquired_on: addDays(today, -10), expires_on: addMonths(today, 10), garden_entry_id: harvest,
+  });
 }
 
 // The local date of the most recent full moon on or before today.
@@ -252,12 +285,15 @@ export function seedDemo(ctx, { reset = false } = {}) {
     const stocked = db.prepare('SELECT 1 FROM items WHERE deleted_at IS NULL').get();
     if (seeded.value === SEED_VERSION) return false;
     transaction(db, () => {
+      // The harvest jar joins the cabinet only when the demo jars are there; an older folder with her own stock gets none.
+      const hasDemoJars = !stocked || Boolean(db.prepare("SELECT 1 FROM items WHERE name = 'Lavender' AND deleted_at IS NULL").get());
       if (stocked) linkDemoHerbs(db);
       else stockCabinet(db, localToday());
       if (!db.prepare('SELECT 1 FROM recipes').get()) stockRecipes(db);
       if (!db.prepare('SELECT 1 FROM batches').get()) stockBatches(db, localToday());
       if (!db.prepare('SELECT 1 FROM tasks').get()) stockTasks(db, localToday());
       if (!db.prepare('SELECT 1 FROM journal_entries').get()) stockJournal(db, localToday());
+      if (!db.prepare('SELECT 1 FROM garden_plants').get() && !db.prepare('SELECT 1 FROM garden_entries').get()) stockGarden(db, localToday(), { withJar: hasDemoJars });
       db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
     });
     return !stocked;
@@ -265,6 +301,7 @@ export function seedDemo(ctx, { reset = false } = {}) {
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
     clearJournal(db, ctx.config.dataDir);
+    clearGarden(db, ctx.config.dataDir);
     clearTasks(db, ctx.config.dataDir);
     clearBatches(db, ctx.config.dataDir);
     clearCabinet(db, ctx.config.dataDir);
@@ -274,6 +311,7 @@ export function seedDemo(ctx, { reset = false } = {}) {
     stockBatches(db, localToday());
     stockTasks(db, localToday());
     stockJournal(db, localToday());
+    stockGarden(db, localToday());
     db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });
   return true;

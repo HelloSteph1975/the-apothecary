@@ -3,15 +3,18 @@ import { PHOTO_OWNERS } from './photos.js';
 
 const PAGE_SIZE = 48;
 
-// Where each kind of owner lives: its name column and the client page that shows it.
+// Where each kind of owner lives: a SQL expression for its name (on the owner alias `o`) and the client page that shows it.
 const OWNER_INFO = {
-  item: { name: 'name', link: id => `/cabinet/items/${id}` },
-  supplier: { name: 'name', link: id => `/cabinet/suppliers/${id}` },
-  herb: { name: 'common_name', link: id => `/grimoire/${id}` },
-  recipe: { name: 'name', link: id => `/recipes/${id}` },
-  batch: { name: 'name', link: id => `/batches/${id}` },
-  task: { name: 'title', link: id => `/todo/${id}` },
-  journal: { name: 'title', link: id => `/journal/${id}` },
+  item: { name: 'o.name', link: id => `/cabinet/items/${id}` },
+  supplier: { name: 'o.name', link: id => `/cabinet/suppliers/${id}` },
+  herb: { name: 'o.common_name', link: id => `/grimoire/${id}` },
+  recipe: { name: 'o.name', link: id => `/recipes/${id}` },
+  batch: { name: 'o.name', link: id => `/batches/${id}` },
+  task: { name: 'o.title', link: id => `/todo/${id}` },
+  journal: { name: 'o.title', link: id => `/journal/${id}` },
+  garden_plant: { name: 'o.name', link: id => `/garden/plants/${id}` },
+  // The garden_entry name is the same text as the garden entry title; server/services/garden.js, journal.js and client/src/lib/garden.js must match.
+  garden_entry: { name: "upper(substr(o.kind, 1, 1)) || substr(o.kind, 2) || ' ' || o.plant_name", link: id => `/garden/entries/${id}` },
 };
 
 export const GALLERY_KINDS = Object.keys(PHOTO_OWNERS);
@@ -22,7 +25,7 @@ const utc = d => d.toISOString().slice(0, 19).replace('T', ' ');
 // A live photo whose owner is also live. Each kind joins its own table, so a deleted or purged owner drops out.
 function liveSql(kinds) {
   return kinds.map(k => `SELECT p.id, p.filename, p.caption, p.created_at, p.owner_type AS kind, p.owner_id,
-      o.${OWNER_INFO[k].name} AS owner_name
+      ${OWNER_INFO[k].name} AS owner_name
     FROM photos p JOIN ${PHOTO_OWNERS[k]} o ON o.id = p.owner_id AND o.deleted_at IS NULL
     WHERE p.owner_type = '${k}' AND p.deleted_at IS NULL`).join('\nUNION ALL\n');
 }

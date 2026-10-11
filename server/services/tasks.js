@@ -13,7 +13,7 @@ import { cascadeDeletePhotos, cascadeRestorePhotos } from './photos.js';
 
 const GONE = 'That task is not on the list.';
 const FIX = 'Please fix the highlighted fields.';
-const RELATED_TABLES = { item: ['items', 'name'], recipe: ['recipes', 'name'], batch: ['batches', 'name'], herb: ['herbs', 'common_name'] };
+const RELATED_TABLES = { item: ['items', 'name'], recipe: ['recipes', 'name'], batch: ['batches', 'name'], herb: ['herbs', 'common_name'], garden_plant: ['garden_plants', 'name'] };
 const AUTO_EDITABLE = ['title', 'notes', 'priority', 'snoozed_until'];
 const PRIORITY_RANK = { high: 0, normal: 1, low: 2 };
 const isObject = v => v && typeof v === 'object' && !Array.isArray(v);
@@ -33,6 +33,14 @@ function wantedAutoTasks(db, today) {
     for (const it of listItems(db, { status }, today)) {
       wanted.set(`expiry:${it.id}:${it.expires_on}`, { title: `Use or replace ${it.name}`, due_on: it.expires_on, related_type: 'item', related_id: it.id });
     }
+  }
+  // A growing plant nearing its expected harvest, until a harvest is logged within two weeks of that date.
+  const plants = db.prepare(`SELECT p.id, p.name, p.expected_harvest_on FROM garden_plants p
+    WHERE p.deleted_at IS NULL AND p.ended_on IS NULL AND p.expected_harvest_on IS NOT NULL AND p.expected_harvest_on <= ?
+    AND NOT EXISTS (SELECT 1 FROM garden_entries e WHERE e.plant_id = p.id AND e.deleted_at IS NULL AND e.kind = 'harvested'
+      AND e.entry_date >= date(p.expected_harvest_on, '-14 days'))`).all(addDays(today, 7));
+  for (const p of plants) {
+    wanted.set(`harvest:${p.id}:${p.expected_harvest_on}`, { title: `Harvest ${p.name}`, due_on: p.expected_harvest_on, related_type: 'garden_plant', related_id: p.id });
   }
   return wanted;
 }
@@ -115,7 +123,7 @@ export function listTasks(db, view, today) {
       .map(out);
   }
   if (view === 'area') {
-    const groups = { item: [], recipe: [], batch: [], herb: [], none: [] };
+    const groups = { item: [], recipe: [], batch: [], herb: [], garden_plant: [], none: [] };
     for (const r of openRows(db).sort((a, b) => byDate(a, b) || byPriority(a, b) || byTitle(a, b))) groups[r.related_type ?? 'none'].push(out(r));
     return groups;
   }

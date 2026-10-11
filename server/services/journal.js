@@ -13,7 +13,10 @@ const MAX_TAG_LENGTH = 40;
 const PAGE_SIZE = 30;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MOON_GROUPS = ['new', 'waxing', 'full', 'waning'];
-const LINK_TABLES = { herb: ['herbs', 'common_name'], recipe: ['recipes', 'name'], batch: ['batches', 'name'] };
+const LINK_TABLES = { herb: ['herbs', 'common_name'], recipe: ['recipes', 'name'], batch: ['batches', 'name'],
+  // A name expression, not just a column: the same text as the garden entry title. server/services/garden.js, gallery.js and client/src/lib/garden.js must match.
+  garden_entry: ['garden_entries', "upper(substr(kind, 1, 1)) || substr(kind, 2) || ' ' || plant_name"],
+};
 const str = v => (typeof v === 'string' && v !== '' ? v : null);
 const likeEscape = s => s.replace(/[\\%_]/g, '\\$&');
 
@@ -152,7 +155,7 @@ function parseLinks(db, list, errors) {
   list.forEach((raw, i) => {
     const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     const id = Number(src.id);
-    if (!JOURNAL_LINK_TYPES.includes(src.type)) { errors[`links.${i}`] = 'Link to a herb, recipe or batch'; return; }
+    if (!JOURNAL_LINK_TYPES.includes(src.type)) { errors[`links.${i}`] = 'Link to a herb, recipe, batch or garden entry'; return; }
     if (!Number.isInteger(id) || id < 1 || !isLive(db, LINK_TABLES[src.type][0], id)) { errors[`links.${i}`] = `That ${src.type} doesn't exist`; return; }
     const key = `${src.type}:${id}`;
     if (seen.has(key)) return;

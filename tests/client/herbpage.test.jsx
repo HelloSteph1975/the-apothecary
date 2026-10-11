@@ -21,6 +21,13 @@ const base = {
     { id: 2, title: 'Odd Link', author: null, year: null, url: 'javascript:alert(1)', covers: [] },
   ],
   photos: [],
+  garden_plants: [
+    { id: 7, name: 'Back bed calendula', place: 'Back bed', ended_on: null },
+    { id: 8, name: 'Old pot', place: null, ended_on: '2026-09-01' },
+  ],
+  garden_entries: [
+    { id: 11, entry_date: '2026-10-05', kind: 'harvested', title: 'Harvested Back bed calendula' },
+  ],
   jars: [{ id: 9, name: 'Lavender buds', amount: 30, unit: 'g', size_label: null, expires_on: '2026-10-12', status: { low: false, expiring: true, expired: false } }],
 };
 
@@ -66,11 +73,12 @@ it('puts the cautions panel before the uses, with labels and the AHPA class', as
 });
 
 it('says so when no cautions are recorded and hides empty panels', async () => {
-  herb = { ...base, caution_pregnancy: '', caution_medications: '', ahpa_class: null, garden_harvest_part: '', garden_harvest_timing: '', garden_sun: '', garden_water: '', garden_companions: [], sources: [], jars: [], notes: '' };
+  herb = { ...base, caution_pregnancy: '', caution_medications: '', ahpa_class: null, garden_harvest_part: '', garden_harvest_timing: '', garden_sun: '', garden_water: '', garden_companions: [], garden_plants: [], garden_entries: [], sources: [], jars: [], notes: '' };
   open();
   const cautions = await screen.findByRole('region', { name: 'Before you use it' });
   expect(within(cautions).getByText("No cautions recorded. That doesn't mean it's safe for everyone.")).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'In the garden' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Plant this' })).toHaveAttribute('href', '/garden/plants/new?herb=5');
   expect(screen.queryByRole('region', { name: 'Sources' })).not.toBeInTheDocument();
   expect(within(await screen.findByRole('region', { name: 'In your cabinet' })).getByText('No jar of this herb yet.')).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'Notes' })).not.toBeInTheDocument();
@@ -153,4 +161,25 @@ it('shows only the write link when there are no recipes', async () => {
   await screen.findByRole('region', { name: 'In your cabinet' });
   expect(screen.queryByRole('region', { name: 'Recipes with this herb' })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Write a recipe with this herb' })).toHaveAttribute('href', '/recipes/new?herb=5');
+});
+
+it('lists the plants growing here and the garden log in the garden card, with a link to plant it', async () => {
+  open();
+  const garden = await screen.findByRole('region', { name: 'In the garden' });
+  const growing = within(garden).getByRole('list', { name: 'Growing here' });
+  expect(within(growing).getByRole('link', { name: 'Back bed calendula' })).toHaveAttribute('href', '/garden/plants/7');
+  expect(within(growing).getByText(/Back bed/, { selector: 'span' })).toBeInTheDocument();
+  expect(within(growing).getByRole('link', { name: 'Old pot' })).toHaveAttribute('href', '/garden/plants/8');
+  expect(within(growing).getByText('Ended')).toBeInTheDocument();
+  const log = within(garden).getByRole('list', { name: 'Garden log' });
+  expect(within(log).getByRole('link', { name: 'Harvested Back bed calendula' })).toHaveAttribute('href', '/garden/entries/11');
+  expect(within(log).getByText(/Oct 5/)).toBeInTheDocument();
+  expect(within(garden).getByRole('link', { name: 'Plant this' })).toHaveAttribute('href', '/garden/plants/new?herb=5');
+});
+
+it('shows the garden card for plants and entries even when the herb has no garden notes', async () => {
+  herb = { ...base, garden_harvest_part: '', garden_harvest_timing: '', garden_sun: '', garden_water: '', garden_companions: [] };
+  open();
+  const garden = await screen.findByRole('region', { name: 'In the garden' });
+  expect(within(garden).getByRole('link', { name: 'Back bed calendula' })).toBeInTheDocument();
 });
