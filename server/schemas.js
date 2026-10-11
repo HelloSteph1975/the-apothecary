@@ -66,8 +66,19 @@ export const journalTypeSchema = {
 export const journalEntrySchema = {
   type_id: 'int!', title: 'string!', entry_date: 'date!', entry_time: 'string', body: 'string', mood: MOODS,
 };
+export const GARDEN_KINDS = ['planted', 'sowed', 'transplanted', 'pruned', 'harvested', 'foraged', 'observed'];
+// What the moon's garden lore can suggest for a day. Labels live in client/src/lib/garden.js.
+export const GARDEN_TASKS = ['sow-above', 'sow-root', 'transplant', 'prune', 'weed', 'harvest-above', 'harvest-root'];
+export const gardenPlantSchema = {
+  name: 'string!', herb_id: 'int', place: 'string', planted_on: 'date', expected_harvest_on: 'date', ended_on: 'date', notes: 'string',
+};
+// plant_name is required by the service unless plant_id is given.
+export const gardenEntrySchema = {
+  entry_date: 'date!', kind: { type: GARDEN_KINDS, required: true }, plant_id: 'int', herb_id: 'int', plant_name: 'string', place: 'string',
+  amount: { type: 'number', min: 0 }, unit: UNITS, weather: 'string', notes: 'string',
+};
 export const TIMING_KINDS = ['phase_group', 'phase', 'moon_element', 'moon_sign', 'day_ruler', 'festival'];
-// List fields (recipe_types, planets, elements) are arrays of strings, checked by the timing service.
+// List fields (recipe_types, planets, elements, garden_tasks) are arrays of strings, checked by the timing service.
 export const timingRuleSchema = {
   kind: { type: TIMING_KINDS, required: true }, value: 'string!', text: 'string!',
   weight: { type: 'int', min: 1, max: 3, nullable: false }, sort_order: { type: 'int', nullable: false },

@@ -74,10 +74,10 @@ it('runMaintenance keeps going when the timing rule seed throws', () => {
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM timing_rules').get().n).toBe(0);
 });
 
-it('runMaintenance seeds the 19 starter timing rules', () => {
+it('runMaintenance seeds the 29 starter timing rules', () => {
   t = makeTestContext();
   runMaintenance(t.ctx);
-  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM timing_rules').get().n).toBe(19);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM timing_rules').get().n).toBe(29);
 });
 
 it('contentMaintenance seeds the grimoire, links jars, seeds recipe types, seeds timing rules, then seeds journal types', () => {

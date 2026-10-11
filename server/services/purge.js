@@ -16,11 +16,21 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
       OR (owner_type = 'recipe' AND owner_id IN (${old('recipes')}))
       OR (owner_type = 'batch' AND owner_id IN (${old('batches')}))
       OR (owner_type = 'task' AND owner_id IN (${old('tasks')}))
-      OR (owner_type = 'journal' AND owner_id IN (${old('journal_entries')}))`;
+      OR (owner_type = 'journal' AND owner_id IN (${old('journal_entries')}))
+      OR (owner_type = 'garden_plant' AND owner_id IN (${old('garden_plants')}))
+      OR (owner_type = 'garden_entry' AND owner_id IN (${old('garden_entries')}))`;
     files = db.prepare(`SELECT filename FROM photos WHERE ${photoMatch}`).all(cutoff).map(r => r.filename);
     const counts = {};
     counts.photos = db.prepare(`DELETE FROM photos WHERE ${photoMatch}`).run(cutoff).changes;
-    // Journal rows go first: links to herbs, recipes or batches about to be purged mean nothing, and children go before entries.
+    // Garden rows go first. Entries keep their name when their plant is purged; links to a purged entry mean nothing.
+    db.prepare(`UPDATE garden_entries SET plant_id = NULL WHERE plant_id IN (${old('garden_plants')})`).run();
+    const goneEntries = db.prepare(`SELECT id FROM garden_entries WHERE id IN (${old('garden_entries')})`).all().map(r => r.id);
+    counts.garden_entries = db.prepare(`DELETE FROM garden_entries WHERE id IN (${old('garden_entries')})`).run().changes;
+    db.prepare(`UPDATE tasks SET related_type = NULL, related_id = NULL WHERE related_type = 'garden_plant' AND related_id IN (${old('garden_plants')})`).run();
+    counts.garden_plants = db.prepare(`DELETE FROM garden_plants WHERE id IN (${old('garden_plants')})`).run().changes;
+    const dropLink = db.prepare("DELETE FROM journal_links WHERE link_type = 'garden_entry' AND link_id = ?");
+    for (const entryId of goneEntries) dropLink.run(entryId);
+    // Journal rows go next: links to herbs, recipes or batches about to be purged mean nothing, and children go before entries.
     for (const [type, table] of [['herb', 'herbs'], ['recipe', 'recipes'], ['batch', 'batches']]) {
       db.prepare(`DELETE FROM journal_links WHERE link_type = '${type}' AND link_id IN (${old(table)})`).run();
     }
@@ -37,6 +47,7 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     counts.purchases = db.prepare(`DELETE FROM purchases WHERE id IN (${old('purchases')}) OR item_id IN (${old('items')})`).run().changes;
     db.prepare(`UPDATE batches SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     db.prepare(`UPDATE batch_ingredients SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
+    db.prepare(`UPDATE garden_entries SET item_id = NULL WHERE item_id IN (${old('items')})`).run();
     counts.items = db.prepare(`DELETE FROM items WHERE id IN (${old('items')})`).run().changes;
     db.prepare(`UPDATE purchases SET supplier_id = NULL WHERE supplier_id IN (${old('suppliers')})`).run();
     counts.suppliers = db.prepare(`DELETE FROM suppliers WHERE id IN (${old('suppliers')})`).run().changes;
@@ -67,6 +78,8 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     counts.timing_rules = db.prepare(`DELETE FROM timing_rules WHERE id IN (${old('timing_rules')})`).run().changes;
     db.prepare(`DELETE FROM herb_sources WHERE id IN (${old('herb_sources')}) OR herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE items SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
+    db.prepare(`UPDATE garden_plants SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
+    db.prepare(`UPDATE garden_entries SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE recipe_ingredients SET herb_id = NULL, herb_gone = 1 WHERE herb_id IN (${old('herbs')})`).run();
     db.prepare(`UPDATE batch_ingredients SET herb_id = NULL WHERE herb_id IN (${old('herbs')})`).run();
     counts.herbs = db.prepare(`DELETE FROM herbs WHERE id IN (${old('herbs')})`).run().changes;

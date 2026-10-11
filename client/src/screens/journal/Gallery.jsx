@@ -16,6 +16,8 @@ const KIND_LABELS = {
   batch: { plural: 'Batches', one: 'Batch' },
   task: { plural: 'Tasks', one: 'Task' },
   journal: { plural: 'Journal entries', one: 'Journal entry' },
+  garden_plant: { plural: 'Garden plants', one: 'Garden plant' },
+  garden_entry: { plural: 'Garden entries', one: 'Garden entry' },
 };
 
 const queryOf = pairs => {

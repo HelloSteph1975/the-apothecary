@@ -28,9 +28,9 @@ describe('starter file', () => {
     phase_group: PHASE_GROUPS, phase: PHASE_NAMES, moon_element: ELEMENTS, moon_sign: SIGNS, day_ruler: PLANETS,
     festival: FESTIVALS.map(f => f.name),
   };
-  it('has 19 well-formed rules', () => {
-    expect(rules).toHaveLength(19);
-    expect(new Set(rules.map(r => r.slug)).size).toBe(19);
+  it('has 29 well-formed rules', () => {
+    expect(rules).toHaveLength(29);
+    expect(new Set(rules.map(r => r.slug)).size).toBe(29);
     for (const r of rules) {
       expect(Object.keys(valid)).toContain(r.kind);
       expect(valid[r.kind]).toContain(r.value);
@@ -50,11 +50,11 @@ describe('starter file', () => {
 });
 
 describe('seeding', () => {
-  it('adds the 19 starters once, hides the key, and keeps her edits and deletions', () => {
+  it('adds the 29 starters once, hides the key, and keeps her edits and deletions', () => {
     t = makeTestContext();
     const db = t.ctx.db;
-    expect(seedTimingRules(db)).toEqual({ added: 19 });
-    expect(count()).toBe(19);
+    expect(seedTimingRules(db)).toEqual({ added: 29 });
+    expect(count()).toBe(29);
     expect(getSettings(db)).not.toHaveProperty('timing_rules_seed_version');
     expect(db.prepare("SELECT value FROM settings WHERE key = 'timing_rules_seed_version'").get().value).toBe(String(TIMING_RULES_SEED_VERSION));
     const r = repos(db).timingRules;
@@ -64,7 +64,7 @@ describe('seeding', () => {
     r.remove(yule);
     expect(seedTimingRules(db)).toEqual({ added: 0 });
     expect(r.get(waxing).text).toBe('Mine now.');
-    expect(count()).toBe(19);
+    expect(count()).toBe(29);
     expect(r.get(yule)).toBeNull();
   });
   it('does not bring a deleted rule back even when a newer seed version adds entries', () => {
@@ -76,14 +76,14 @@ describe('seeding', () => {
     repos(db).timingRules.remove(id);
     db.prepare("DELETE FROM settings WHERE key = 'timing_rules_seed_version'").run();
     expect(seedTimingRules(db, [...starters, { ...starters[0], slug: 'brand-new' }])).toEqual({ added: 1 });
-    expect(count()).toBe(20);
+    expect(count()).toBe(30);
     expect(db.prepare("SELECT deleted_at FROM timing_rules WHERE slug = 'samhain'").get().deleted_at).not.toBeNull();
   });
   it('stores the lists as text and the API returns arrays', async () => {
     t = makeTestContext();
     seedTimingRules(t.ctx.db);
     const res = await t.http().get('/api/timing-rules');
-    expect(res.body).toHaveLength(19);
+    expect(res.body).toHaveLength(29);
     expect(res.body[0]).toMatchObject({ slug: 'waxing-build', kind: 'phase_group', value: 'waxing', weight: 2, is_starter: 1 });
     expect(res.body[0].recipe_types).toEqual(['tincture', 'glycerite', 'infused-oil', 'oxymel', 'vinegar', 'syrup']);
     expect(res.body[4].planets).toEqual(['Saturn', 'Venus']);

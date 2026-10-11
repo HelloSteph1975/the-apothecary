@@ -295,5 +295,153 @@
     ],
     "elements": [],
     "weight": 2
+  },
+  {
+    "slug": "garden-waxing-sow",
+    "kind": "phase_group",
+    "value": "waxing",
+    "text": "A growing moon: in folk gardening, the time to sow leafy greens and flowers, which are said to rise with it.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 2,
+    "garden_tasks": [
+      "sow-above",
+      "transplant"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-waning-roots",
+    "kind": "phase_group",
+    "value": "waning",
+    "text": "A shrinking moon: old garden lore saves this for sowing roots and bulbs and for digging roots to dry.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 2,
+    "garden_tasks": [
+      "sow-root",
+      "harvest-root"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-full-gather",
+    "kind": "phase",
+    "value": "full",
+    "text": "Full moon: traditionally a good time to gather leaves and flowers, in the morning once the dew has dried.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 3,
+    "garden_tasks": [
+      "harvest-above"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-new-rest",
+    "kind": "phase",
+    "value": "new",
+    "text": "New moon: in folk practice a resting time for the beds, good for weeding and planning.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 1,
+    "garden_tasks": [
+      "weed"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-waning-prune",
+    "kind": "phase_group",
+    "value": "waning",
+    "text": "A shrinking moon: pruning now is said to slow regrowth.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 1,
+    "garden_tasks": [
+      "prune"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-water-fruitful",
+    "kind": "moon_element",
+    "value": "Water",
+    "text": "Moon in a water sign: counted among the most fruitful days for sowing and planting out.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 2,
+    "garden_tasks": [
+      "sow-above",
+      "sow-root",
+      "transplant"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-earth-roots",
+    "kind": "moon_element",
+    "value": "Earth",
+    "text": "Moon in an earth sign: said to favour roots and settling young plants into the ground.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 1,
+    "garden_tasks": [
+      "sow-root",
+      "transplant"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-fire-dry",
+    "kind": "moon_element",
+    "value": "Fire",
+    "text": "Moon in a fire sign: a dry, barren time in garden lore, kept for weeding, pruning and harvests meant to store.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 2,
+    "garden_tasks": [
+      "weed",
+      "prune",
+      "harvest-root"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-air-flowers",
+    "kind": "moon_element",
+    "value": "Air",
+    "text": "Moon in an air sign: traditionally kind to flowers, and another dry spell for weeding.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 1,
+    "garden_tasks": [
+      "harvest-above",
+      "weed"
+    ],
+    "since": 2
+  },
+  {
+    "slug": "garden-friday-flowers",
+    "kind": "day_ruler",
+    "value": "Venus",
+    "text": "Friday, under Venus: a traditional day for gathering roses and other flowers.",
+    "recipe_types": [],
+    "planets": [],
+    "elements": [],
+    "weight": 1,
+    "garden_tasks": [
+      "harvest-above"
+    ],
+    "since": 2
   }
 ]
