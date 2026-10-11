@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Sprout } from 'lucide-react';
 import { MoonGlyph } from '../../lib/moonGlyph.jsx';
 import { addDaysTo, WEEKDAYS } from '../../lib/tasks.js';
 import { MAX_SHOWN, badge, cellName } from '../../lib/calendar.js';
-import { Sprout } from 'lucide-react';
 import { goodFor } from '../../lib/garden.js';
 import { EventList } from './EventList.jsx';
 

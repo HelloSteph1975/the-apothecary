@@ -16,6 +16,7 @@ const RULES = [
   rule(3, { kind: 'moon_sign', value: 'Taurus', text: 'Taurus text.', weight: 1 }),
 ];
 const GARDEN_RULE = rule(4, { text: 'Gather in the full moon.', garden_tasks: ['harvest-above'] });
+const GARDEN_RULE_2 = rule(5, { kind: 'moon_sign', value: 'Cancer', text: 'Weed in Cancer.', garden_tasks: ['weed'] });
 let withGarden;
 const TYPES = [
   { id: 1, slug: 'tincture', name: 'Tincture' },
@@ -40,7 +41,7 @@ beforeEach(() => {
     }
     if (method === 'PUT' && url === '/api/timing-rules/order') return json(RULES);
     if (method === 'PATCH') return json({ ok: true });
-    if (url === '/api/timing-rules') return json(withGarden ? [...RULES, GARDEN_RULE] : RULES);
+    if (url === '/api/timing-rules') return json(withGarden ? [...RULES, GARDEN_RULE, GARDEN_RULE_2] : RULES);
     return json({});
   });
 });
@@ -339,4 +340,23 @@ it('filters the list to Making or Garden rules, all by default', async () => {
   await user.click(filter.getByRole('button', { name: 'Making' }));
   expect(screen.getByText('Waxing text.')).toBeInTheDocument();
   expect(screen.queryByText('Gather in the full moon.')).toBeNull();
+});
+
+it('moves a rule on the Garden filter by swapping with its visible neighbour and sending the full list', async () => {
+  const user = userEvent.setup();
+  withGarden = true;
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(within(screen.getByRole('group', { name: 'Show rules' })).getByRole('button', { name: 'Garden' }));
+  await user.click(screen.getByRole('button', { name: 'Move Waxing moon down' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'PUT')).toBeTruthy());
+  expect(calls.find(c => c.method === 'PUT').body).toEqual({ ids: [1, 2, 3, 5, 4] });
+});
+
+it('says when no rule matches the filter', async () => {
+  const user = userEvent.setup();
+  open();
+  await screen.findByText('Waxing text.');
+  await user.click(within(screen.getByRole('group', { name: 'Show rules' })).getByRole('button', { name: 'Garden' }));
+  expect(screen.getByText('No rules match this filter.')).toBeInTheDocument();
 });

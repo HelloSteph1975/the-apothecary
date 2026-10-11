@@ -15,6 +15,10 @@ import { RULE_KINDS, WEIGHTS, PLANETS, ELEMENTS, valueOptions, ruleTitle, weight
 
 const MAX_TEXT = 300;
 const blank = { kind: 'phase_group', value: 'waxing', text: '', weight: '2', recipe_types: [], planets: [], elements: [], garden_tasks: [] };
+const hasGarden = r => (r.garden_tasks ?? []).length > 0;
+// A rule with only garden tasks belongs to the garden; any other rule also works for making.
+const gardenOnly = r => hasGarden(r) && !r.recipe_types.length && !r.planets.length && !r.elements.length;
+const filterRules = (rules, show) => (show === 'garden' ? rules.filter(hasGarden) : show === 'making' ? rules.filter(r => !gardenOnly(r)) : rules);
 const toggle = (list, v) => (list.includes(v) ? list.filter(x => x !== v) : [...list, v]);
 
 function CheckGroup({ legend, options, selected, onToggle }) {
@@ -124,10 +128,7 @@ export function TimingRules() {
   const closeForm = key => { if (activeForm.current === key) { activeForm.current = null; setFormOpen(false); } };
   const [show, setShow] = useState('all'); // 'all', 'making' or 'garden'
   const all = rules.data || [];
-  const hasGarden = r => (r.garden_tasks ?? []).length > 0;
-  // A rule with only garden tasks belongs to the garden; any other rule also works for making.
-  const gardenOnly = r => hasGarden(r) && !r.recipe_types.length && !r.planets.length && !r.elements.length;
-  const list = show === 'garden' ? all.filter(hasGarden) : show === 'making' ? all.filter(r => !gardenOnly(r)) : all;
+  const list = filterRules(all, show);
   const [moving, setMoving] = useState(false);
 
   const typeName = slug => types.find(t => slugOf(t) === slug)?.name ?? slug;
@@ -152,9 +153,11 @@ export function TimingRules() {
     const p = pending.current;
     if (!p || !rules.data) return;
     pending.current = null;
-    const index = rules.data.findIndex(r => r.id === p.id);
+    // Position and ends are those of the list she sees, which may be filtered.
+    const seen = filterRules(rules.data, show);
+    const index = seen.findIndex(r => r.id === p.id);
     if (index < 0) return;
-    const atEnd = p.dir === 'up' ? index === 0 : index === rules.data.length - 1;
+    const atEnd = p.dir === 'up' ? index === 0 : index === seen.length - 1;
     const dir = atEnd ? (p.dir === 'up' ? 'down' : 'up') : p.dir;
     listRef.current?.querySelector(`[data-move="${p.id}-${dir}"]`)?.focus();
     setAnnouncement(`Moved ${p.title} to position ${index + 1}.`);
@@ -162,8 +165,11 @@ export function TimingRules() {
 
   const shift = async (i, by) => {
     if (moving) return;
-    const ids = list.map(r => r.id);
-    [ids[i], ids[i + by]] = [ids[i + by], ids[i]];
+    // Swap with the visible neighbour at their places in the full list, and send every id.
+    const ids = all.map(r => r.id);
+    const a = ids.indexOf(list[i].id);
+    const b = ids.indexOf(list[i + by].id);
+    [ids[a], ids[b]] = [ids[b], ids[a]];
     setMoving(true);
     setAnnouncement('');
     pending.current = { id: list[i].id, dir: by < 0 ? 'up' : 'down', title: ruleTitle(list[i]) };
@@ -195,7 +201,7 @@ export function TimingRules() {
           ))}
         </div>
         {all.length === 0 && <p className="muted">No rules yet. Add one to get folk timing on Today.</p>}
-        {all.length > 0 && list.length === 0 && <p className="muted">No {show} rules yet.</p>}
+        {all.length > 0 && list.length === 0 && <p className="muted">No rules match this filter.</p>}
         <ul className="type-list" ref={listRef}>
           {list.map((r, i) => (
             <li key={r.id} className="type-row">
