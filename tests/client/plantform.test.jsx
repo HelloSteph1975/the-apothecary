@@ -145,3 +145,17 @@ it('asks before leaving a changed form', async () => {
   expect(await screen.findByText('Leave without saving?')).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/garden/plants/7/edit');
 });
+
+it('keeps the link to a herb that was deleted when the plant is saved', async () => {
+  const real = global.fetch;
+  global.fetch = vi.fn(async (url, opts = {}) => (url === '/api/garden/plants/7' && (opts.method ?? 'GET') === 'GET'
+    ? new Response(JSON.stringify({ ...plant, herb_id: 99, herb: { id: 99, name: 'Old herb', live: false } }))
+    : real(url, opts)));
+  open('/garden/plants/7/edit');
+  const herb = await screen.findByLabelText('Herb');
+  expect(herb).toHaveValue('99');
+  expect(within(herb).getByRole('option', { name: 'Old herb (no longer in the grimoire)' })).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText('Place'), ' two');
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.find(c => c.method === 'PATCH')?.body.herb_id).toBe(99));
+});

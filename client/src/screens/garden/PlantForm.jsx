@@ -37,7 +37,7 @@ export function PlantForm() {
     if (editing) {
       const p = plant.data;
       start = {
-        herb_id: p.herb?.live ? s(p.herb_id) : '', name: s(p.name), place: s(p.place), planted_on: s(p.planted_on),
+        herb_id: s(p.herb_id), name: s(p.name), place: s(p.place), planted_on: s(p.planted_on),
         expected_harvest_on: s(p.expected_harvest_on), ended_on: s(p.ended_on), notes: s(p.notes),
       };
     } else {
@@ -104,6 +104,10 @@ export function PlantForm() {
   if (!form) return <PageHeader title={heading} />;
 
   const herbOptions = herbs.data.map(h => ({ value: String(h.id), label: h.common_name }));
+  // A herb that was deleted stays linked unless she picks another, so saving never unlinks it silently.
+  if (form.herb_id !== '' && !herbOptions.some(o => o.value === form.herb_id)) {
+    herbOptions.unshift({ value: form.herb_id, label: `${plant.data?.herb?.name ?? 'Herb'} (no longer in the grimoire)` });
+  }
   const used = [...new Set((places.data ?? []).map(p => p.place).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   return (

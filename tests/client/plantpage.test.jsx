@@ -10,7 +10,7 @@ import { todayString } from '../../client/src/lib/today.js';
 HTMLDialogElement.prototype.showModal ??= function () { this.setAttribute('open', ''); };
 HTMLDialogElement.prototype.close ??= function () { this.removeAttribute('open'); };
 
-const day = (iso, score = 3) => ({ day: iso, score, sky: { phase: 'Full Moon', sign: 'Leo', ruler: 'Sun' }, reasons: ['A full moon in a fire sign.'] });
+const day = (iso, score = 3) => ({ day: iso, score, sky: { phase: 'full', sign: 'Leo', ruler: 'Sun' }, reasons: ['A full moon in a fire sign.'] });
 const base = {
   id: 7, name: 'Back bed calendula', herb_id: 3, place: 'Back bed', planted_on: '2026-10-01', expected_harvest_on: '2026-12-01', ended_on: null,
   notes: 'Started from seed.', deleted_at: null,
@@ -99,7 +99,7 @@ it('lists good harvest days for a flower, labelled as folk tradition', async () 
   expect(links).toHaveLength(2);
   expect(links[0]).toHaveAttribute('href', '/calendar/2026-10-17');
   expect(links[0]).toHaveTextContent('Sat Oct 17');
-  expect(links[0]).toHaveTextContent('in Leo');
+  expect(links[0]).toHaveTextContent('full moon in Leo');
 });
 
 it('uses the root days for a root crop', async () => {
