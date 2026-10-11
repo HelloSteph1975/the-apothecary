@@ -1,3 +1,4 @@
+import { phaseText } from './calendar.js';
 import { Sprout, Shovel, Scissors, ShoppingBasket, Leaf, Eye } from 'lucide-react';
 
 // Mirrors GARDEN_KINDS and GARDEN_TASKS on the server (server/schemas.js); keep them in step.
@@ -34,3 +35,12 @@ export const entryTitle = (kind, plantName) => `${kind.charAt(0).toUpperCase()}$
 
 // Roots are dug in a shrinking moon; leaves, flowers and everything else are gathered in a full one.
 export const harvestTaskFor = part => (part === 'root' ? 'harvest-root' : 'harvest-above');
+
+export const FORAGING_NOTE = 'Only gather a plant you can identify with complete certainty, and only where foraging is allowed.';
+
+// "waxing gibbous in Taurus"; empty when the entry has no sky stamp.
+export const skyText = sky => (sky?.phase && sky?.sign ? `${phaseText(sky.phase)} in ${sky.sign}` : '');
+export const skyTextCap = sky => {
+  const text = skyText(sky);
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : '';
+};

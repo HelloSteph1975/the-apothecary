@@ -37,6 +37,9 @@ import { DayPage } from './screens/calendar/DayPage.jsx';
 import { Garden } from './screens/garden/Garden.jsx';
 import { PlantPage } from './screens/garden/PlantPage.jsx';
 import { PlantForm } from './screens/garden/PlantForm.jsx';
+import { GardenLog } from './screens/garden/GardenLog.jsx';
+import { GardenEntryPage } from './screens/garden/EntryPage.jsx';
+import { GardenEntryForm } from './screens/garden/EntryForm.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -105,6 +108,18 @@ function PlantPageRoute() {
   return <PlantPage key={id} />;
 }
 
+// Keyed by id so moving between garden entries reloads the page.
+function GardenEntryPageRoute() {
+  const { id } = useParams();
+  return <GardenEntryPage key={id} />;
+}
+
+// A fresh form per entry, so moving between edit pages does not keep the last entry's fields.
+function GardenEntryFormRoute() {
+  const { id } = useParams();
+  return <GardenEntryForm key={id ?? 'new'} />;
+}
+
 // A fresh form per plant, so moving between edit pages does not keep the last plant's fields.
 function PlantFormRoute() {
   const { id } = useParams();
@@ -153,6 +168,10 @@ export const routes = [
       { path: 'garden/plants/new', element: <PlantFormRoute /> },
       { path: 'garden/plants/:id/edit', element: <PlantFormRoute /> },
       { path: 'garden/plants/:id', element: <PlantPageRoute /> },
+      { path: 'garden/log', element: <GardenLog /> },
+      { path: 'garden/entries/new', element: <GardenEntryFormRoute /> },
+      { path: 'garden/entries/:id/edit', element: <GardenEntryFormRoute /> },
+      { path: 'garden/entries/:id', element: <GardenEntryPageRoute /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },

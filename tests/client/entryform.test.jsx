@@ -37,6 +37,7 @@ beforeEach(() => {
     if (url === '/api/journal/tags') return json([{ tag: 'samhain', count: 2 }, { tag: 'moon', count: 1 }]);
     if (url === '/api/herbs') return json([{ id: 3, common_name: 'Mugwort' }, { id: 6, common_name: 'Yarrow' }]);
     if (url === '/api/recipes') return json([{ id: 5, name: 'Dream oil' }]);
+    if (url === '/api/garden/entries/options') return json([{ id: 12, title: 'Harvested Calendula', entry_date: '2026-10-05' }]);
     if (url === '/api/batches') return json([{ id: 8, name: 'Autumn salve' }]);
     if (method === 'POST' && url === '/api/journal') {
       if (slow) await slow;
@@ -291,4 +292,19 @@ it('sends the body as typed, and null only when it is empty', async () => {
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(saved()).toHaveLength(1));
   expect(saved()[0].body.body).toBe('  Line one' + String.fromCharCode(10) + '  indented  ');
+});
+
+it('links a garden entry from the options list and sends it as garden_entry', async () => {
+  const user = userEvent.setup();
+  await open('/journal/new');
+  await user.type(screen.getByLabelText('Title (required)'), 'Harvest day');
+  await user.selectOptions(screen.getByLabelText('Type (required)'), 'Ritual');
+  await user.selectOptions(screen.getByLabelText('Link to'), 'Garden entry');
+  await user.selectOptions(screen.getByLabelText('Record'), 'Harvested Calendula');
+  await user.click(screen.getByRole('button', { name: 'Add' }));
+  expect(within(links()).getByText(/Harvested Calendula/)).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saved()).toHaveLength(1));
+  expect(saved()[0].body.links).toEqual([{ type: 'garden_entry', id: 12 }]);
+  expect(calls.some(c => c.url === '/api/garden/entries/options')).toBe(true);
 });

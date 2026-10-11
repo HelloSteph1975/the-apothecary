@@ -14,22 +14,30 @@ let calls;
 let postFails;
 let itemExtra;
 let herbsFail;
+let jar;
+let jarFail;
+let jarConflict;
 beforeEach(() => {
   calls = [];
   postFails = false;
   itemExtra = {};
   herbsFail = false;
+  jarFail = false;
+  jarConflict = false;
+  jar = { name: 'Calendula', herb_id: 3, latin_name: 'Calendula officinalis', source_kind: 'grown', source_place: 'Back bed', acquired_on: '2026-10-05', amount: 30, unit: 'g', form: 'fresh', plant_part: 'flower' };
   global.fetch = vi.fn(async (url, opts = {}) => {
     const method = opts.method ?? 'GET';
     calls.push({ method, url, body: opts.body ? JSON.parse(opts.body) : undefined });
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
+    if (url === '/api/garden/entries/5/jar') return jarFail ? (jarFail = false, json({ error: 'The harvest would not load.' }, 500)) : json(jar);
     if (url === '/api/sections') return json([{ id: 1, name: 'Herbs', kind: 'herb' }, { id: 2, name: 'Containers', kind: 'supply' }]);
     if (url === '/api/suppliers' && method === 'GET') return json([{ id: 2, name: 'Mountain Rose' }]);
     if (url === '/api/storage-spots') return json(['Pantry shelf']);
     if (url === '/api/herbs' && herbsFail) return json({ error: 'Herbs would not load.' }, 500);
-    if (url === '/api/herbs') return json([{ id: 3, common_name: 'Lavender', latin_name: 'Lavandula angustifolia' }, { id: 4, common_name: 'Nettle', latin_name: 'Urtica dioica' }]);
+    if (url === '/api/herbs') return json([{ id: 3, common_name: 'Calendula', latin_name: 'Calendula officinalis' }, { id: 6, common_name: 'Lavender', latin_name: 'Lavandula angustifolia' }, { id: 4, common_name: 'Nettle', latin_name: 'Urtica dioica' }]);
     if (url.startsWith('/api/expiry-suggestion')) return json(url.includes('form=fresh') ? null : { expires_on: '2027-10-08' });
     if (url === '/api/items' && method === 'POST') {
+      if (jarConflict) return json({ error: 'That harvest is already in the cabinet.' }, 409);
       if (postFails) return json({ error: 'Please fix the highlighted fields.', details: { name: 'Required' } }, 400);
       return json({ id: 9 }, 201);
     }
@@ -277,4 +285,59 @@ it('says the herb list did not load, with Try again, when adding a jar of a herb
   herbsFail = false;
   await user.click(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(screen.getByLabelText('Grimoire herb')).toHaveValue('4'));
+});
+
+it('fills the form from a garden harvest on an herb shelf and says where it came from', async () => {
+  open('/cabinet/new?garden_entry=5');
+  expect(await screen.findByText('From your garden log')).toBeInTheDocument();
+  expect(screen.getByLabelText(/^Section/)).toHaveValue('1');
+  expect(screen.getByLabelText(/^Name/)).toHaveValue('Calendula');
+  expect(screen.getByLabelText('Grimoire herb')).toHaveValue('3');
+  expect(screen.getByLabelText('Latin name')).toHaveValue('Calendula officinalis');
+  expect(screen.getByLabelText('Source')).toHaveValue('grown');
+  expect(screen.getByLabelText('Amount (required)')).toHaveValue(30);
+  expect(screen.getByLabelText('Unit')).toHaveValue('g');
+  expect(screen.getByLabelText('Form')).toHaveValue('fresh');
+  expect(screen.getByLabelText('Plant part')).toHaveValue('flower');
+});
+
+it('sends garden_entry_id with the save and goes to the new jar', async () => {
+  const user = userEvent.setup();
+  const router = createMemoryRouter(routes, { initialEntries: ['/cabinet/new?garden_entry=5'] });
+  render(<ToastProvider><ConfirmProvider><RouterProvider router={router} /></ConfirmProvider></ToastProvider>);
+  await screen.findByText('From your garden log');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/items')).toBe(true));
+  expect(calls.find(c => c.method === 'POST' && c.url === '/api/items').body).toMatchObject({ garden_entry_id: 5, name: 'Calendula', herb_id: 3 });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/cabinet/items/9'));
+});
+
+it('shows a 409 as a form error and stays on the form', async () => {
+  const user = userEvent.setup();
+  jarConflict = true;
+  open('/cabinet/new?garden_entry=5');
+  await screen.findByText('From your garden log');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('That harvest is already in the cabinet.');
+  expect(screen.getByText('From your garden log')).toBeInTheDocument();
+});
+
+it('shows a failed harvest load with Try again', async () => {
+  const user = userEvent.setup();
+  jarFail = true;
+  open('/cabinet/new?garden_entry=5');
+  expect(await screen.findByRole('alert')).toHaveTextContent('The harvest would not load.');
+  await user.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(await screen.findByText('From your garden log')).toBeInTheDocument();
+  expect(screen.getByLabelText(/^Name/)).toHaveValue('Calendula');
+});
+
+it('does not send garden_entry_id on an ordinary jar', async () => {
+  const user = userEvent.setup();
+  open('/cabinet/new?section=2');
+  await user.type(await screen.findByLabelText(/^Name/), 'Tin');
+  await user.type(screen.getByLabelText('Amount (required)'), '1');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/items')).toBe(true));
+  expect(calls.find(c => c.method === 'POST' && c.url === '/api/items').body).not.toHaveProperty('garden_entry_id');
 });

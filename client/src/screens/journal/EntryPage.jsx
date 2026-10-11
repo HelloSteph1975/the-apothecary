@@ -7,8 +7,8 @@ import { useDeleteWithUndo } from '../../components/useDeleteWithUndo.jsx';
 import { useApi } from '../../lib/useApi.js';
 import { MOODS, entryWhen, skyStampText } from '../../lib/journal.jsx';
 
-export const LINK_PATHS = { herb: 'grimoire', recipe: 'recipes', batch: 'batches' };
-export const LINK_LABELS = { herb: 'Herb', recipe: 'Recipe', batch: 'Batch' };
+export const LINK_PATHS = { herb: 'grimoire', recipe: 'recipes', batch: 'batches', garden_entry: 'garden/entries' };
+export const LINK_LABELS = { herb: 'Herb', recipe: 'Recipe', batch: 'Batch', garden_entry: 'Garden entry' };
 
 export function EntryPage() {
   const { id } = useParams();

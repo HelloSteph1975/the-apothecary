@@ -18,11 +18,12 @@ const LINK_TYPES = [
   { value: 'herb', label: 'Herb' },
   { value: 'recipe', label: 'Recipe' },
   { value: 'batch', label: 'Batch' },
+  { value: 'garden_entry', label: 'Garden entry' },
 ];
 const s = v => (v == null ? '' : String(v));
 const orNull = v => (v.trim() === '' ? null : v.trim());
 const cleanTag = t => t.trim().toLowerCase();
-const nameOf = (type, r) => (type === 'herb' ? r.common_name : r.name);
+const nameOf = (type, r) => (type === 'herb' ? r.common_name : type === 'garden_entry' ? r.title : r.name);
 const linkKey = l => `${l.type}:${l.id}`;
 
 export function EntryForm() {
@@ -36,7 +37,8 @@ export function EntryForm() {
   const herbs = useApi('/api/herbs');
   const recipes = useApi('/api/recipes');
   const batches = useApi('/api/batches');
-  const records = { herb: herbs, recipe: recipes, batch: batches };
+  const gardenEntries = useApi('/api/garden/entries/options');
+  const records = { herb: herbs, recipe: recipes, batch: batches, garden_entry: gardenEntries };
   const tagList = useApi('/api/journal/tags');
   const listId = useId();
   const tagInput = useRef(null);
@@ -52,7 +54,7 @@ export function EntryForm() {
   const [typeGone, setTypeGone] = useState(false);
   const [droppedLinks, setDroppedLinks] = useState(false);
 
-  const apis = [types, herbs, recipes, batches];
+  const apis = [types, herbs, recipes, batches, gardenEntries];
   const ready = apis.every(a => a.data) && (!editing || entry.data);
   useEffect(() => {
     if (form || !ready) return;

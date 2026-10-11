@@ -106,3 +106,10 @@ it('says when the entry is gone and offers Try again on other errors', async () 
   expect(await screen.findByRole('alert')).toHaveTextContent('That entry is not in the journal.');
   expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
 });
+
+it('links a garden entry to its page in the log', async () => {
+  entry = { ...base, links: [{ type: 'garden_entry', id: 12, name: 'Harvested Calendula', live: true }] };
+  open();
+  expect(await screen.findByRole('link', { name: 'Harvested Calendula' })).toHaveAttribute('href', '/garden/entries/12');
+  expect(screen.getByText('Garden entry:')).toBeInTheDocument();
+});
