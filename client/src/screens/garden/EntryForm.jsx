@@ -42,8 +42,8 @@ export function GardenEntryForm() {
     let start;
     if (editing) {
       const e = entry.data;
-      // A deleted plant becomes "Something else" so its name stays on the entry.
-      const linked = e.plant && e.plant.live ? String(e.plant.id) : NONE;
+      // A deleted plant stays selected, so an unrelated edit never detaches the entry from it.
+      const linked = e.plant ? String(e.plant.id) : NONE;
       start = {
         entry_date: s(e.entry_date), kind: s(e.kind), plant: linked, plant_name: linked === NONE ? s(e.plant_name) : '',
         herb_id: linked === NONE ? s(e.herb_id) : '', place: s(e.place), amount: s(e.amount), unit: s(e.unit),
@@ -118,7 +118,8 @@ export function GardenEntryForm() {
   const plantOptions = [{ value: NONE, label: 'Something else' }, ...plants.data.map(p => ({ value: String(p.id), label: p.name }))];
   // The plant this entry already belongs to stays pickable even if it has since ended.
   if (form.plant !== NONE && !plantOptions.some(o => o.value === form.plant)) {
-    plantOptions.push({ value: form.plant, label: entry.data?.plant?.name ?? 'This plant' });
+    const gone = entry.data?.plant && !entry.data.plant.live;
+    plantOptions.push({ value: form.plant, label: `${entry.data?.plant?.name ?? 'This plant'}${gone ? ' (no longer here)' : ''}` });
   }
   const herbOptions = herbs.data.map(h => ({ value: String(h.id), label: h.common_name }));
 

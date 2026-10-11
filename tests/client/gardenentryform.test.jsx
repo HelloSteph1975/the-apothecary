@@ -156,11 +156,17 @@ it('keeps an ended plant selectable when editing its entry', async () => {
   expect(screen.getByRole('option', { name: 'Old sage' })).toBeInTheDocument();
 });
 
-it('treats a deleted plant as Something else and keeps its name', async () => {
-  detail = { ...existing, plant: { id: 7, name: 'Back bed calendula', live: false } };
+it('keeps a deleted plant selected, and an unrelated edit keeps the link', async () => {
+  const user = userEvent.setup();
+  detail = { ...existing, plant_id: 99, plant: { id: 99, name: 'Old calendula', live: false } };
   await open('/garden/entries/5/edit');
-  expect(screen.getByLabelText('Plant')).toHaveValue('none');
-  expect(screen.getByLabelText('Name (required)')).toHaveValue('Calendula');
+  expect(screen.getByLabelText('Plant')).toHaveValue('99');
+  expect(screen.getByRole('option', { name: 'Old calendula (no longer here)' })).toBeInTheDocument();
+  await user.type(screen.getByLabelText('Notes'), ' More.');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saved()).toHaveLength(1));
+  expect(saved()[0].body).toMatchObject({ plant_id: 99 });
+  expect(saved()[0].body).not.toHaveProperty('plant_name');
 });
 
 it('shows server errors under the fields, including plant_name and plant_id', async () => {
