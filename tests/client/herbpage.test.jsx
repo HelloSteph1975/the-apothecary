@@ -78,6 +78,7 @@ it('says so when no cautions are recorded and hides empty panels', async () => {
   const cautions = await screen.findByRole('region', { name: 'Before you use it' });
   expect(within(cautions).getByText("No cautions recorded. That doesn't mean it's safe for everyone.")).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'In the garden' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Plant this' })).toHaveAttribute('href', '/garden/plants/new?herb=5');
   expect(screen.queryByRole('region', { name: 'Sources' })).not.toBeInTheDocument();
   expect(within(await screen.findByRole('region', { name: 'In your cabinet' })).getByText('No jar of this herb yet.')).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'Notes' })).not.toBeInTheDocument();

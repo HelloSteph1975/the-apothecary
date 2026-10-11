@@ -359,3 +359,16 @@ it('purges old garden plants and entries, their photos, journal links, and clear
   expect(related(tRecent)).toEqual({ related_type: 'garden_plant', related_id: plantRecent });
   expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
 });
+
+it('drops harvest dismissals once their plant is purged and keeps those of a live plant', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const gone = Number(db.prepare("INSERT INTO garden_plants (name, deleted_at) VALUES ('Old', ?)").run(old).lastInsertRowid);
+  const live = Number(db.prepare("INSERT INTO garden_plants (name) VALUES ('Live')").run().lastInsertRowid);
+  const add = db.prepare("INSERT INTO task_dismissals (auto_key, dismissed_on) VALUES (?, '2026-10-10')");
+  add.run(`harvest:${gone}:2026-10-12`);
+  add.run(`harvest:${live}:2026-10-12`);
+  purgeSoftDeleted(db, t.dataDir);
+  expect(db.prepare('SELECT auto_key FROM task_dismissals').all().map(r => r.auto_key)).toEqual([`harvest:${live}:2026-10-12`]);
+});

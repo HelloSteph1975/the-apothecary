@@ -119,6 +119,11 @@ export function updatePlant(db, id, body) {
       db.prepare("UPDATE garden_entries SET plant_name = ?, herb_id = ?, updated_at = datetime('now') WHERE plant_id = ?")
         .run(merged.name, merged.herb_id ?? null, id);
     }
+    // An open harvest reminder with the default title follows the rename. A title she wrote herself stays.
+    if (merged.name !== existing.name) {
+      db.prepare(`UPDATE tasks SET title = ?, updated_at = datetime('now') WHERE kind = 'auto' AND done_on IS NULL AND deleted_at IS NULL
+        AND auto_key LIKE ? AND title = ?`).run(`Harvest ${merged.name}`, `harvest:${id}:%`, `Harvest ${existing.name}`);
+    }
   });
   return id;
 }
@@ -185,7 +190,11 @@ export function getEntryDetail(db, id) {
   const e = db.prepare(`${entrySelect} WHERE e.id = ? AND e.deleted_at IS NULL`).get(id);
   if (!e) throw notFound(ENTRY_GONE);
   const { plant_current_name, plant_deleted, item_name, item_deleted, ...row } = e;
-  return { ...row, ...shapeEntry(e), photos: repos(db).photos.list({ owner_type: 'garden_entry', owner_id: id }) };
+  const herb = e.herb_id == null ? null : db.prepare('SELECT id, common_name, deleted_at FROM herbs WHERE id = ?').get(e.herb_id);
+  return {
+    ...row, ...shapeEntry(e), herb: herb ? { id: herb.id, name: herb.common_name, live: herb.deleted_at == null } : null,
+    photos: repos(db).photos.list({ owner_type: 'garden_entry', owner_id: id }),
+  };
 }
 
 function parseEntryInput(db, body, { partial, existing }) {
@@ -210,6 +219,11 @@ function parseEntryInput(db, body, { partial, existing }) {
     // Still linked to the same plant: its name and herb stay with the plant.
     delete data.plant_name;
     delete data.herb_id;
+  }
+  // A blank place falls back to the place of the plant, even when the plant has since ended or been deleted.
+  if (!errors.plant_id && blank(merged.place) && merged.plant_id != null && (!partial || plantChanged || Object.hasOwn(data, 'place'))) {
+    const home = plant ?? db.prepare('SELECT place FROM garden_plants WHERE id = ?').get(merged.plant_id);
+    if (home && !blank(home.place)) data.place = home.place;
   }
   if (Object.keys(errors).length) fail(errors);
   return data;

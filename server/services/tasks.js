@@ -64,12 +64,6 @@ export function syncAutoTasks(db, given) {
     for (const { id, auto_key } of doneSteps) {
       if (wanted.has(auto_key)) r.tasks.update(id, { done_on: null });
     }
-    // A renamed plant renames its open harvest reminder. Only harvest tasks; other titles are left as she has them.
-    const openHarvests = db.prepare(`SELECT id, auto_key, title FROM tasks WHERE kind = 'auto' AND done_on IS NULL AND deleted_at IS NULL AND auto_key LIKE 'harvest:%'`).all();
-    for (const { id, auto_key, title } of openHarvests) {
-      const row = wanted.get(auto_key);
-      if (row && row.title !== title) r.tasks.update(id, { title: row.title });
-    }
     const stale = db.prepare(`SELECT id, auto_key FROM tasks WHERE kind = 'auto' AND done_on IS NULL AND deleted_at IS NULL`).all()
       .filter(row => !wanted.has(row.auto_key));
     const hasPhotos = db.prepare("SELECT 1 FROM photos WHERE owner_type = 'task' AND owner_id = ? AND deleted_at IS NULL");

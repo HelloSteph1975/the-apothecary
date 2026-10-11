@@ -21,6 +21,10 @@ const existing = {
   place: 'Back bed', amount: 30, unit: 'g', weather: 'Sunny', notes: 'First flush.', item_id: null,
   sky: { phase: 'waxing gibbous', sign: 'Taurus' }, item: null, cover: null, photos: [],
 };
+const ended = {
+  id: 12, name: 'Winter sage', herb: null, garden_notes: null, place: 'Side bed', planted_on: '2025-09-01', expected_harvest_on: null,
+  ended_on: '2026-09-30', notes: null, last_entry: null, entries: [], photos: [], cover: null,
+};
 let calls;
 let router;
 let fail;
@@ -47,6 +51,7 @@ beforeEach(() => {
       if (fail) return json(fail.body, fail.status);
       return json(existing);
     }
+    if (url === '/api/garden/plants/12') return json(ended);
     if (url === '/api/garden/entries/9') return json({ ...existing, id: 9 });
     if (url === '/api/garden/entries/5') return json(detail);
     return json({});
@@ -200,4 +205,32 @@ it('does not ask about leaving after a save', async () => {
   await user.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/garden/entries/9'));
   expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+it('preselects an ended plant from the address and sends its id', async () => {
+  const user = userEvent.setup();
+  await open('/garden/entries/new?plant=12&kind=observed');
+  await waitFor(() => expect(screen.getByLabelText('Plant')).toHaveValue('12'));
+  expect(screen.getByRole('option', { name: 'Winter sage' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('Name (required)')).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saved()).toHaveLength(1));
+  expect(saved()[0].body).toMatchObject({ plant_id: 12, kind: 'observed' });
+});
+
+it('falls back to Something else when the plant in the address is gone', async () => {
+  await open('/garden/entries/new?plant=77');
+  expect(screen.getByLabelText('Plant')).toHaveValue('none');
+});
+
+it('keeps a herb that left the grimoire selectable on a Something else entry', async () => {
+  const user = userEvent.setup();
+  detail = { ...existing, plant: null, plant_id: null, plant_name: 'Wild fennel', herb_id: 99, herb: { id: 99, name: 'Fennel', live: false } };
+  await open('/garden/entries/5/edit');
+  expect(screen.getByLabelText('Grimoire herb')).toHaveValue('99');
+  expect(screen.getByRole('option', { name: 'Fennel (no longer in the grimoire)' })).toBeInTheDocument();
+  await user.type(screen.getByLabelText('Notes'), ' More.');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saved()).toHaveLength(1));
+  expect(saved()[0].body).toMatchObject({ plant_id: null, herb_id: 99 });
 });

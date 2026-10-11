@@ -204,6 +204,20 @@ describe('entries', () => {
     expect((await h().patch('/api/garden/entries/9999').send({ weather: 'x' })).status).toBe(404);
   });
 
+  it('clearing the place on an entry keeps the plant place, and the detail names the herb', async () => {
+    const { h, herb } = setup();
+    const p = (await h().post('/api/garden/plants').send({ herb_id: herb.id, place: 'Bed 1' })).body;
+    const e = (await h().post('/api/garden/entries').send({ plant_id: p.id, kind: 'observed', entry_date: '2026-10-10', place: 'Pot' })).body;
+    const cleared = await h().patch(`/api/garden/entries/${e.id}`).send({ place: '' });
+    expect(cleared.body.place).toBe('Bed 1');
+    expect(cleared.body.herb).toEqual({ id: herb.id, name: 'Calendula', live: true });
+    await h().patch(`/api/garden/entries/${e.id}`).send({ place: 'Pot' });
+    await h().patch(`/api/garden/plants/${p.id}`).send({ ended_on: '2026-10-11' });
+    expect((await h().patch(`/api/garden/entries/${e.id}`).send({ place: null })).body.place).toBe('Bed 1');
+    const free = (await h().post('/api/garden/entries').send({ kind: 'foraged', entry_date: '2026-10-10', plant_name: 'Mint' })).body;
+    expect(free.herb).toBeNull();
+  });
+
   it('lists newest first with filters, 30 per page, and the options list', async () => {
     const { h, r, herb } = setup();
     const p = await (async () => (await h().post('/api/garden/plants').send({ herb_id: herb.id })).body)();

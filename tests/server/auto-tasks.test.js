@@ -268,3 +268,18 @@ it('renames an open harvest task when the plant is renamed, and leaves other tas
   expect(all().find(r => r.id === manual.id).title).toBe('Harvest Calendula');
   expect(harvestKeys()).toHaveLength(1);
 });
+
+it('keeps a harvest title she edited through a sync and a rename, but renames the default title', async () => {
+  t = makeTestContext();
+  const a = await addPlant({ name: 'Calendula', expected_harvest_on: '2026-10-12' });
+  const b = await addPlant({ name: 'Sage', expected_harvest_on: '2026-10-12' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  const mine = all().find(r => r.auto_key.startsWith(`harvest:${b.id}:`));
+  t.ctx.db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run('Cut the sage before frost', mine.id);
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(all().find(r => r.id === mine.id).title).toBe('Cut the sage before frost');
+  await t.http().patch(`/api/garden/plants/${a.id}`).send({ name: 'Pot marigold' });
+  await t.http().patch(`/api/garden/plants/${b.id}`).send({ name: 'Garden sage' });
+  const titles = all().map(r => r.title).sort();
+  expect(titles).toEqual(['Cut the sage before frost', 'Harvest Pot marigold']);
+});

@@ -86,10 +86,11 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
     // A dismissal key names its cause (step:<id>:..., restock:<id>:..., expiry:<id>:...). Keep it while the cause row still exists.
     const stepIds = new Set(db.prepare('SELECT id FROM batch_steps').all().map(r => r.id));
     const itemIds = new Set(db.prepare('SELECT id FROM items').all().map(r => r.id));
+    const plantIds = new Set(db.prepare('SELECT id FROM garden_plants').all().map(r => r.id));
     const dropKey = db.prepare('DELETE FROM task_dismissals WHERE auto_key = ?');
     for (const { auto_key } of db.prepare('SELECT auto_key FROM task_dismissals').all()) {
       const [source, id] = auto_key.split(':');
-      const known = source === 'step' ? stepIds : source === 'restock' || source === 'expiry' ? itemIds : null;
+      const known = source === 'step' ? stepIds : source === 'restock' || source === 'expiry' ? itemIds : source === 'harvest' ? plantIds : null;
       if (known && !known.has(Number(id))) dropKey.run(auto_key);
     }
     return counts;

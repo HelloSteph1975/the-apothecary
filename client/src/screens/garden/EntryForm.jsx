@@ -28,6 +28,10 @@ export function GardenEntryForm() {
   const entry = useApi(editing ? `/api/garden/entries/${id}` : null);
   const plants = useApi('/api/garden/plants?status=growing');
   const herbs = useApi('/api/herbs');
+  // A plant that has ended is not in the growing list, so a link to log something for it loads that plant by itself.
+  const wanted = editing ? null : params.get('plant');
+  const missing = plants.data && wanted && /^\d+$/.test(wanted) && !plants.data.some(p => String(p.id) === wanted);
+  const extra = useApi(missing ? `/api/garden/plants/${wanted}` : null);
   const [form, setForm] = useState(null);
   const [initial, setInitial] = useState('');
   const [errors, setErrors] = useState({});
@@ -36,7 +40,7 @@ export function GardenEntryForm() {
   // Once she types a place herself, changing the plant no longer clears it.
   const placeTyped = useRef(false);
 
-  const ready = plants.data && herbs.data && (!editing || entry.data);
+  const ready = plants.data && herbs.data && (!editing || entry.data) && (!missing || extra.data || extra.error);
   useEffect(() => {
     if (form || !ready) return;
     let start;
@@ -50,7 +54,7 @@ export function GardenEntryForm() {
         weather: s(e.weather), notes: s(e.notes),
       };
     } else {
-      const plant = plants.data.find(p => String(p.id) === params.get('plant'));
+      const plant = plants.data.find(p => String(p.id) === wanted) ?? (extra.data && String(extra.data.id) === wanted ? extra.data : null);
       const kind = params.get('kind');
       const date = params.get('date');
       start = {
@@ -60,7 +64,7 @@ export function GardenEntryForm() {
     }
     setForm(start);
     setInitial(JSON.stringify(start));
-  }, [form, ready, editing, entry.data, plants.data, params]);
+  }, [form, ready, editing, entry.data, plants.data, extra.data, wanted, params]);
 
   const dirty = Boolean(form) && JSON.stringify(form) !== initial;
   const markSaved = useLeaveGuard(dirty);
@@ -119,9 +123,13 @@ export function GardenEntryForm() {
   // The plant this entry already belongs to stays pickable even if it has since ended.
   if (form.plant !== NONE && !plantOptions.some(o => o.value === form.plant)) {
     const gone = entry.data?.plant && !entry.data.plant.live;
-    plantOptions.push({ value: form.plant, label: `${entry.data?.plant?.name ?? 'This plant'}${gone ? ' (no longer here)' : ''}` });
+    plantOptions.push({ value: form.plant, label: `${entry.data?.plant?.name ?? extra.data?.name ?? 'This plant'}${gone ? ' (no longer here)' : ''}` });
   }
   const herbOptions = herbs.data.map(h => ({ value: String(h.id), label: h.common_name }));
+  // A herb that left the grimoire stays linked unless she picks another, so saving never unlinks it silently.
+  if (form.herb_id !== '' && !herbOptions.some(o => o.value === form.herb_id)) {
+    herbOptions.unshift({ value: form.herb_id, label: `${entry.data?.herb?.name ?? 'Herb'} (no longer in the grimoire)` });
+  }
 
   return (
     <>

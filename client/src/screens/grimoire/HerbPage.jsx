@@ -145,6 +145,8 @@ export function HerbPage() {
           </ParchmentCard>
         )}
 
+        {!hasGarden && <p><Link to={`/garden/plants/new?herb=${herb.id}`}>Plant this</Link></p>}
+
         <ParchmentCard title="In your cabinet">
           {jars.length > 0 ? (
             <ul>
