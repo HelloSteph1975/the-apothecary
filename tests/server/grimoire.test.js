@@ -85,6 +85,35 @@ it('returns a detail with parsed lists, sources and jars', async () => {
   expect((await h().get('/api/herbs/9999')).status).toBe(404);
 });
 
+it('lists the live garden plants and the newest ten entries for a herb', async () => {
+  const { h, byName } = setup();
+  const cal = byName('Calendula');
+  const g = repos(t.ctx.db);
+  const bed = g.gardenPlants.create({ name: 'Front bed', herb_id: cal.id, place: 'Front' });
+  const ended = g.gardenPlants.create({ name: 'Old pot', herb_id: cal.id, ended_on: '2026-09-01' });
+  const gone = g.gardenPlants.create({ name: 'Gone', herb_id: cal.id });
+  g.gardenPlants.remove(gone.id);
+  g.gardenPlants.create({ name: 'Other', herb_id: byName('Chamomile').id });
+  for (let i = 1; i <= 12; i++) {
+    g.gardenEntries.create({ entry_date: `2026-09-${String(i).padStart(2, '0')}`, kind: 'observed', plant_id: bed.id, herb_id: cal.id, plant_name: 'Calendula' });
+  }
+  const newest = g.gardenEntries.create({ entry_date: '2026-10-01', kind: 'harvested', herb_id: cal.id, plant_name: 'Pot marigold' });
+  const hidden = g.gardenEntries.create({ entry_date: '2026-10-02', kind: 'sowed', herb_id: cal.id, plant_name: 'Calendula' });
+  g.gardenEntries.remove(hidden.id);
+  const res = await h().get(`/api/herbs/${cal.id}`);
+  expect(res.body.garden_plants).toEqual([
+    { id: bed.id, name: 'Front bed', place: 'Front', ended_on: null },
+    { id: ended.id, name: 'Old pot', place: null, ended_on: '2026-09-01' },
+  ]);
+  expect(res.body.garden_entries).toHaveLength(10);
+  expect(res.body.garden_entries[0]).toEqual({ id: newest.id, entry_date: '2026-10-01', kind: 'harvested', title: 'Harvested Pot marigold' });
+  const dates = res.body.garden_entries.map(e => e.entry_date);
+  expect(dates).toEqual([...dates].sort().reverse());
+  const empty = await h().get(`/api/herbs/${byName('Peppermint').id}`);
+  expect(empty.body.garden_plants).toEqual([]);
+  expect(empty.body.garden_entries).toEqual([]);
+});
+
 it('lists the live recipes that use a herb, once each, by name', async () => {
   const { h, byName } = setup();
   const cal = byName('Calendula');

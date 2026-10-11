@@ -58,7 +58,7 @@ export const recipeTypeSchema = {
 };
 export const JOURNAL_ICONS = ['sparkles', 'moon', 'sun', 'cloud', 'sprout', 'leaf', 'feather', 'pen', 'flame', 'flower', 'star', 'book'];
 export const MOODS = ['joyful', 'calm', 'grateful', 'hopeful', 'tired', 'unsettled', 'sad', 'curious'];
-export const JOURNAL_LINK_TYPES = ['herb', 'recipe', 'batch'];
+export const JOURNAL_LINK_TYPES = ['herb', 'recipe', 'batch', 'garden_entry'];
 export const journalTypeSchema = {
   name: 'string!', description: 'string', icon: JOURNAL_ICONS, sort_order: { type: 'int', nullable: false },
 };

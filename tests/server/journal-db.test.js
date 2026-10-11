@@ -23,7 +23,7 @@ it('exposes the schema lists and the journal photo owner', () => {
   expect(PHOTO_OWNERS.journal).toBe('journal_entries');
   expect(JOURNAL_ICONS).toHaveLength(12);
   expect(MOODS).toHaveLength(8);
-  expect(JOURNAL_LINK_TYPES).toEqual(['herb', 'recipe', 'batch']);
+  expect(JOURNAL_LINK_TYPES).toEqual(['herb', 'recipe', 'batch', 'garden_entry']);
 });
 
 it('the starter journal types file has 8 valid entries with plain dashes', () => {

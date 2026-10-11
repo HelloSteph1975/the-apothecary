@@ -182,3 +182,76 @@ it('a restock reminder is not hidden by an old dismissal after purchases are del
   await t.http().post(`/api/items/${item.id}/restock`).send({ purchased_on: TODAY, quantity: 1 });
   expect((await today()).map(r => r.auto_key)).toEqual([`restock:${item.id}:2`]);
 });
+
+// Garden harvest reminders ------------------------------------------------
+
+const addPlant = async body => (await t.http().post('/api/garden/plants').send({ name: 'Calendula', ...body })).body;
+const harvestKeys = () => keys().filter(k => k.startsWith('harvest:'));
+
+it('makes a harvest task 7 days before the expected date and not 8', async () => {
+  t = makeTestContext();
+  const near = await addPlant({ name: 'Calendula', expected_harvest_on: '2026-10-17' });
+  await addPlant({ name: 'Sage', expected_harvest_on: '2026-10-18' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([`harvest:${near.id}:2026-10-17`]);
+  expect(all()[0]).toMatchObject({ kind: 'auto', title: 'Harvest Calendula', due_on: '2026-10-17', related_type: 'garden_plant', related_id: near.id });
+  const [row] = await today('upcoming');
+  expect(row.related).toEqual({ type: 'garden_plant', id: near.id, name: 'Calendula', live: true });
+});
+
+it('swaps the harvest task when the expected date changes', async () => {
+  t = makeTestContext();
+  const p = await addPlant({ expected_harvest_on: '2026-10-12' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([`harvest:${p.id}:2026-10-12`]);
+  await t.http().patch(`/api/garden/plants/${p.id}`).send({ expected_harvest_on: '2026-10-15' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([`harvest:${p.id}:2026-10-15`]);
+});
+
+it('removes the harvest task when the plant ends or is deleted, and undo brings it back', async () => {
+  t = makeTestContext();
+  const p = await addPlant({ expected_harvest_on: '2026-10-12' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  await t.http().patch(`/api/garden/plants/${p.id}`).send({ ended_on: '2026-10-09' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([]);
+  await t.http().patch(`/api/garden/plants/${p.id}`).send({ ended_on: null });
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toHaveLength(1);
+  await t.http().delete(`/api/garden/plants/${p.id}`);
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([]);
+  await t.http().post(`/api/garden/plants/${p.id}/restore`);
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toHaveLength(1);
+});
+
+it('stops the harvest task once a harvest is logged within 14 days of the expected date', async () => {
+  t = makeTestContext();
+  const p = await addPlant({ expected_harvest_on: '2026-10-12' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toHaveLength(1);
+  const early = (await t.http().post('/api/garden/entries').send({ plant_id: p.id, kind: 'harvested', entry_date: '2026-09-27' })).body;
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toHaveLength(1);
+  await t.http().delete(`/api/garden/entries/${early.id}`);
+  const ok = (await t.http().post('/api/garden/entries').send({ plant_id: p.id, kind: 'harvested', entry_date: '2026-09-28' })).body;
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([]);
+  await t.http().delete(`/api/garden/entries/${ok.id}`);
+  await t.http().post('/api/garden/entries').send({ plant_id: p.id, kind: 'pruned', entry_date: '2026-10-09' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toHaveLength(1);
+});
+
+it('a dismissed harvest task stays gone', async () => {
+  t = makeTestContext();
+  await addPlant({ expected_harvest_on: '2026-10-12' });
+  const [row] = await today('upcoming');
+  await t.http().post(`/api/tasks/${row.id}/dismiss`).send({ today: TODAY });
+  expect(await today('upcoming')).toHaveLength(0);
+  syncAutoTasks(t.ctx.db, TODAY);
+  expect(harvestKeys()).toEqual([]);
+});

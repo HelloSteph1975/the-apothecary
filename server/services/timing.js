@@ -170,7 +170,7 @@ const dayValue = {
   festival: sky => sky.festival,
 };
 
-const matches = (rule, sky) => dayValue[rule.kind](sky) === rule.value;
+export const matches = (rule, sky) => dayValue[rule.kind](sky) === rule.value;
 
 export function rulesForDay(db, sky) {
   return listTimingRules(db).filter(rule => matches(rule, sky));
