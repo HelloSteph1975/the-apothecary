@@ -50,8 +50,8 @@ describe('renderLabelPdf', () => {
   });
 
   it.each(Object.entries(PER))('keeps very long text inside its label on %s', async (size, per) => {
-    const ingredients = Array.from({ length: 40 }, (_, i) => `Herb${i}`).join(', ');
-    const long = label({ name: 'N'.repeat(300), latin_name: 'L'.repeat(300), ingredients, caution: 'C'.repeat(300), copies: per });
+    const ingredients = Array.from({ length: 400 }, (_, i) => `Herb${i}`).join(', ').slice(0, 2000);
+    const long = label({ name: 'N'.repeat(300), latin_name: 'L'.repeat(300), ingredients, caution: 'C '.repeat(1000), copies: per });
     const out = await renderLabelPdf({ size, start: 1, labels: [long] });
     expect(out.pages).toBe(1);
     expect(pdfPages(out.buffer)).toBe(1);
@@ -138,15 +138,27 @@ describe('POST /api/labels/pdf', () => {
     it('rejects more than 500 printed labels', () => bad({ ...ok, labels: Array.from({ length: 6 }, () => label({ copies: 99 })) }, 'labels'));
     it('rejects a missing name', () => bad({ ...ok, labels: [label({ name: '' })] }, 'name'));
     it('rejects a name over 300 characters', () => bad({ ...ok, labels: [label({ name: 'x'.repeat(301) })] }, 'name'));
+    it('rejects a latin name over 300 characters', () => bad({ ...ok, labels: [label({ latin_name: 'x'.repeat(301) })] }, 'latin_name'));
+    it('rejects ingredients over 2000 characters', () => bad({ ...ok, labels: [label({ ingredients: 'x'.repeat(2001) })] }, 'ingredients'));
+    it('rejects a caution over 2000 characters', () => bad({ ...ok, labels: [label({ caution: 'x'.repeat(2001) })] }, 'caution'));
+    it('rejects 61 labels with real label objects', () => bad({ size: 'small-round', start: 1, labels: Array.from({ length: 61 }, (_, i) => label({ name: `L${i}` })) }, 'labels'));
     it('rejects text that is not a string', () => bad({ ...ok, labels: [label({ caution: 5 })] }, 'caution'));
     it('rejects an impossible date', () => bad({ ...ok, labels: [label({ made_on: '2026-02-30' })] }, 'made_on'));
     it('rejects a date outside 1900 to 2100', () => bad({ ...ok, labels: [label({ expires_on: '2101-01-01' })] }, 'expires_on'));
     it('rejects an early date', () => bad({ ...ok, labels: [label({ made_on: '1899-12-31' })] }, 'made_on'));
 
-    it('allows exactly 60 labels, 500 printed, 300 characters, and the edge dates', async () => {
+    it('allows 60 real labels, 300 and 2000 character fields, and the edge dates', async () => {
       t = makeTestContext();
-      const res = await post({ size: 'small-round', start: 12, labels: [label({ name: 'x'.repeat(300), made_on: '1900-01-01', expires_on: '2100-12-31', copies: 99 }),
-        ...Array.from({ length: 4 }, () => label({ copies: 99 })), label({ copies: 5 })] });
+      const sixty = Array.from({ length: 60 }, (_, i) => label({ name: `L${i}` }));
+      sixty[0] = label({ name: 'x'.repeat(300), latin_name: 'y'.repeat(300), ingredients: 'i'.repeat(2000), caution: 'c'.repeat(2000), made_on: '1900-01-01', expires_on: '2100-12-31' });
+      const res = await post({ size: 'small-round', start: 1, labels: sixty });
+      expect(res.status).toBe(200);
+      expect(res.body.labels).toBe(60);
+    }, 30000);
+
+    it('allows exactly 500 printed labels', async () => {
+      t = makeTestContext();
+      const res = await post({ size: 'small-round', start: 12, labels: [...Array.from({ length: 5 }, () => label({ copies: 99 })), label({ copies: 5 })] });
       expect(res.status).toBe(200);
       expect(res.body.labels).toBe(500);
     }, 30000);

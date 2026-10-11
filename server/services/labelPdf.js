@@ -10,8 +10,8 @@ import { phaseFor } from './labels.js';
 const PT = 72;
 export const MAX_LABELS = 60;
 export const MAX_PRINTED = 500;
-const MAX_TEXT = 300;
-const TEXT_FIELDS = ['name', 'latin_name', 'ingredients', 'caution'];
+const TEXT_LIMITS = { name: 300, latin_name: 300, ingredients: 2000, caution: 2000 };
+const TEXT_FIELDS = Object.keys(TEXT_LIMITS);
 const DATE_FIELDS = ['made_on', 'expires_on'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const INK = '#2b2118';
@@ -68,7 +68,7 @@ export function validateLabelRequest(body) {
         const v = l[f];
         if (v === undefined || v === null || v === '') { out[f] = null; continue; }
         if (typeof v !== 'string') errors[at(f)] = 'Must be text';
-        else if (v.length > MAX_TEXT) errors[at(f)] = `Must be ${MAX_TEXT} characters or fewer`;
+        else if (v.length > TEXT_LIMITS[f]) errors[at(f)] = `Must be ${TEXT_LIMITS[f]} characters or fewer`;
         else out[f] = textOrNull(v);
       }
       if (!out.name && !errors[at('name')]) errors[at('name')] = 'Required';
@@ -241,7 +241,8 @@ export function savePdf(dataDir, buffer) {
         if (err.code !== 'EEXIST' || n > 999) throw err;
       }
     }
-  } catch {
+  } catch (err) {
+    console.error(err);
     throw new Error(SAVE_FAILED);
   }
 }

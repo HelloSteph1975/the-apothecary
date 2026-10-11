@@ -112,6 +112,14 @@ describe('label data', () => {
     expect(body.map(x => x.caution)).toEqual(['Shake well.', null]);
   });
 
+  it('leaves out the caution of a soft-deleted recipe type', async () => {
+    const s = setup();
+    const type = s.type({ label_caution: 'For external use only.' });
+    const id = s.batch({ type_id: type.id, ingredients: [['Oil', null]] });
+    s.db.prepare("UPDATE recipe_types SET deleted_at = datetime('now') WHERE id = ?").run(type.id);
+    expect((await s.data(`?batches=${id}`)).body[0].caution).toBeNull();
+  });
+
   it('leaves out a deleted herb when working out cautions', async () => {
     const s = setup();
     const herb = s.herb({ caution_pregnancy: 'No.' });
