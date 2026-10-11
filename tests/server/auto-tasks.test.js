@@ -283,3 +283,21 @@ it('keeps a harvest title she edited through a sync and a rename, but renames th
   const titles = all().map(r => r.title).sort();
   expect(titles).toEqual(['Cut the sage before frost', 'Harvest Pot marigold']);
 });
+
+it('retitles a finished harvest task on rename, so reopening it shows the new name, and keeps a custom title', async () => {
+  t = makeTestContext();
+  const a = await addPlant({ name: 'Calendula', expected_harvest_on: '2026-10-12' });
+  const b = await addPlant({ name: 'Sage', expected_harvest_on: '2026-10-12' });
+  syncAutoTasks(t.ctx.db, TODAY);
+  const ta = all().find(r => r.auto_key.startsWith(`harvest:${a.id}:`));
+  const tb = all().find(r => r.auto_key.startsWith(`harvest:${b.id}:`));
+  t.ctx.db.prepare('UPDATE tasks SET title = ? WHERE id = ?').run('Cut the sage before frost', tb.id);
+  await t.http().post(`/api/tasks/${ta.id}/complete`).send({ today: TODAY });
+  await t.http().post(`/api/tasks/${tb.id}/complete`).send({ today: TODAY });
+  await t.http().patch(`/api/garden/plants/${a.id}`).send({ name: 'Pot marigold' });
+  await t.http().patch(`/api/garden/plants/${b.id}`).send({ name: 'Garden sage' });
+  await t.http().post(`/api/tasks/${ta.id}/uncomplete`);
+  await t.http().post(`/api/tasks/${tb.id}/uncomplete`);
+  expect(all().find(r => r.id === ta.id).title).toBe('Harvest Pot marigold');
+  expect(all().find(r => r.id === tb.id).title).toBe('Cut the sage before frost');
+});

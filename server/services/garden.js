@@ -119,9 +119,9 @@ export function updatePlant(db, id, body) {
       db.prepare("UPDATE garden_entries SET plant_name = ?, herb_id = ?, updated_at = datetime('now') WHERE plant_id = ?")
         .run(merged.name, merged.herb_id ?? null, id);
     }
-    // An open harvest reminder with the default title follows the rename. A title she wrote herself stays.
+    // A harvest reminder with the default title follows the rename, finished or not, so reopening it shows the new name. A title she wrote herself stays.
     if (merged.name !== existing.name) {
-      db.prepare(`UPDATE tasks SET title = ?, updated_at = datetime('now') WHERE kind = 'auto' AND done_on IS NULL AND deleted_at IS NULL
+      db.prepare(`UPDATE tasks SET title = ?, updated_at = datetime('now') WHERE kind = 'auto' AND deleted_at IS NULL
         AND auto_key LIKE ? AND title = ?`).run(`Harvest ${merged.name}`, `harvest:${id}:%`, `Harvest ${existing.name}`);
     }
   });
