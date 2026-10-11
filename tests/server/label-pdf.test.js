@@ -168,9 +168,12 @@ describe('POST /api/labels/pdf', () => {
     t = makeTestContext();
     fs.rmSync(labelsDir(), { recursive: true });
     fs.writeFileSync(labelsDir(), 'not a folder');
-    const res = await post({ size: 'medium-rect', start: 1, labels: [label()] });
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let res;
+    try { res = await post({ size: 'medium-rect', start: 1, labels: [label()] }); } finally { var calls = spy.mock.calls.length; spy.mockRestore(); }
     expect(res.status).toBe(500);
     expect(res.body.error).toBe("Couldn't save the PDF in the labels folder.");
+    expect(calls).toBe(1);
   });
 });
 
