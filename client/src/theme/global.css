@@ -436,3 +436,10 @@ ul.chip-row { list-style: none; padding: 0; }
 .photo-caption { margin: 0; }
 .photo-owner { font-size: .85rem; }
 .photo-large img { display: block; max-width: 100%; max-height: 60vh; margin: 0 auto 12px; object-fit: contain; }
+
+/* Garden */
+.moon-garden { list-style: none; padding: 0; margin: 0; }
+.moon-garden > li { margin: 0 0 12px; }
+.moon-garden h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.moon-garden .chip { display: inline-block; text-decoration: none; }
+.moon-garden-card { margin-top: 24px; }

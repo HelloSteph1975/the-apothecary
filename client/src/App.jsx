@@ -34,6 +34,7 @@ import { Todo } from './screens/todo/Todo.jsx';
 import { TaskPage } from './screens/todo/TaskPage.jsx';
 import { Calendar } from './screens/calendar/Calendar.jsx';
 import { DayPage } from './screens/calendar/DayPage.jsx';
+import { Garden } from './screens/garden/Garden.jsx';
 import { DRAWERS } from './components/Cabinet.jsx';
 
 // A fresh form per herb, so moving between edit pages doesn't keep the last herb's fields.
@@ -96,7 +97,7 @@ function RecordSheetRoute() {
   return <RecordSheet key={id} />;
 }
 
-const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar' && d.to !== '/journal').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
+const soon = DRAWERS.filter(d => d.to !== '/' && d.to !== '/cabinet' && d.to !== '/grimoire' && d.to !== '/recipes' && d.to !== '/batches' && d.to !== '/todo' && d.to !== '/calendar' && d.to !== '/journal' && d.to !== '/garden').map(d => ({ path: d.to.slice(1), element: <DrawerSoon title={d.label} /> }));
 
 export const routes = [
   {
@@ -134,6 +135,7 @@ export const routes = [
       { path: 'todo/:id', element: <TaskPageRoute /> },
       { path: 'calendar', element: <Calendar /> },
       { path: 'calendar/:day', element: <DayPageRoute /> },
+      { path: 'garden', element: <Garden /> },
       ...soon,
       { path: 'settings', element: <Settings /> },
       { path: 'settings/timing-rules', element: <TimingRules /> },
