@@ -11,9 +11,12 @@ import { createBatch, finishBatch } from '../services/batches.js';
 import { convert } from '../lib/units.js';
 import { createTask } from '../services/tasks.js';
 import { nextDue } from '../lib/repeat.js';
+import { seedJournalTypes } from '../services/journalTypes.js';
+import { createEntry } from '../services/journal.js';
+import { principalPhases } from '../lib/sky.js';
 
 // Bump when the demo stock changes, so older demo folders get the new stock once.
-const SEED_VERSION = '6';
+const SEED_VERSION = '7';
 const DEMO_SETTINGS = { keeper_name: 'Demo Keeper', location_name: 'Mexico City', latitude: '19.4326', longitude: '-99.1332', hemisphere: 'north', units: 'metric' };
 
 // The local calendar date, the same way the client works out "today".
@@ -28,6 +31,51 @@ function clearBatches(db, dataDir) {
     trashPhotoFile(dataDir, filename);
   }
   db.exec("DELETE FROM batch_steps; DELETE FROM batch_ingredients; DELETE FROM batches; DELETE FROM photos WHERE owner_type = 'batch'");
+}
+
+// Clears the demo journal entries, children first, and trashes their photo files. The journal types stay.
+function clearJournal(db, dataDir) {
+  for (const { filename } of db.prepare("SELECT filename FROM photos WHERE owner_type = 'journal'").all()) {
+    trashPhotoFile(dataDir, filename);
+  }
+  db.exec("DELETE FROM journal_links; DELETE FROM journal_tags; DELETE FROM photos WHERE owner_type = 'journal'; DELETE FROM journal_entries");
+}
+
+// The local date of the most recent full moon on or before today.
+function lastFullMoonDay(today) {
+  const [y, m, d] = today.split('-').map(Number);
+  const full = principalPhases(new Date(y, m - 1, d - 40), new Date(y, m - 1, d + 1)).filter(p => p.name === 'full');
+  const at = full.length ? new Date(full[full.length - 1].at) : null;
+  if (!at || localToday(at) > today) return addDays(today, -3);
+  return localToday(at);
+}
+
+// Adds three journal entries by type slug, linked to the demo recipe and herb by name or slug.
+function stockJournal(db, today) {
+  seedGrimoire(db);
+  seedJournalTypes(db);
+  const typeId = slug => db.prepare('SELECT id FROM journal_types WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id;
+  const herb = slug => db.prepare('SELECT id FROM herbs WHERE slug = ? AND deleted_at IS NULL').get(slug)?.id;
+  const recipe = name => db.prepare('SELECT id FROM recipes WHERE name = ? AND deleted_at IS NULL').get(name)?.id;
+  const link = (type, id) => (id ? [{ type, id }] : []);
+  const add = (slug, entry) => {
+    const type_id = typeId(slug);
+    if (type_id) createEntry(db, { type_id, ...entry });
+  };
+  add('moon-observance', {
+    title: 'Full moon water', entry_date: lastFullMoonDay(today), entry_time: '21:30', mood: 'calm', tags: ['moon water'],
+    body: 'Set a jar of spring water on the sill at dusk and left it under the full moon. In the morning I bottled it for the salve.',
+    links: link('recipe', recipe('Calendula skin salve')),
+  });
+  add('dream', {
+    title: 'Dreamt of a lavender field', entry_date: addDays(today, -2), mood: 'curious',
+    body: 'Walked a long purple field at first light with the scent all around me. I woke up rested and wanting to plant more.',
+  });
+  add('garden', {
+    title: 'First calendula harvest', entry_date: addDays(today, -5), entry_time: '09:15', mood: 'grateful',
+    body: 'Picked the first bright heads before the dew dried. A small basket, enough to start a jar of infused oil.',
+    links: link('herb', herb('calendula')),
+  });
 }
 
 // Clears the demo tasks and the dismissals, and trashes their photo files. Runs before the batches and jars they point at.
@@ -209,12 +257,14 @@ export function seedDemo(ctx, { reset = false } = {}) {
       if (!db.prepare('SELECT 1 FROM recipes').get()) stockRecipes(db);
       if (!db.prepare('SELECT 1 FROM batches').get()) stockBatches(db, localToday());
       if (!db.prepare('SELECT 1 FROM tasks').get()) stockTasks(db, localToday());
+      if (!db.prepare('SELECT 1 FROM journal_entries').get()) stockJournal(db, localToday());
       db.prepare("UPDATE settings SET value = ? WHERE key = 'demo_seeded'").run(SEED_VERSION);
     });
     return !stocked;
   }
   transaction(db, () => {
     saveSettings(db, DEMO_SETTINGS);
+    clearJournal(db, ctx.config.dataDir);
     clearTasks(db, ctx.config.dataDir);
     clearBatches(db, ctx.config.dataDir);
     clearCabinet(db, ctx.config.dataDir);
@@ -223,6 +273,7 @@ export function seedDemo(ctx, { reset = false } = {}) {
     stockRecipes(db);
     stockBatches(db, localToday());
     stockTasks(db, localToday());
+    stockJournal(db, localToday());
     db.prepare("INSERT INTO settings (key, value) VALUES ('demo_seeded', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(SEED_VERSION);
   });
   return true;

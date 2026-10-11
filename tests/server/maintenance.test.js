@@ -80,11 +80,24 @@ it('runMaintenance seeds the 19 starter timing rules', () => {
   expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM timing_rules').get().n).toBe(19);
 });
 
-it('contentMaintenance seeds the grimoire, links jars, seeds recipe types, then seeds timing rules', () => {
+it('contentMaintenance seeds the grimoire, links jars, seeds recipe types, seeds timing rules, then seeds journal types', () => {
   t = makeTestContext();
   const calls = [];
   contentMaintenance(t.ctx.db, {
     seed: () => calls.push('seed'), link: () => calls.push('link'), seedTypes: () => calls.push('types'), seedRules: () => calls.push('rules'),
+    seedJournal: () => calls.push('journal'),
   });
-  expect(calls).toEqual(['seed', 'link', 'types', 'rules']);
+  expect(calls).toEqual(['seed', 'link', 'types', 'rules', 'journal']);
+});
+
+it('runMaintenance seeds the 8 starter journal types, and keeps going when that seed throws', () => {
+  t = makeTestContext();
+  runMaintenance(t.ctx);
+  expect(t.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_types').get().n).toBe(8);
+  const u = makeTestContext();
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+  expect(() => runMaintenance(u.ctx, { seedJournal: () => { throw new Error('bad journal'); } })).not.toThrow();
+  expect(errors).toHaveBeenCalledWith(expect.stringMatching(/Seeding the journal types failed/), expect.any(Error));
+  expect(u.ctx.db.prepare('SELECT COUNT(*) AS n FROM journal_types').get().n).toBe(0);
+  u.cleanup();
 });

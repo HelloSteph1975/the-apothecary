@@ -36,6 +36,11 @@ export function repos(db) {
         'sort_order', 'is_starter'], { orderBy: 'sort_order, id' }),
       tasks: createRepo(db, 'tasks', ['title', 'notes', 'due_on', 'repeat_kind', 'repeat_days', 'repeat_anchor_day', 'priority', 'related_type',
         'related_id', 'kind', 'auto_key', 'snoozed_until', 'done_on', 'spawned_id'], { orderBy: 'due_on IS NULL, due_on, id' }),
+      journalTypes: createRepo(db, 'journal_types', ['slug', 'name', 'description', 'icon', 'sort_order', 'is_starter'], { orderBy: 'sort_order, id' }),
+      journalEntries: createRepo(db, 'journal_entries', ['type_id', 'title', 'entry_date', 'entry_time', 'body', 'mood', 'sky_phase',
+        'sky_phase_group', 'sky_sign', 'sky_ruler', 'sky_festival'], { orderBy: 'entry_date DESC, entry_time DESC, id DESC' }),
+      journalLinks: createRepo(db, 'journal_links', ['entry_id', 'link_type', 'link_id'], { orderBy: 'id' }),
+      journalTags: createRepo(db, 'journal_tags', ['entry_id', 'tag'], { orderBy: 'id' }),
       photos: createRepo(db, 'photos', ['owner_type', 'owner_id', 'filename', 'caption', 'is_cover', 'sort_order'], { orderBy: 'is_cover DESC, sort_order, id' }),
     };
     cache.set(db, r);

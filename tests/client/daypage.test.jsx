@@ -190,3 +190,19 @@ it('posts complete once on a second click while the day is reloading', async () 
   await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Done: Light a candle' })).toBeInTheDocument());
   expect(calls.filter(c => c.method === 'POST' && c.url === '/api/tasks/7/complete')).toHaveLength(1);
 });
+
+it('lists the journal entries of the day apart from what is due, with an add button', async () => {
+  payload.events = [ev('task', 'Light a candle', { link: '/todo/7', id: 7 }), ev('journal', 'Samhain night', { link: '/journal/4', id: 4 })];
+  await open('/calendar/2026-10-31');
+  const card = await screen.findByRole('region', { name: 'Journal entries' });
+  expect(within(card).getByRole('link', { name: 'Samhain night' })).toHaveAttribute('href', '/journal/4');
+  expect(within(cardOf('Due this day')).queryByText('Samhain night')).toBeNull();
+  expect(within(card).getByRole('link', { name: 'Add a journal entry' })).toHaveAttribute('href', '/journal/new?date=2026-10-31');
+});
+
+it('offers to add a journal entry when the day has none', async () => {
+  await open('/calendar/2026-10-31');
+  const card = await screen.findByRole('region', { name: 'Journal entries' });
+  expect(within(card).getByText('No journal entries for this day.')).toBeInTheDocument();
+  expect(within(card).getByRole('link', { name: 'Add a journal entry' })).toBeInTheDocument();
+});

@@ -120,6 +120,25 @@ export const migrations = [
   CREATE TABLE task_dismissals (auto_key TEXT PRIMARY KEY, dismissed_on TEXT NOT NULL);
   ALTER TABLE items ADD COLUMN restock_count INTEGER NOT NULL DEFAULT 0;
   `,
+  // 8: the journal. Links point at herbs, recipes or batches; entry_time is HH:MM local; tags are stored trimmed and lowercased.
+  `
+  CREATE TABLE journal_types (id INTEGER PRIMARY KEY, slug TEXT, name TEXT NOT NULL, description TEXT, icon TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0, is_starter INTEGER NOT NULL DEFAULT 0, ${TS});
+  CREATE UNIQUE INDEX idx_journal_types_slug ON journal_types(slug) WHERE slug IS NOT NULL;
+  CREATE TABLE journal_entries (id INTEGER PRIMARY KEY, type_id INTEGER NOT NULL REFERENCES journal_types(id),
+    title TEXT NOT NULL, entry_date TEXT NOT NULL, entry_time TEXT, body TEXT, mood TEXT,
+    sky_phase TEXT, sky_phase_group TEXT, sky_sign TEXT, sky_ruler TEXT, sky_festival TEXT, ${TS});
+  CREATE INDEX idx_journal_entries_date ON journal_entries(entry_date);
+  CREATE INDEX idx_journal_entries_type ON journal_entries(type_id);
+  CREATE TABLE journal_links (id INTEGER PRIMARY KEY, entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
+    link_type TEXT NOT NULL CHECK (link_type IN ('herb','recipe','batch')), link_id INTEGER NOT NULL, ${TS});
+  CREATE INDEX idx_journal_links_entry ON journal_links(entry_id);
+  CREATE INDEX idx_journal_links_target ON journal_links(link_type, link_id);
+  CREATE TABLE journal_tags (id INTEGER PRIMARY KEY, entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
+    tag TEXT NOT NULL, ${TS});
+  CREATE INDEX idx_journal_tags_entry ON journal_tags(entry_id);
+  CREATE INDEX idx_journal_tags_tag ON journal_tags(tag);
+  `,
 ];
 
 export function migrate(db) {

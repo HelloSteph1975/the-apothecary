@@ -394,6 +394,7 @@ textarea.input { resize: vertical; }
 .cal-event { font-size: .9rem; line-height: 1.25; padding-left: 6px; border-left: 3px solid var(--leaf); }
 .cal-event.cal-task { border-left-color: var(--brass); }
 .cal-event.cal-expiry { border-left-color: var(--oxblood); }
+.cal-event.cal-journal { border-left-color: var(--ink-green); }
 .cal-event.is-done .cal-event-link { text-decoration: line-through; color: var(--ink-soft); }
 .cal-event-link, .cal-more a { color: var(--ink-on-parchment); }
 .cal-overdue { color: var(--oxblood); font-weight: 600; font-size: .85rem; }
@@ -410,3 +411,28 @@ textarea.input { resize: vertical; }
 .cal-agenda-day .cal-badge { margin-bottom: 4px; }
 @media (max-width: 900px) { .cal-week { grid-template-columns: 1fr; } .cal-cell { height: auto; min-height: 84px; } }
 @media (forced-colors: active) { .cal-cell.is-today, .cal-col.is-today { outline: 3px solid Highlight; } }
+
+/* Journal */
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.chip {
+  font: inherit; font-size: .95rem; color: var(--ink-on-parchment); background: #f7efdc; cursor: pointer;
+  border: 1px solid var(--parchment-edge); border-radius: 999px; padding: 4px 12px;
+}
+.chip[aria-pressed='true'] { color: #fff; background: var(--ink-green); border-color: var(--ink-green); }
+.chip[aria-pressed='true'] .muted { color: inherit; }
+.chip:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 2px; }
+.journal-type { display: flex; align-items: center; gap: 6px; margin: 0; }
+.journal-group { margin: 0 0 24px; }
+.entry-chip { display: inline-flex; align-items: center; gap: 6px; }
+.entry-chip .icon-btn { padding: 2px; width: 28px; height: 28px; }
+.entry-link-add { display: grid; grid-template-columns: 1fr 2fr auto; gap: 12px; align-items: end; margin-bottom: 12px; }
+.entry-link-add .field { margin-bottom: 0; }
+ul.chip-row { list-style: none; padding: 0; }
+@media (max-width: 700px) { .entry-link-add { grid-template-columns: 1fr; } }
+.photo-grid { list-style: none; padding: 0; margin: 0 0 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr)); gap: 14px; }
+.photo-tile { display: grid; gap: 4px; align-content: start; }
+.photo-open { padding: 0; border: 0; background: none; cursor: pointer; display: block; }
+.photo-open img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; border: 1px solid var(--rule); border-radius: var(--radius); }
+.photo-caption { margin: 0; }
+.photo-owner { font-size: .85rem; }
+.photo-large img { display: block; max-width: 100%; max-height: 60vh; margin: 0 auto 12px; object-fit: contain; }

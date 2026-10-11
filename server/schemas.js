@@ -56,6 +56,16 @@ export const recipeTypeSchema = {
   shelf_life_days: { type: 'int', min: 0, max: 3650 }, label_caution: 'string', is_topical: { type: 'bool', nullable: false },
   icon: RECIPE_ICONS, sort_order: { type: 'int', nullable: false },
 };
+export const JOURNAL_ICONS = ['sparkles', 'moon', 'sun', 'cloud', 'sprout', 'leaf', 'feather', 'pen', 'flame', 'flower', 'star', 'book'];
+export const MOODS = ['joyful', 'calm', 'grateful', 'hopeful', 'tired', 'unsettled', 'sad', 'curious'];
+export const JOURNAL_LINK_TYPES = ['herb', 'recipe', 'batch'];
+export const journalTypeSchema = {
+  name: 'string!', description: 'string', icon: JOURNAL_ICONS, sort_order: { type: 'int', nullable: false },
+};
+// entry_time (HH:MM, optional) is checked by the journal service.
+export const journalEntrySchema = {
+  type_id: 'int!', title: 'string!', entry_date: 'date!', entry_time: 'string', body: 'string', mood: MOODS,
+};
 export const TIMING_KINDS = ['phase_group', 'phase', 'moon_element', 'moon_sign', 'day_ruler', 'festival'];
 // List fields (recipe_types, planets, elements) are arrays of strings, checked by the timing service.
 export const timingRuleSchema = {

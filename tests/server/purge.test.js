@@ -257,3 +257,50 @@ it('drops dismissals whose cause is gone for good and keeps ones for live causes
   expect(db.prepare('SELECT auto_key FROM task_dismissals ORDER BY auto_key').all().map(r => r.auto_key))
     .toEqual([`expiry:${item}:2026-12-01`, `restock:${item}:0`, `step:${step}:2026-10-12`]);
 });
+
+it('purges old journal entries, children, photos and unused types, and links to purged targets', () => {
+  t = makeTestContext();
+  const db = t.ctx.db;
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  const run = (sql, ...a) => db.prepare(sql).run(...a);
+  const id = r => Number(r.lastInsertRowid);
+  const typeOld = id(run("INSERT INTO journal_types (name) VALUES ('Old type')"));
+  const typeUsed = id(run("INSERT INTO journal_types (name) VALUES ('Used old type')"));
+  const typeLive = id(run("INSERT INTO journal_types (name) VALUES ('Live type')"));
+  run('UPDATE journal_types SET deleted_at = ? WHERE id IN (?, ?)', old, typeOld, typeUsed);
+  const entry = (typeId, title) => id(run("INSERT INTO journal_entries (type_id, title, entry_date) VALUES (?, ?, '2026-10-01')", typeId, title));
+  const eGone = entry(typeLive, 'Gone');
+  const eKeep = entry(typeUsed, 'Keeps its type');
+  run('UPDATE journal_entries SET deleted_at = ? WHERE id = ?', old, eGone);
+  run("INSERT INTO journal_tags (entry_id, tag) VALUES (?, 'moon')", eGone);
+  const tagOld = id(run("INSERT INTO journal_tags (entry_id, tag) VALUES (?, 'old')", eKeep));
+  run("INSERT INTO journal_tags (entry_id, tag) VALUES (?, 'fresh')", eKeep);
+  run('UPDATE journal_tags SET deleted_at = ? WHERE id = ?', old, tagOld);
+  run("INSERT INTO journal_links (entry_id, link_type, link_id) VALUES (?, 'herb', 1)", eGone);
+  const herb = id(run("INSERT INTO herbs (common_name) VALUES ('Gone herb')"));
+  const recipeType = id(run("INSERT INTO recipe_types (name) VALUES ('t')"));
+  const recipe = id(run('INSERT INTO recipes (name, type_id) VALUES (?, ?)', 'Gone recipe', recipeType));
+  const batch = id(run("INSERT INTO batches (name, start_date) VALUES ('Gone batch', '2026-01-01')"));
+  const liveHerb = id(run("INSERT INTO herbs (common_name) VALUES ('Live herb')"));
+  run('UPDATE herbs SET deleted_at = ? WHERE id = ?', old, herb);
+  run('UPDATE recipes SET deleted_at = ? WHERE id = ?', old, recipe);
+  run('UPDATE batches SET deleted_at = ? WHERE id = ?', old, batch);
+  for (const [lt, li] of [['herb', herb], ['recipe', recipe], ['batch', batch], ['herb', liveHerb]]) {
+    run('INSERT INTO journal_links (entry_id, link_type, link_id) VALUES (?, ?, ?)', eKeep, lt, li);
+  }
+  const linkOld = id(run("INSERT INTO journal_links (entry_id, link_type, link_id) VALUES (?, 'herb', ?)", eKeep, liveHerb));
+  run('UPDATE journal_links SET deleted_at = ? WHERE id = ?', old, linkOld);
+  run("INSERT INTO photos (owner_type, owner_id, filename) VALUES ('journal', ?, '3-cccccccc.jpg')", eGone);
+  fs.writeFileSync(path.join(t.dataDir, 'photos', '3-cccccccc.jpg'), 'x');
+
+  const counts = purgeSoftDeleted(db, t.dataDir);
+  expect(counts.journal_entries).toBe(1);
+  expect(counts.journal_types).toBe(1);
+  expect(db.prepare('SELECT title FROM journal_entries').all().map(r => r.title)).toEqual(['Keeps its type']);
+  expect(db.prepare('SELECT name FROM journal_types ORDER BY id').all().map(r => r.name)).toEqual(['Used old type', 'Live type']);
+  expect(db.prepare('SELECT tag FROM journal_tags').all().map(r => r.tag)).toEqual(['fresh']);
+  expect(db.prepare('SELECT link_type, link_id FROM journal_links').all()).toEqual([{ link_type: 'herb', link_id: liveHerb }]);
+  expect(db.prepare("SELECT COUNT(*) n FROM photos WHERE owner_type = 'journal'").get().n).toBe(0);
+  expect(fs.existsSync(path.join(t.dataDir, 'photos', '3-cccccccc.jpg'))).toBe(false);
+  expect(db.prepare('SELECT COUNT(*) n FROM herbs WHERE id = ?').get(herb).n).toBe(0);
+});

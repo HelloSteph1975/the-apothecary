@@ -15,10 +15,21 @@ export function purgeSoftDeleted(db, dataDir, { days = 30, now = Date.now() } = 
       OR (owner_type = 'herb' AND owner_id IN (${old('herbs')}))
       OR (owner_type = 'recipe' AND owner_id IN (${old('recipes')}))
       OR (owner_type = 'batch' AND owner_id IN (${old('batches')}))
-      OR (owner_type = 'task' AND owner_id IN (${old('tasks')}))`;
+      OR (owner_type = 'task' AND owner_id IN (${old('tasks')}))
+      OR (owner_type = 'journal' AND owner_id IN (${old('journal_entries')}))`;
     files = db.prepare(`SELECT filename FROM photos WHERE ${photoMatch}`).all(cutoff).map(r => r.filename);
     const counts = {};
     counts.photos = db.prepare(`DELETE FROM photos WHERE ${photoMatch}`).run(cutoff).changes;
+    // Journal rows go first: links to herbs, recipes or batches about to be purged mean nothing, and children go before entries.
+    for (const [type, table] of [['herb', 'herbs'], ['recipe', 'recipes'], ['batch', 'batches']]) {
+      db.prepare(`DELETE FROM journal_links WHERE link_type = '${type}' AND link_id IN (${old(table)})`).run();
+    }
+    for (const child of ['journal_links', 'journal_tags']) {
+      db.prepare(`DELETE FROM ${child} WHERE id IN (${old(child)}) OR entry_id IN (${old('journal_entries')})`).run();
+    }
+    counts.journal_entries = db.prepare(`DELETE FROM journal_entries WHERE id IN (${old('journal_entries')})`).run().changes;
+    counts.journal_types = db.prepare(`DELETE FROM journal_types WHERE id IN (${old('journal_types')})
+      AND id NOT IN (SELECT type_id FROM journal_entries)`).run().changes;
     for (const [type, table] of [['item', 'items'], ['recipe', 'recipes'], ['batch', 'batches'], ['herb', 'herbs']]) {
       db.prepare(`UPDATE tasks SET related_type = NULL, related_id = NULL WHERE related_type = '${type}' AND related_id IN (${old(table)})`).run();
     }

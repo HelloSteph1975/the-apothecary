@@ -10,7 +10,7 @@
     "demo": "node --disable-warning=ExperimentalWarning server/index.js --demo",
     "dev": "concurrently -n api,web \"node --disable-warning=ExperimentalWarning --watch server/index.js\" \"vite\"",
     "build": "vite build",
-    "test": "vitest run",
+    "test": "vitest run --project server && vitest run --project client",
     "test:e2e": "playwright test",
     "icon": "node scripts/make-icon.js",
     "setup": "npm install && npm run build && node scripts/setup.js",

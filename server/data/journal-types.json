@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "ritual",
+    "name": "Ritual",
+    "description": "A working, a spell or a small ceremony.",
+    "icon": "sparkles"
+  },
+  {
+    "slug": "moon-observance",
+    "name": "Moon observance",
+    "description": "Watching or marking the moon.",
+    "icon": "moon"
+  },
+  {
+    "slug": "festival",
+    "name": "Festival",
+    "description": "A turn of the wheel and how you kept it.",
+    "icon": "sun"
+  },
+  {
+    "slug": "dream",
+    "name": "Dream",
+    "description": "What you dreamed and what it stirred.",
+    "icon": "cloud"
+  },
+  {
+    "slug": "garden",
+    "name": "Garden",
+    "description": "Notes from the garden.",
+    "icon": "sprout"
+  },
+  {
+    "slug": "foraging-walk",
+    "name": "Foraging walk",
+    "description": "What you found and where.",
+    "icon": "leaf"
+  },
+  {
+    "slug": "reflection",
+    "name": "Reflection",
+    "description": "Thoughts worth keeping.",
+    "icon": "feather"
+  },
+  {
+    "slug": "note",
+    "name": "Note",
+    "description": "Anything else.",
+    "icon": "pen"
+  }
+]

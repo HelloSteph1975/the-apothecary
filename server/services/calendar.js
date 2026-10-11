@@ -39,7 +39,11 @@ export function calendarEvents(db, from, to, today) {
   for (const it of items) {
     events.push({ kind: 'expiry', day: it.expires_on, title: `Use up ${it.name}`, link: `/cabinet/items/${it.id}`, done: false, overdue: overdue(it.expires_on, false), id: it.id });
   }
-  const order = { step: 0, task: 1, expiry: 2 };
+  const entries = db.prepare('SELECT id, title, entry_date FROM journal_entries WHERE deleted_at IS NULL AND entry_date BETWEEN ? AND ?').all(from, to);
+  for (const e of entries) {
+    events.push({ kind: 'journal', day: e.entry_date, title: e.title, link: `/journal/${e.id}`, done: false, overdue: false, id: e.id });
+  }
+  const order = { step: 0, task: 1, expiry: 2, journal: 3 };
   return events.sort((a, b) => a.day.localeCompare(b.day) || order[a.kind] - order[b.kind] || a.title.localeCompare(b.title) || a.id - b.id);
 }
 

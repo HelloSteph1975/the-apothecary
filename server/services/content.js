@@ -1,12 +1,13 @@
 import { seedGrimoire, linkItemsOnce } from './grimoire.js';
 import { seedRecipeTypes } from './recipeTypes.js';
+import { seedJournalTypes } from './journalTypes.js';
 import { seedTimingRules } from './timing.js';
 
 // Starter content, run at startup and after a restore. Each step logs its own failure so the app still opens;
 // linking skips itself when the grimoire seed didn't finish.
-export function contentMaintenance(db, { seed = seedGrimoire, link = linkItemsOnce, seedTypes = seedRecipeTypes, seedRules = seedTimingRules } = {}) {
+export function contentMaintenance(db, { seed = seedGrimoire, link = linkItemsOnce, seedTypes = seedRecipeTypes, seedRules = seedTimingRules, seedJournal = seedJournalTypes } = {}) {
   const steps = [['Seeding the grimoire', seed], ['Linking jars to the grimoire', link], ['Seeding the recipe types', seedTypes],
-    ['Seeding the timing rules', seedRules]];
+    ['Seeding the timing rules', seedRules], ['Seeding the journal types', seedJournal]];
   for (const [label, fn] of steps) {
     try { fn(db); } catch (err) { console.error(`${label} failed (the app will still run):`, err); }
   }
