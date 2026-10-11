@@ -63,7 +63,7 @@ export function GardenEntryPage() {
         {harvest && (
           <ParchmentCard title="In the cabinet">
             {jar
-              ? <p>In the cabinet: <Link to={`/cabinet/items/${jar.id}`}>{jar.name}</Link></p>
+              ? <p>Jar: <Link to={`/cabinet/items/${jar.id}`}>{jar.name}</Link></p>
               : <p><Button as={Link} variant="secondary" to={`/cabinet/new?garden_entry=${entry.id}`}>Send to the cabinet</Button></p>}
           </ParchmentCard>
         )}

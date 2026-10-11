@@ -54,7 +54,7 @@ test('keeps a garden from planting to the cabinet', async ({ page, request }) =>
   await slowExpect(page.getByRole('heading', { level: 1, name: PLANT })).toBeVisible();
   await expect(page).toHaveURL(/\/cabinet\/items\/\d+$/);
   await page.goto(entryUrl);
-  await slowExpect(page.getByText('In the cabinet:')).toBeVisible();
+  await slowExpect(page.getByText('Jar:')).toBeVisible();
   await expect(page.getByRole('region', { name: 'In the cabinet' }).getByRole('link', { name: PLANT })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Send to the cabinet' })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: `Harvested ${PLANT}` })).toBeVisible();

@@ -83,7 +83,7 @@ it('links the jar when a live one holds the harvest', async () => {
   entry = { ...base, item_id: 12, item: { id: 12, name: 'Calendula jar', live: true } };
   open();
   expect(await screen.findByRole('link', { name: 'Calendula jar' })).toHaveAttribute('href', '/cabinet/items/12');
-  expect(screen.getByText(/In the cabinet:/)).toBeInTheDocument();
+  expect(screen.getByText(/Jar:/)).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Send to the cabinet' })).toBeNull();
 });
 
