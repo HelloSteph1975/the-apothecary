@@ -57,7 +57,7 @@ function stockGarden(db, today, { withJar = true } = {}) {
   const calendula = createPlant(db, {
     name: 'Calendula', herb_id: herb('calendula'), place: 'the raised bed', planted_on: addDays(today, -42), expected_harvest_on: addDays(today, 5),
   });
-  const lavender = createPlant(db, { name: 'Lavender', herb_id: herb('lavender'), place: 'by the front path', planted_on: addDays(today, -300) });
+  const lavender = createPlant(db, { name: 'Lavender', herb_id: herb('lavender'), place: 'by the front path', planted_on: addDays(today, -190) });
   createGardenEntry(db, { entry_date: addDays(today, -42), kind: 'sowed', plant_id: calendula, notes: 'Pressed the seeds in and watered them well.' });
   createGardenEntry(db, {
     entry_date: addDays(today, -21), kind: 'foraged', plant_name: 'Elderflower', herb_id: herb('elderflower'), place: 'the lane hedge',
