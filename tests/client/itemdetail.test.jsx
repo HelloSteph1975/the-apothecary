@@ -65,6 +65,11 @@ it('shows the jar, badges, source and purchases', async () => {
   expect(screen.getByText(/\(removed\)/)).toBeInTheDocument();
 });
 
+it('links to the label maker for this jar', async () => {
+  open();
+  expect(await screen.findByRole('link', { name: 'Print a label' })).toHaveAttribute('href', '/labels?items=7');
+});
+
 it('shows dates in a friendly format', async () => {
   open();
   await screen.findByRole('heading', { name: 'Nettle' });

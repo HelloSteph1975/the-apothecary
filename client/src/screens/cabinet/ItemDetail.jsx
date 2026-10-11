@@ -63,6 +63,7 @@ export function ItemDetail() {
           <>
             <WaxSeal onClick={() => setRestocking(true)}>Restock</WaxSeal>
             <Button as={Link} variant="secondary" to={`/cabinet/items/${item.id}/edit`}>Edit</Button>
+            <Button as={Link} variant="secondary" to={`/labels?items=${item.id}`}>Print a label</Button>
             {!usedUp && !item.status?.low && <Button variant="secondary" onClick={addToList}>Add to shopping list</Button>}
             <Button variant="secondary" onClick={toggleUsedUp}>{usedUp ? 'Put back' : 'Mark used up'}</Button>
             <Button variant="danger" onClick={async () => {
