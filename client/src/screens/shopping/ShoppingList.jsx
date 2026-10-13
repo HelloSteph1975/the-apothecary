@@ -30,7 +30,9 @@ function Row({ row, onCheck, onRestock, onEdit, onDelete }) {
       <input type="checkbox" className="shopping-box" aria-label={row.name} checked={row.checked} onChange={() => onCheck(row)} />
       <div className="shopping-main">
         <p className="shopping-name">{jar ? <Link to={`/cabinet/items/${jar.id}`}>{row.name}</Link> : <span>{row.name}</span>}</p>
-        {low && <p className="muted">{formatAmount(row.amount, row.unit)} left, low at {formatAmount(row.low_threshold, row.unit)}</p>}
+        {low && (row.used_up
+          ? <p className="muted">Used up</p>
+          : <p className="muted">{formatAmount(row.amount, row.unit)} left, low at {formatAmount(row.low_threshold, row.unit)}</p>)}
         {!low && row.quantity && <p className="muted">{row.quantity}</p>}
         {!low && row.notes && <p className="muted">{row.notes}</p>}
         {row.last && <p className="muted">{lastText(row.last)}</p>}

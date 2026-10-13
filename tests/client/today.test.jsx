@@ -78,6 +78,28 @@ it('offers See all when a list is capped', async () => {
   expect(screen.getByRole('link', { name: 'See all 9' })).toHaveAttribute('href', '/cabinet?status=expired');
 });
 
+it('lists used-up jars in Running low, first, with their own See all', async () => {
+  summary = {
+    ...summary,
+    runningLow: [item(1, 'Calendula')],
+    usedUp: [item(5, 'Acacia', { used_up_at: '2026-10-13T10:26:50.034Z' })],
+    counts: { runningLow: 1, usedUp: 11, nearingExpiry: 0, expired: 0 },
+  };
+  today();
+  const acacia = await screen.findByRole('link', { name: 'Acacia, used up' });
+  expect(acacia).toHaveAttribute('href', '/cabinet/items/5');
+  const cal = screen.getByRole('link', { name: /Calendula, 40 g left/ });
+  expect(acacia.compareDocumentPosition(cal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'See all 11' })).toHaveAttribute('href', '/cabinet?status=used_up');
+});
+
+it('does not call the cabinet empty when every jar is used up', async () => {
+  summary = { ...summary, usedUp: [item(5, 'Acacia', { used_up_at: '2026-10-13T10:26:50.034Z' })], counts: { runningLow: 0, usedUp: 1, nearingExpiry: 0, expired: 0 } };
+  today();
+  expect(await screen.findByRole('link', { name: 'Acacia, used up' })).toBeInTheDocument();
+  expect(screen.queryByText(/once the herb cabinet is stocked/i)).toBeNull();
+});
+
 it('says nothing is low or close to its date when the cabinet has herbs', async () => {
   items = [item(1, 'Calendula')];
   today();

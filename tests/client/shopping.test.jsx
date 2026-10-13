@@ -90,6 +90,14 @@ it('shows the header, a group card and both kinds of row', async () => {
   expect(screen.getByRole('checkbox', { name: 'Beeswax pellets' })).not.toBeChecked();
 });
 
+it('says Used up for a used-up jar instead of the amount left', async () => {
+  rows = [low({ amount: 1, unit: 'lb', low_threshold: 0.5, used_up: true })];
+  open();
+  const card = await screen.findByRole('region', { name: 'Herbs' });
+  expect(await within(card).findByText('Used up')).toBeInTheDocument();
+  expect(within(card).queryByText(/left, low at/)).toBeNull();
+});
+
 it('groups by supplier from the URL and the toggle keeps it in the URL', async () => {
   const user = userEvent.setup();
   const router = open('/shopping?group=supplier');

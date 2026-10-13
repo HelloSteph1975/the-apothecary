@@ -43,10 +43,13 @@ const LIST_SQL = `
   LEFT JOIN herbs h ON h.id = i.herb_id AND h.deleted_at IS NULL
   WHERE i.deleted_at IS NULL`;
 
+const LOW = 'i.low_threshold IS NOT NULL AND i.amount <= i.low_threshold';
+
 export function listItems(db, f, today) {
   const where = [];
   const args = [];
-  if (!f.include_used_up) where.push('i.used_up_at IS NULL');
+  const status = typeof f.status === 'string' ? f.status : '';
+  if (!f.include_used_up && status !== 'used_up' && status !== 'needed') where.push('i.used_up_at IS NULL');
   for (const key of ['section_id', 'source_kind', 'form', 'plant_part', 'storage_spot']) {
     if (typeof f[key] === 'string' && f[key] !== '') { where.push(`i.${key} = ?`); args.push(f[key]); }
   }
@@ -55,8 +58,10 @@ export function listItems(db, f, today) {
     where.push('EXISTS (SELECT 1 FROM purchases px WHERE px.item_id = i.id AND px.deleted_at IS NULL AND px.supplier_id = ?)');
     args.push(Number(f.supplier_id));
   }
-  const status = typeof f.status === 'string' ? f.status : '';
-  if (status === 'low') where.push('i.used_up_at IS NULL AND i.low_threshold IS NOT NULL AND i.amount <= i.low_threshold');
+  if (status === 'used_up') where.push('i.used_up_at IS NOT NULL');
+  // What the shopping list adds by itself: low jars and used-up ones.
+  if (status === 'needed') where.push(`(i.used_up_at IS NOT NULL OR (${LOW}))`);
+  if (status === 'low') where.push(`i.used_up_at IS NULL AND ${LOW}`);
   if (status === 'expiring') { where.push('i.used_up_at IS NULL AND i.expires_on >= ? AND i.expires_on <= ?'); args.push(today, addDays(today, 30)); }
   if (status === 'expired') { where.push('i.used_up_at IS NULL AND i.expires_on < ?'); args.push(today); }
   const sql = `${LIST_SQL}${where.map(w => ` AND ${w}`).join('')} ORDER BY s.sort_order, s.id, i.name COLLATE NOCASE`;
@@ -70,7 +75,11 @@ export function getItemDetail(db, id, today) {
     FROM purchases p LEFT JOIN suppliers s ON s.id = p.supplier_id
     WHERE p.item_id = ? AND p.deleted_at IS NULL ORDER BY p.purchased_on DESC, p.id DESC`).all(id);
   const photos = repos(db).photos.list({ owner_type: 'item', owner_id: id });
-  return { ...row, status: itemStatus(row, today), purchases, photos };
+  const status = itemStatus(row, today);
+  // On the list by hand, or by itself because it is low or used up.
+  const listed = db.prepare('SELECT 1 FROM shopping_items WHERE item_id = ? AND deleted_at IS NULL').get(id);
+  const on_shopping_list = Boolean(listed) || Boolean(row.used_up_at) || status.low;
+  return { ...row, status, purchases, photos, on_shopping_list };
 }
 
 function itemData(input, { partial }) {

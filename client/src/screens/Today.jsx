@@ -78,7 +78,7 @@ export function Today() {
   const today = useApi(`/api/today?today=${day}`);
   const data = today.data;
   const counts = data?.counts;
-  const allZero = Boolean(counts) && counts.runningLow === 0 && counts.nearingExpiry === 0 && counts.expired === 0;
+  const allZero = Boolean(counts) && counts.runningLow === 0 && !counts.usedUp && counts.nearingExpiry === 0 && counts.expired === 0;
   const items = useApi(allZero ? `/api/items?today=${day}` : null);
   const cabinetEmpty = allZero && !items.loading && !items.error && (items.data ?? []).length === 0;
   const failed = today.error || (allZero && items.error);
@@ -88,6 +88,13 @@ export function Today() {
   const taskActions = useTaskActions({ onChange: () => today.reload() });
   const tasks = data?.tasks ?? [];
   const retry = () => { today.reload(); items.reload(); };
+  const usedUp = data?.usedUp ?? [];
+  const low = data
+    ? [
+      ...usedUp.map(it => ({ it, text: 'used up' })),
+      ...data.runningLow.map(it => ({ it, text: leftText(it) })),
+    ]
+    : [];
   const nearing = data
     ? [
       ...data.expired.map(it => ({ it, text: `past its best since ${formatShortDay(it.expires_on)}` })),
@@ -156,11 +163,12 @@ export function Today() {
           ))}
         </ParchmentCard>
         <ParchmentCard title="Running low" subtitle="jars to refill soon" botanical="chamomile">
-          {status(!data ? <p className="muted">Looking in the cabinet…</p> : cabinetEmpty ? <EmptyCabinet /> : data.runningLow.length === 0 ? (
+          {status(!data ? <p className="muted">Looking in the cabinet…</p> : cabinetEmpty ? <EmptyCabinet /> : low.length === 0 ? (
             <p className="muted">Nothing is running low.</p>
           ) : (
             <>
-              <Rows items={data.runningLow.map(it => ({ it, text: leftText(it) }))} />
+              <Rows items={low} />
+              {seeAll(counts.usedUp ?? 0, usedUp.length, '/cabinet?status=used_up')}
               {seeAll(counts.runningLow, data.runningLow.length, '/cabinet?status=low')}
             </>
           ))}

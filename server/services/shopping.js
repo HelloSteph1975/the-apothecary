@@ -64,12 +64,16 @@ function shapeManual(db, w) {
 }
 
 const lowKey = i => `low:${i.id}:${i.restock_count}`;
-const lowJars = db => listItems(db, { status: 'low' }, localToday());
+// Low and used-up jars, less any she already put on the list by hand, so a jar shows once.
+function lowJars(db) {
+  const byHand = new Set(db.prepare('SELECT item_id FROM shopping_items WHERE item_id IS NOT NULL AND deleted_at IS NULL').all().map(r => r.item_id));
+  return listItems(db, { status: 'needed' }, localToday()).filter(i => !byHand.has(i.id));
+}
 
 function shapeLow(db, i, checks) {
   const key = lowKey(i);
   return {
-    key, kind: 'low', name: i.name, amount: i.amount, unit: i.unit, low_threshold: i.low_threshold,
+    key, kind: 'low', name: i.name, amount: i.amount, unit: i.unit, low_threshold: i.low_threshold, used_up: Boolean(i.used_up_at),
     item: { id: i.id, name: i.name, live: true }, section: { id: i.section_id, name: i.section_name },
     last: lastForJar(db, i.id), checked: checks.has(key),
   };

@@ -7,6 +7,7 @@ const SHOW = [
   { value: 'low', label: 'Running low' },
   { value: 'expiring', label: 'Use soon' },
   { value: 'expired', label: 'Past its best' },
+  { value: 'used_up', label: 'Used up' },
 ];
 
 export function Toolbar({ params, setParam, sections, suppliers, spots }) {

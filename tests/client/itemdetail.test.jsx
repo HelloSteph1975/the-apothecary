@@ -204,16 +204,27 @@ it('adds one shopping item for a double click', async () => {
   expect(calls.filter(c => c.method === 'POST' && c.url === '/api/shopping/items')).toHaveLength(1);
 });
 
-it('hides Add to shopping list while the jar is already low', async () => {
-  item = { ...baseItem, status: { low: true, expiring: false, expired: false } };
+it('says the jar is on the shopping list instead of offering to add it again', async () => {
+  item = { ...baseItem, used_up_at: '2026-10-01', status: {}, on_shopping_list: true };
   open();
   await screen.findByRole('heading', { name: 'Nettle' });
   expect(screen.queryByRole('button', { name: 'Add to shopping list' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'On the shopping list' })).toHaveAttribute('href', '/shopping');
 });
 
-it('hides Add to shopping list for a used-up jar', async () => {
-  item = { ...baseItem, used_up_at: '2026-10-01', status: {} };
+it('offers Add to shopping list for a low or used-up jar that is not on the list', async () => {
+  item = { ...baseItem, used_up_at: '2026-10-01', status: { low: true }, on_shopping_list: false };
+  open();
+  expect(await screen.findByRole('button', { name: 'Add to shopping list' })).toBeInTheDocument();
+});
+
+it('reads the jar again after adding it, so the button turns into the list link', async () => {
+  const user = userEvent.setup();
+  item = { ...baseItem, status: {}, section_id: 1 };
   open();
   await screen.findByRole('heading', { name: 'Nettle' });
-  expect(screen.queryByRole('button', { name: 'Add to shopping list' })).not.toBeInTheDocument();
+  const before = itemGets();
+  await user.click(screen.getByRole('button', { name: 'Add to shopping list' }));
+  await screen.findByText('Added to the shopping list');
+  await waitFor(() => expect(itemGets()).toBeGreaterThan(before));
 });
