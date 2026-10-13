@@ -6,8 +6,8 @@ import { todaySuggestions } from './timing.js';
 import { syncAutoTasks, listTasks } from './tasks.js';
 
 const CAP = 8;
-const pick = ({ id, name, size_label, amount, unit, low_threshold, expires_on, section_name, cover }) =>
-  ({ id, name, size_label, amount, unit, low_threshold, expires_on, section_name, cover });
+const pick = ({ id, name, size_label, amount, unit, low_threshold, expires_on, section_name, cover, used_up_at }) =>
+  ({ id, name, size_label, amount, unit, low_threshold, expires_on, section_name, cover, used_up_at });
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 const ratio = i => (i.low_threshold > 0 ? i.amount / i.low_threshold : 0);
 
@@ -15,18 +15,20 @@ export function todaySummary(db, today) {
   syncAutoTasks(db, today);
   const tasks = listTasks(db, 'today', today);
   const low = listItems(db, { status: 'low' }, today).sort((a, b) => ratio(a) - ratio(b) || byName(a, b));
+  const used = listItems(db, { status: 'used_up' }, today).sort(byName);
   const soon = listItems(db, { status: 'expiring' }, today).sort((a, b) => a.expires_on.localeCompare(b.expires_on) || byName(a, b));
   const gone = listItems(db, { status: 'expired' }, today).sort((a, b) => a.expires_on.localeCompare(b.expires_on) || byName(a, b));
   const due = dueSteps(db, today);
   const { sky, suggestions } = todaySuggestions(db, today, getSettings(db), new Date());
   return {
     runningLow: low.slice(0, CAP).map(pick),
+    usedUp: used.slice(0, CAP).map(pick),
     nearingExpiry: soon.slice(0, CAP).map(pick),
     expired: gone.slice(0, CAP).map(pick),
     batchesDue: due.slice(0, CAP),
     tasks: tasks.slice(0, CAP),
     sky,
     suggestions,
-    counts: { runningLow: low.length, nearingExpiry: soon.length, expired: gone.length, batchesDue: due.length, tasks: tasks.length },
+    counts: { runningLow: low.length, usedUp: used.length, nearingExpiry: soon.length, expired: gone.length, batchesDue: due.length, tasks: tasks.length },
   };
 }

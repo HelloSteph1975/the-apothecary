@@ -228,3 +228,30 @@ it('drawFromItem subtracts, clamps at zero and marks the jar used up', async () 
   expect(row.used_up_at).toBeTruthy();
   expect(() => drawFromItem(t.ctx.db, 9999, 1)).toThrow();
 });
+
+it('filters used-up jars with status=used_up, even without include_used_up', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const gone = (await h().post('/api/items').send({ section_id: 1, name: 'Acacia', amount: 1, unit: 'lb' })).body;
+  await h().post('/api/items').send({ section_id: 1, name: 'Sage', amount: 1, unit: 'lb' });
+  await h().patch(`/api/items/${gone.id}`).send({ used_up: true });
+  expect((await h().get(`/api/items?today=${TODAY}&status=used_up`)).body.map(i => i.name)).toEqual(['Acacia']);
+});
+
+it('says whether a jar is on the shopping list', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const add = body => h().post('/api/items').send({ section_id: 1, unit: 'lb', ...body }).then(r => r.body);
+  const listed = async id => (await h().get(`/api/items/${id}?today=${TODAY}`)).body.on_shopping_list;
+  const full = await add({ name: 'Sage', amount: 1, low_threshold: 0.5 });
+  const low = await add({ name: 'Agrimony', amount: 0, low_threshold: 0.5 });
+  const gone = await add({ name: 'Acacia', amount: 1, low_threshold: 0.5 });
+  await h().patch(`/api/items/${gone.id}`).send({ used_up: true });
+  expect(await listed(full.id)).toBe(false);
+  expect(await listed(low.id)).toBe(true);
+  expect(await listed(gone.id)).toBe(true);
+  const added = (await h().post('/api/shopping/items').send({ name: 'Sage', item_id: full.id })).body;
+  expect(await listed(full.id)).toBe(true);
+  await h().delete(`/api/shopping/items/${added.id}`);
+  expect(await listed(full.id)).toBe(false);
+});

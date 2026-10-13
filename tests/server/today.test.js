@@ -21,10 +21,12 @@ it('summarises low, nearing and expired items and leaves batches empty', async (
   const res = await h().get('/api/today?today=2026-10-08');
   expect(res.status).toBe(200);
   expect(res.body.runningLow.map(i => i.name)).toEqual(['Mullein', 'Yarrow']);
+  expect(res.body.usedUp.map(i => i.name)).toEqual(['Gone']);
+  expect(res.body.usedUp[0].used_up_at).toBeTruthy();
   expect(res.body.nearingExpiry.map(i => i.name)).toEqual(['Rose', 'Elderberry']);
   expect(res.body.expired.map(i => i.name)).toEqual(['Old sage']);
   expect(res.body.batchesDue).toEqual([]);
-  expect(res.body.counts).toEqual({ runningLow: 2, nearingExpiry: 2, expired: 1, batchesDue: 0, tasks: 3 });
+  expect(res.body.counts).toEqual({ runningLow: 2, usedUp: 1, nearingExpiry: 2, expired: 1, batchesDue: 0, tasks: 3 });
   expect(res.body.tasks.map(x => x.title)).toEqual(['Use or replace Old sage', 'Restock Mullein', 'Restock Yarrow']);
 });
 
@@ -34,6 +36,19 @@ it('caps each list at eight but counts them all', async () => {
   const res = await t.http().get('/api/today?today=2026-10-08');
   expect(res.body.runningLow).toHaveLength(8);
   expect(res.body.counts.runningLow).toBe(10);
+});
+
+it('lists used-up jars, even past their date, and drops them once restocked', async () => {
+  t = makeTestContext();
+  const h = t.http;
+  const jar = (await h().post('/api/items').send({ section_id: 1, unit: 'g', name: 'Acacia', amount: 1, low_threshold: 0.5, expires_on: '2026-09-13' })).body;
+  await h().patch(`/api/items/${jar.id}`).send({ used_up: true });
+  let res = await h().get('/api/today?today=2026-10-08');
+  expect(res.body.usedUp.map(i => i.name)).toEqual(['Acacia']);
+  expect(res.body.expired).toEqual([]);
+  await h().post(`/api/items/${jar.id}/restock`).send({ purchased_on: '2026-10-08', quantity: 5, unit: 'g' });
+  res = await h().get('/api/today?today=2026-10-08');
+  expect(res.body.usedUp).toEqual([]);
 });
 
 it('needs a date', async () => {

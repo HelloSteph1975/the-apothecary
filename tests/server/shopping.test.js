@@ -58,7 +58,7 @@ describe('the list', () => {
     const section = s.r.sections.get(1);
     expect(res.groups).toEqual([{
       key: 'section-1', name: section.name, rows: [{
-        key: `low:${low.id}:0`, kind: 'low', name: 'Sage', amount: 5, unit: 'g', low_threshold: 10,
+        key: `low:${low.id}:0`, kind: 'low', name: 'Sage', amount: 5, unit: 'g', low_threshold: 10, used_up: false,
         item: { id: low.id, name: 'Sage', live: true }, section: { id: 1, name: section.name },
         last: { supplier: { id: sup.id, name: 'Mountain Rose' }, price: 9, purchased_on: '2026-09-15', quantity: 100, unit: 'g' },
         checked: false,
@@ -139,7 +139,7 @@ describe('the list', () => {
     await s.add({ name: 'Lonely' });
     const res = await s.list('?group=supplier');
     expect(res.group).toBe('supplier');
-    expect(rowNames(res)).toEqual([['Alpha Co', ['Linked', 'Sage']], ['Beta Co', ['Wax']], ['No supplier yet', ['Lonely']]]);
+    expect(rowNames(res)).toEqual([['Alpha Co', ['Linked']], ['Beta Co', ['Wax']], ['No supplier yet', ['Lonely']]]);
     expect(res.groups.at(-1).key).toBe('none');
   });
 
@@ -153,6 +153,72 @@ describe('the list', () => {
     const a = (await s.add()).body;
     await s.h().delete(`/api/shopping/items/${a.id}`);
     expect((await s.list()).groups).toEqual([]);
+  });
+});
+
+describe('used-up jars', () => {
+  it('go on the list by themselves, even when they were above the line', async () => {
+    const s = setup();
+    const jar = await s.jar({ name: 'Acacia', amount: 1, low_threshold: 0.5 });
+    await s.h().patch(`/api/items/${jar.id}`).send({ used_up: true });
+    const rows = (await s.list()).groups.flatMap(g => g.rows);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: `low:${jar.id}:0`, kind: 'low', name: 'Acacia', used_up: true });
+    expect((await s.h().post('/api/shopping/check').send({ key: rows[0].key, checked: true })).status).toBe(200);
+  });
+
+  it('leave the list once restocked', async () => {
+    const s = setup();
+    const jar = await s.jar({ name: 'Acacia', amount: 1, low_threshold: 0.5 });
+    await s.h().patch(`/api/items/${jar.id}`).send({ used_up: true });
+    await s.h().post(`/api/items/${jar.id}/restock`).send({ purchased_on: '2026-10-11', quantity: 5 });
+    expect((await s.list()).groups).toEqual([]);
+  });
+});
+
+describe('a jar she added by hand', () => {
+  it('shows once, as her item, when it is also low or used up', async () => {
+    const s = setup();
+    const low = await s.jar({ name: 'Sage', amount: 2, low_threshold: 10 });
+    const gone = await s.jar({ name: 'Acacia', amount: 1, low_threshold: 0.5 });
+    await s.add({ name: 'Sage', item_id: low.id });
+    await s.add({ name: 'Acacia', item_id: gone.id });
+    await s.h().patch(`/api/items/${gone.id}`).send({ used_up: true });
+    const rows = (await s.list()).groups.flatMap(g => g.rows);
+    expect(rows.map(r => [r.name, r.kind])).toEqual([['Acacia', 'manual'], ['Sage', 'manual']]);
+    expect(rows.map(r => r.need)).toEqual([{ used_up: true }, { used_up: false, amount: 2, unit: 'g', low_threshold: 10 }]);
+  });
+
+  it('has no need while the jar is full, or once the jar is deleted', async () => {
+    const s = setup();
+    const jar = await s.jar({ name: 'Sage', amount: 50, low_threshold: 10 });
+    await s.add({ name: 'Sage', item_id: jar.id });
+    expect((await s.list()).groups[0].rows[0].need).toBeNull();
+    await s.h().patch(`/api/items/${jar.id}`).send({ used_up: true });
+    await s.h().delete(`/api/items/${jar.id}`);
+    expect((await s.list()).groups[0].rows[0].need).toBeNull();
+  });
+
+  it('stays open, even if she checked it, while a refill leaves the jar low', async () => {
+    const s = setup();
+    const jar = await s.jar({ name: 'Sage', amount: 2, low_threshold: 10 });
+    const added = (await s.add({ name: 'Sage', item_id: jar.id })).body;
+    await s.h().post('/api/shopping/check').send({ key: `item:${added.id}`, checked: true });
+    await s.h().post(`/api/items/${jar.id}/restock`).send({ purchased_on: '2026-10-11', quantity: 3 });
+    expect(s.checked(added.id)).toBeNull();
+    const rows = (await s.list()).groups.flatMap(g => g.rows);
+    expect(rows.map(r => [r.name, r.checked, r.need])).toEqual([['Sage', false, { used_up: false, amount: 5, unit: 'g', low_threshold: 10 }]]);
+  });
+
+  it('is checked off when the jar is restocked', async () => {
+    const s = setup();
+    const jar = await s.jar({ name: 'Acacia', amount: 1, low_threshold: 0.5 });
+    const added = (await s.add({ name: 'Acacia', item_id: jar.id })).body;
+    await s.h().patch(`/api/items/${jar.id}`).send({ used_up: true });
+    await s.h().post(`/api/items/${jar.id}/restock`).send({ purchased_on: '2026-10-11', quantity: 5 });
+    expect(s.checked(added.id)).toBe('2026-10-11');
+    const rows = (await s.list()).groups.flatMap(g => g.rows);
+    expect(rows.map(r => [r.name, r.checked, r.need])).toEqual([['Acacia', true, null]]);
   });
 });
 

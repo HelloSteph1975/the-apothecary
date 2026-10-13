@@ -45,12 +45,23 @@ function lastFor(db, row) {
 
 const MANUAL_SELECT = `SELECT w.*, sec.name AS section_name, sec.deleted_at AS section_deleted,
   sup.name AS supplier_name, sup.deleted_at AS supplier_deleted, h.common_name AS herb_name, h.deleted_at AS herb_deleted,
-  it.name AS item_name, it.deleted_at AS item_deleted
+  it.name AS item_name, it.deleted_at AS item_deleted, it.amount AS item_amount, it.unit AS item_unit,
+  it.low_threshold AS item_low_threshold, it.used_up_at AS item_used_up_at
   FROM shopping_items w
   LEFT JOIN cabinet_sections sec ON sec.id = w.section_id
   LEFT JOIN suppliers sup ON sup.id = w.supplier_id
   LEFT JOIN herbs h ON h.id = w.herb_id
   LEFT JOIN items it ON it.id = w.item_id`;
+
+// How the linked jar stands, when it is live and low or used up; otherwise null.
+function jarNeed(w) {
+  if (w.item_id == null || w.item_deleted != null) return null;
+  if (w.item_used_up_at) return { used_up: true };
+  if (w.item_low_threshold != null && w.item_amount <= w.item_low_threshold) {
+    return { used_up: false, amount: w.item_amount, unit: w.item_unit, low_threshold: w.item_low_threshold };
+  }
+  return null;
+}
 
 function shapeManual(db, w) {
   return {
@@ -59,17 +70,21 @@ function shapeManual(db, w) {
     supplier: ref(w.supplier_id, w.supplier_name, w.supplier_deleted),
     herb: ref(w.herb_id, w.herb_name, w.herb_deleted),
     item: ref(w.item_id, w.item_name, w.item_deleted),
-    last: lastFor(db, w), checked: w.checked_on != null,
+    need: jarNeed(w), last: lastFor(db, w), checked: w.checked_on != null,
   };
 }
 
 const lowKey = i => `low:${i.id}:${i.restock_count}`;
-const lowJars = db => listItems(db, { status: 'low' }, localToday());
+// Low and used-up jars, less any she already put on the list by hand, so a jar shows once.
+function lowJars(db) {
+  const byHand = new Set(db.prepare('SELECT item_id FROM shopping_items WHERE item_id IS NOT NULL AND deleted_at IS NULL').all().map(r => r.item_id));
+  return listItems(db, { status: 'needed' }, localToday()).filter(i => !byHand.has(i.id));
+}
 
 function shapeLow(db, i, checks) {
   const key = lowKey(i);
   return {
-    key, kind: 'low', name: i.name, amount: i.amount, unit: i.unit, low_threshold: i.low_threshold,
+    key, kind: 'low', name: i.name, amount: i.amount, unit: i.unit, low_threshold: i.low_threshold, used_up: Boolean(i.used_up_at),
     item: { id: i.id, name: i.name, live: true }, section: { id: i.section_id, name: i.section_name },
     last: lastForJar(db, i.id), checked: checks.has(key),
   };

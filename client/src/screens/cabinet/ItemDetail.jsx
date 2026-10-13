@@ -52,6 +52,7 @@ export function ItemDetail() {
       if (item.herb_id != null && item.herb_name) body.herb_id = item.herb_id;
       await api.post('/api/shopping/items', body);
       toast.show({ message: 'Added to the shopping list', duration: 6000, action: { label: 'See the list', onClick: () => navigate('/shopping') } });
+      reload();
     } catch (e) { toast.show({ message: e.message, duration: 6000 }); } finally { addingRef.current = false; }
   }
 
@@ -70,7 +71,9 @@ export function ItemDetail() {
             <WaxSeal onClick={() => setRestocking(true)}>Restock</WaxSeal>
             <Button as={Link} variant="secondary" to={`/cabinet/items/${item.id}/edit`}>Edit</Button>
             <Button as={Link} variant="secondary" to={`/labels?items=${item.id}`}>Print a label</Button>
-            {!usedUp && !item.status?.low && <Button variant="secondary" onClick={addToList}>Add to shopping list</Button>}
+            {item.on_shopping_list
+              ? <Button as={Link} variant="secondary" to="/shopping">On the shopping list</Button>
+              : <Button variant="secondary" onClick={addToList}>Add to shopping list</Button>}
             <Button variant="secondary" onClick={toggleUsedUp}>{usedUp ? 'Put back' : 'Mark used up'}</Button>
             <Button variant="danger" onClick={async () => {
               if (await del({ url: `/api/items/${item.id}`, label: item.name, onUndo: () => navigate(`/cabinet/items/${item.id}`) })) navigate('/cabinet');
