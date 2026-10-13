@@ -199,6 +199,17 @@ describe('a jar she added by hand', () => {
     expect((await s.list()).groups[0].rows[0].need).toBeNull();
   });
 
+  it('stays open, even if she checked it, while a refill leaves the jar low', async () => {
+    const s = setup();
+    const jar = await s.jar({ name: 'Sage', amount: 2, low_threshold: 10 });
+    const added = (await s.add({ name: 'Sage', item_id: jar.id })).body;
+    await s.h().post('/api/shopping/check').send({ key: `item:${added.id}`, checked: true });
+    await s.h().post(`/api/items/${jar.id}/restock`).send({ purchased_on: '2026-10-11', quantity: 3 });
+    expect(s.checked(added.id)).toBeNull();
+    const rows = (await s.list()).groups.flatMap(g => g.rows);
+    expect(rows.map(r => [r.name, r.checked, r.need])).toEqual([['Sage', false, { used_up: false, amount: 5, unit: 'g', low_threshold: 10 }]]);
+  });
+
   it('is checked off when the jar is restocked', async () => {
     const s = setup();
     const jar = await s.jar({ name: 'Acacia', amount: 1, low_threshold: 0.5 });
