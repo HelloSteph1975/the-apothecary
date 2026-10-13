@@ -25,24 +25,27 @@ function lastText(last) {
 function Row({ row, onCheck, onRestock, onEdit, onDelete }) {
   const low = row.kind === 'low';
   const jar = row.item?.live ? row.item : null;
+  const need = low ? { used_up: row.used_up, amount: row.amount, unit: row.unit, low_threshold: row.low_threshold } : row.need;
+  const restockButton = <Button variant="secondary" size="sm" onClick={() => onRestock(row)}>Restock</Button>;
   return (
     <li className={`shopping-row${row.checked ? ' shopping-checked' : ''}`}>
       <input type="checkbox" className="shopping-box" aria-label={row.name} checked={row.checked} onChange={() => onCheck(row)} />
       <div className="shopping-main">
         <p className="shopping-name">{jar ? <Link to={`/cabinet/items/${jar.id}`}>{row.name}</Link> : <span>{row.name}</span>}</p>
-        {low && (row.used_up
+        {need && (need.used_up
           ? <p className="muted">Used up</p>
-          : <p className="muted">{formatAmount(row.amount, row.unit)} left, low at {formatAmount(row.low_threshold, row.unit)}</p>)}
+          : <p className="muted">{formatAmount(need.amount, need.unit)} left, low at {formatAmount(need.low_threshold, need.unit)}</p>)}
         {!low && row.quantity && <p className="muted">{row.quantity}</p>}
         {!low && row.notes && <p className="muted">{row.notes}</p>}
         {row.last && <p className="muted">{lastText(row.last)}</p>}
       </div>
       <div className="shopping-actions">
         {low
-          ? <Button variant="secondary" size="sm" onClick={() => onRestock(row)}>Restock</Button>
+          ? restockButton
           : (
             <>
-              <Button as={Link} variant="secondary" size="sm" to={`/cabinet/new?shopping=${row.id}`}>Bought</Button>
+              {/* A row for a jar she already has refills that jar instead of starting a new one. */}
+              {jar ? restockButton : <Button as={Link} variant="secondary" size="sm" to={`/cabinet/new?shopping=${row.id}`}>Bought</Button>}
               <Button variant="secondary" size="sm" icon={Pencil} aria-label={`Edit ${row.name}`} onClick={() => onEdit(row)} />
               <Button variant="secondary" size="sm" icon={Trash2} aria-label={`Delete ${row.name}`} onClick={() => onDelete(row)} />
             </>

@@ -142,6 +142,9 @@ export function restockItem(db, id, body) {
     const changes = { amount: item.amount + purchase.quantity, used_up_at: null };
     if (!item.source_kind) changes.source_kind = 'bought';
     if (expires_on !== undefined) changes.expires_on = expires_on;
+    // Refilling the jar checks off whatever she put on the shopping list for it.
+    db.prepare("UPDATE shopping_items SET checked_on = ?, updated_at = datetime('now') WHERE item_id = ? AND deleted_at IS NULL AND checked_on IS NULL")
+      .run(purchase.purchased_on, id);
     return r.items.update(id, changes);
   });
 }

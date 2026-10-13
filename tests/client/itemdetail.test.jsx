@@ -223,8 +223,9 @@ it('reads the jar again after adding it, so the button turns into the list link'
   item = { ...baseItem, status: {}, section_id: 1 };
   open();
   await screen.findByRole('heading', { name: 'Nettle' });
-  const before = itemGets();
+  item = { ...item, on_shopping_list: true }; // what the server says once the jar is on the list
   await user.click(screen.getByRole('button', { name: 'Add to shopping list' }));
   await screen.findByText('Added to the shopping list');
-  await waitFor(() => expect(itemGets()).toBeGreaterThan(before));
+  expect(await screen.findByRole('link', { name: 'On the shopping list' })).toHaveAttribute('href', '/shopping');
+  expect(screen.queryByRole('button', { name: 'Add to shopping list' })).not.toBeInTheDocument();
 });

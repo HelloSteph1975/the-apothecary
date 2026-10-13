@@ -45,12 +45,23 @@ function lastFor(db, row) {
 
 const MANUAL_SELECT = `SELECT w.*, sec.name AS section_name, sec.deleted_at AS section_deleted,
   sup.name AS supplier_name, sup.deleted_at AS supplier_deleted, h.common_name AS herb_name, h.deleted_at AS herb_deleted,
-  it.name AS item_name, it.deleted_at AS item_deleted
+  it.name AS item_name, it.deleted_at AS item_deleted, it.amount AS item_amount, it.unit AS item_unit,
+  it.low_threshold AS item_low_threshold, it.used_up_at AS item_used_up_at
   FROM shopping_items w
   LEFT JOIN cabinet_sections sec ON sec.id = w.section_id
   LEFT JOIN suppliers sup ON sup.id = w.supplier_id
   LEFT JOIN herbs h ON h.id = w.herb_id
   LEFT JOIN items it ON it.id = w.item_id`;
+
+// How the linked jar stands, when it is live and low or used up; otherwise null.
+function jarNeed(w) {
+  if (w.item_id == null || w.item_deleted != null) return null;
+  if (w.item_used_up_at) return { used_up: true };
+  if (w.item_low_threshold != null && w.item_amount <= w.item_low_threshold) {
+    return { used_up: false, amount: w.item_amount, unit: w.item_unit, low_threshold: w.item_low_threshold };
+  }
+  return null;
+}
 
 function shapeManual(db, w) {
   return {
@@ -59,7 +70,7 @@ function shapeManual(db, w) {
     supplier: ref(w.supplier_id, w.supplier_name, w.supplier_deleted),
     herb: ref(w.herb_id, w.herb_name, w.herb_deleted),
     item: ref(w.item_id, w.item_name, w.item_deleted),
-    last: lastFor(db, w), checked: w.checked_on != null,
+    need: jarNeed(w), last: lastFor(db, w), checked: w.checked_on != null,
   };
 }
 

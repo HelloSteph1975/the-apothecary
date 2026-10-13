@@ -98,6 +98,18 @@ it('says Used up for a used-up jar instead of the amount left', async () => {
   expect(within(card).queryByText(/left, low at/)).toBeNull();
 });
 
+it('offers Restock, not Bought, for her item that points at a jar, and shows how the jar stands', async () => {
+  const user = userEvent.setup();
+  rows = [mine({ item: { id: 7, name: 'Nettle', live: true }, need: { used_up: true } })];
+  open();
+  const card = await screen.findByRole('region', { name: 'Herbs' });
+  expect(await within(card).findByText('Used up')).toBeInTheDocument();
+  expect(within(card).queryByRole('link', { name: 'Bought' })).toBeNull();
+  await user.click(within(card).getByRole('button', { name: 'Restock' }));
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  expect(calls.some(c => c.url.startsWith('/api/items/7?'))).toBe(true);
+});
+
 it('groups by supplier from the URL and the toggle keeps it in the URL', async () => {
   const user = userEvent.setup();
   const router = open('/shopping?group=supplier');
